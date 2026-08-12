@@ -1,5 +1,5 @@
 import "server-only";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { getRuntimeConfig, getSecrets } from "./env";
 
 /**
@@ -32,6 +32,14 @@ export interface GenerateOptions {
   /** 기본 0.9 — 해석문이라 약간 높게 둔다. */
   temperature?: number;
   maxOutputTokens?: number;
+  /**
+   * 추론(thinking) 예산. 기본 "minimal".
+   *
+   * 사주 해석은 이미 계산된 사실을 서술하는 작업이라 깊은 추론이 필요하지 않다.
+   * 실측(gemini-3.5-flash): MINIMAL 6.9s / LOW 12.6s / MEDIUM 11.4s.
+   * Vercel 함수 타임아웃(maxDuration=30)을 지키려면 MINIMAL 이 안전하다.
+   */
+  thinkingLevel?: ThinkingLevel;
 }
 
 export async function generateText(options: GenerateOptions): Promise<{
@@ -50,6 +58,9 @@ export async function generateText(options: GenerateOptions): Promise<{
         systemInstruction: options.systemInstruction,
         temperature: options.temperature ?? 0.9,
         maxOutputTokens: options.maxOutputTokens ?? 4096,
+        thinkingConfig: {
+          thinkingLevel: options.thinkingLevel ?? ThinkingLevel.MINIMAL,
+        },
       },
     });
 

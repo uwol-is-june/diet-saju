@@ -48,7 +48,9 @@ export function getSecrets(): z.infer<typeof secretsSchema> {
 
 // ── 일반 설정 (없으면 기본값으로 동작) ─────────────────────────────────────
 const runtimeConfigSchema = z.object({
-  GEMINI_MODEL: z.string().min(1).default("gemini-2.5-flash"),
+  // gemini-2.5-* 는 신규 API 키에 더 이상 제공되지 않는다 (404 NOT_FOUND).
+  // 사용 가능한 모델은 ListModels 로 확인할 수 있다.
+  GEMINI_MODEL: z.string().min(1).default("gemini-3.5-flash"),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(5),
 });
 

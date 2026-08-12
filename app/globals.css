@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c1917;
+  --color-ink-soft: #57534e;
+  --color-paper: #faf8f5;
+  --color-paper-deep: #f2ede6;
+  --color-brand: #7c3aed;
+  --color-brand-soft: #ede9fe;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* LLM 이 돌려주는 마크다운 렌더 영역 */
+.reading h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.reading h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+}
+.reading p {
+  margin-bottom: 0.75rem;
+  line-height: 1.75;
+  color: var(--color-ink-soft);
+}
+.reading ul,
+.reading ol {
+  margin: 0 0 0.75rem 1.25rem;
+  line-height: 1.75;
+  color: var(--color-ink-soft);
+}
+.reading ul {
+  list-style: disc;
+}
+.reading ol {
+  list-style: decimal;
+}
+.reading strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import Markdown from "react-markdown";
+import { breakSentences } from "@/lib/reading/line-breaks";
 import {
   SECTION_SPECS,
   parseReadingSections,
@@ -43,7 +44,7 @@ export function ReadingSections({
         <ReadingStatus streaming={streaming} hasText={reading.length > 0} />
         {reading ? (
           <>
-            <Markdown>{reading}</Markdown>
+            <Prose>{reading}</Prose>
             {streaming && <StreamingCursor />}
           </>
         ) : (
@@ -64,7 +65,7 @@ export function ReadingSections({
 
       {parsed.preamble && (
         <section className="reading rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
-          <Markdown>{parsed.preamble}</Markdown>
+          <Prose>{parsed.preamble}</Prose>
         </section>
       )}
 
@@ -108,7 +109,7 @@ function Body({ section, showCursor }: { section: ParsedSection; showCursor: boo
   if (!section.body) return showCursor ? <StreamingCursor /> : null;
   return (
     <div className="reading">
-      <Markdown>{section.body}</Markdown>
+      <Prose>{section.body}</Prose>
       {showCursor && <StreamingCursor />}
     </div>
   );
@@ -147,6 +148,17 @@ function ProgressNote({
       풀이를 쓰고 있습니다… {Math.min(done, expected)}/{expected}
     </p>
   );
+}
+
+/**
+ * 마크다운을 그리는 **유일한 통로** (TASK-28).
+ *
+ * `react-markdown` 을 직접 부르지 말고 이걸 쓴다. 문장 단위 줄바꿈은 렌더 직전 변환이라
+ * 호출부마다 붙이면 한 곳을 빠뜨리게 되고 — 특히 계약을 어겼을 때 가는 **폴백 경로**를
+ * 빠뜨리기 쉽다 — 화면이 경로에 따라 다르게 보인다.
+ */
+function Prose({ children }: { children: string }) {
+  return <Markdown>{breakSentences(children)}</Markdown>;
 }
 
 /** 생성 중임을 알리는 커서. 텍스트가 멈춰 있어도 살아 있다는 신호가 된다. */

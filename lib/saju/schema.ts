@@ -1,4 +1,10 @@
 import { z } from "zod";
+import type {
+  DaeunAnalysis,
+  OhaengAnalysis,
+  SeunYear,
+  StrengthAnalysis,
+} from "./analysis";
 
 /**
  * 사주 입력 스키마 — 클라이언트/서버 공용.
@@ -37,8 +43,26 @@ export const sajuInputSchema = z.object({
     .optional(),
   /** 양력/음력 */
   calendar: z.enum(["solar", "lunar"]).default("solar"),
+  /** 음력 입력일 때 윤달 여부. 양력이면 무시된다. */
+  isLeapMonth: z.boolean().default(false),
   gender: z.enum(["male", "female", "unspecified"]).default("unspecified"),
   readingType: z.enum(READING_TYPES).default("general"),
+
+  /**
+   * 시각 보정 방식.
+   * - `longitude`(기본): 경도 보정만. 한국 만세력 다수 관행
+   * - `true`: 경도 + 균시차 (엄밀한 진태양시)
+   * - `standard`: 보정 없음 (시계시 그대로)
+   */
+  solarTimeMode: z.enum(["standard", "longitude", "true"]).default("longitude"),
+  /**
+   * 자시 학파 — 23:00~23:59 의 일주를 어느 날로 볼지.
+   * - `yajasi`(기본): 일주는 자정에 바뀐다 (야자시·조자시 구분). 한국 다수 관행
+   * - `jasi`: 23:00 부터 다음날 일주 (중국식)
+   */
+  dayBoundary: z.enum(["yajasi", "jasi"]).default("yajasi"),
+  /** 출생지 경도(도). 기본값은 서울(126.9784). 부산은 129.08 처럼 지정 가능. */
+  longitude: z.number().min(124).max(132).optional(),
 });
 
 export type SajuInput = z.infer<typeof sajuInputSchema>;
@@ -55,6 +79,24 @@ export interface Pillar {
   ohaeng: string;
   /** 천간 십신 예: "편인" (일주는 본인이므로 "일간") */
   sipsin: string;
+  /** 지지 십신 — 지장간 본기(정기)를 일간과 비교한 것 */
+  jiSipsin: string;
+}
+
+/** 어떤 보정이 적용됐는지 — 결과의 근거를 사용자에게 보여주기 위한 정보 */
+export interface TimeCorrectionInfo {
+  mode: "standard" | "longitude" | "true";
+  dayBoundary: "yajasi" | "jasi";
+  /** 시계시 대비 총 보정량(분). 음수면 앞당긴 것 */
+  correctionMinutes: number;
+  /** 서머타임으로 앞당겨져 있던 분 (0 또는 60) */
+  dstMinutes: number;
+  /** 출생 당시 표준자오선 오프셋(분): 540=동경135°, 510=동경127.5° */
+  standardOffsetMinutes: number;
+  /** 보정 후 실제로 시주 판정에 쓴 시각. 시각 미상이면 null */
+  appliedTime: string | null;
+  /** 보정으로 날짜가 넘어가 일주 판정 기준일이 바뀌었는지 */
+  appliedDateShifted: boolean;
 }
 
 /** 계산된 사주 원국 */
@@ -73,8 +115,15 @@ export interface SajuChart {
   saencho: string;
   /** 일간 (사주의 주체) */
   ilgan: string;
-  /** 오행 분포 (목/화/토/금/수 개수) */
-  ohaengCount: Record<string, number>;
+  /** 오행 분포 — 개수(사실) + 계절 기세(고전) + 점수(우리 관례) */
+  ohaeng: OhaengAnalysis;
+  /** 신강/신약 — 득령·득지·득세 3기준 */
+  strength: StrengthAnalysis;
+  /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */
+  daeun: DaeunAnalysis | null;
+  /** 세운 (기준 연도부터 3년) */
+  seun: SeunYear[];
+  timeCorrection: TimeCorrectionInfo;
 }
 
 export interface SajuReadingResponse {

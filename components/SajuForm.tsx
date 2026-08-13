@@ -19,8 +19,13 @@ export function SajuForm() {
   const [birthTime, setBirthTime] = useState("");
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [calendar, setCalendar] = useState<"solar" | "lunar">("solar");
+  const [isLeapMonth, setIsLeapMonth] = useState(false);
   const [gender, setGender] = useState<"male" | "female" | "unspecified">("unspecified");
   const [readingType, setReadingType] = useState<ReadingType>("general");
+  const [solarTimeMode, setSolarTimeMode] = useState<"standard" | "longitude" | "true">(
+    "longitude",
+  );
+  const [dayBoundary, setDayBoundary] = useState<"yajasi" | "jasi">("yajasi");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +46,11 @@ export function SajuForm() {
           birthDate,
           birthTime: timeUnknown || !birthTime ? undefined : birthTime,
           calendar,
+          isLeapMonth: calendar === "lunar" ? isLeapMonth : false,
           gender,
           readingType,
+          solarTimeMode,
+          dayBoundary,
         }),
       });
 
@@ -110,6 +118,17 @@ export function SajuForm() {
               <option value="solar">양력</option>
               <option value="lunar">음력</option>
             </select>
+            {calendar === "lunar" && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={isLeapMonth}
+                  onChange={(e) => setIsLeapMonth(e.target.checked)}
+                  className="size-4 accent-violet-600"
+                />
+                윤달입니다
+              </label>
+            )}
           </Field>
 
           <Field label="태어난 시각">
@@ -153,6 +172,44 @@ export function SajuForm() {
             ))}
           </div>
         </Field>
+
+        <details className="rounded-xl border border-stone-200 bg-stone-50/60 px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium text-stone-700">
+            만세력 고급 설정
+          </summary>
+          <div className="mt-4 space-y-4">
+            <Field label="출생시각 보정">
+              <select
+                value={solarTimeMode}
+                onChange={(e) => setSolarTimeMode(e.target.value as typeof solarTimeMode)}
+                className={inputClass}
+              >
+                <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
+                <option value="true">진태양시 (경도 + 균시차)</option>
+                <option value="standard">보정 없음 (시계시 그대로)</option>
+              </select>
+              <p className="mt-1.5 text-xs text-stone-500">
+                한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분 빠릅니다.
+                서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
+              </p>
+            </Field>
+
+            <Field label="자시(子時) 기준">
+              <select
+                value={dayBoundary}
+                onChange={(e) => setDayBoundary(e.target.value as typeof dayBoundary)}
+                className={inputClass}
+              >
+                <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
+                <option value="jasi">자시파 (23시부터 다음날)</option>
+              </select>
+              <p className="mt-1.5 text-xs text-stone-500">
+                23:00~23:59 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파 차이입니다.
+                그 시간대가 아니면 결과가 같습니다.
+              </p>
+            </Field>
+          </div>
+        </details>
 
         <button
           type="submit"

@@ -48,9 +48,10 @@ export function getSecrets(): z.infer<typeof secretsSchema> {
 
 // ── 일반 설정 (없으면 기본값으로 동작) ─────────────────────────────────────
 const runtimeConfigSchema = z.object({
-  // gemini-2.5-* 는 신규 API 키에 더 이상 제공되지 않는다 (404 NOT_FOUND).
-  // 사용 가능한 모델은 ListModels 로 확인할 수 있다.
-  GEMINI_MODEL: z.string().min(1).default("gemini-3.5-flash"),
+  // 무료 등급 일일 한도(RPD)가 모델마다 25배까지 차이난다.
+  // Flash Lite 계열만 500 RPD 이고 나머지 Flash 는 20 RPD 다. 근거는 CLAUDE.md 참고.
+  // gemini-2.5-* 는 신규 API 키에 제공되지 않는다 (404 NOT_FOUND).
+  GEMINI_MODEL: z.string().min(1).default("gemini-3.5-flash-lite"),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(5),
 });
 

@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate:saju": "tsx --conditions react-server scripts/validate-saju.ts"
   },
   "dependencies": {
     "@google/genai": "^2.16.0",
@@ -28,7 +29,9 @@
     "@types/react-dom": "^19.2.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.0",
+    "server-only": "^0.0.1",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.0"
   }
 }

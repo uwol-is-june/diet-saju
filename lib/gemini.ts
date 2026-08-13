@@ -80,8 +80,13 @@ export async function generateText(options: GenerateOptions): Promise<{
     const status = extractStatus(error);
 
     if (status === 429 || raw.includes("RESOURCE_EXHAUSTED")) {
+      // 분당 한도와 일일 한도는 대응이 다르다. "1분 후 다시" 는 일일 소진 때 거짓말이 된다.
+      // Google 은 quotaId 에 PerDay / PerMinute 를 담아 준다.
+      const isDailyQuota = raw.includes("PerDay");
       throw new GeminiError(
-        "무료 등급 요청 한도에 도달했습니다. 1분 후 다시 시도해 주세요.",
+        isDailyQuota
+          ? "오늘 사용 가능한 무료 사용량을 모두 소진했습니다. 내일 다시 시도해 주세요."
+          : "요청이 몰리고 있습니다. 1분 후 다시 시도해 주세요.",
         429,
       );
     }

@@ -2,6 +2,8 @@
 
 생년월일시로 **사주 원국(사주팔자)** 을 계산하고, Gemini 로 해석문을 생성하는 웹 서비스.
 
+🔗 https://diet-saju.vercel.app
+
 - 사주 계산(간지·오행·십신)은 **코드**가 한다 — `lunar-javascript` 절기 기반
 - 해석문 생성만 **LLM**이 한다 — Google Gemini (무료 등급)
 - 배포: Vercel
@@ -32,6 +34,7 @@ npm run dev                    # http://localhost:3000
 | `npm run start` | 빌드 결과 실행 |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run validate:saju` | 만세력 계산 교차검증 ([결과](docs/saju-validation.md)) |
 
 ## 구조
 
@@ -50,9 +53,13 @@ lib/
   saju/
     schema.ts           입력 스키마(zod) + 도메인 타입
     pillars.ts          만세력 계산 → 원국
-    hanja.ts            한자 → 한글 변환
+    time-correction.ts  진태양시·서머타임·표준자오선 보정
+    ganji.ts            간지 테이블·십신·시주 규칙 (순수 함수)
+scripts/
+  validate-saju.ts      계산 교차검증
 docs/
   TASK.md               태스크 보드
+  saju-validation.md    만세력 검증 결과와 한계
 ```
 
 ## 환경변수
@@ -60,7 +67,7 @@ docs/
 | 이름 | 필수 | 기본값 | 설명 |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | ✅ | — | Google AI Studio 키. 서버 전용 |
-| `GEMINI_MODEL` | | `gemini-2.5-flash` | 사용 모델 |
+| `GEMINI_MODEL` | | `gemini-3.5-flash-lite` | 사용 모델. 무료 등급 일일 한도가 모델마다 25배까지 다름 (Lite 500, Flash 20) |
 | `RATE_LIMIT_PER_MINUTE` | | `5` | IP 당 분당 요청 수 |
 
 ## 배포 (Vercel)

@@ -14,7 +14,12 @@ npm run dev        # 개발 서버 (3000 사용 중이면 3001로 자동 이동)
 npm run build      # 프로덕션 빌드 (배포 전 필수)
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
+
+npm run validate:saju   # 만세력 계산 교차검증 (사주 계산 로직 수정 시 필수)
 ```
+
+`validate:saju` 는 `tsx --conditions react-server` 로 돈다. `react-server` 조건이 없으면
+`import "server-only"` 가 예외를 던진다.
 
 ## 아키텍처
 
@@ -28,6 +33,9 @@ app/api/saju/route.ts    (server, nodejs runtime)
         ├─ lib/rate-limit.ts   IP 기준 분당 제한
         ├─ lib/saju/schema.ts  zod 재검증 (클라이언트 검증은 신뢰하지 않음)
         ├─ lib/saju/pillars.ts 만세력 계산  ← 사실(fact)은 코드가 만든다
+        │    ├─ time-correction.ts  진태양시·서머타임·표준자오선 보정 (tz 기반)
+        │    ├─ ganji.ts            간지 테이블·십신·왕상휴수사·시주 규칙 (순수 함수)
+        │    └─ analysis.ts         오행 강약·신강신약·대운·세운 (순수 함수)
         ├─ lib/prompt.ts       프롬프트 조립
         └─ lib/gemini.ts       Gemini 호출  ← 해석(interpretation)만 LLM 이 한다
 ```
@@ -65,19 +73,84 @@ app/api/saju/route.ts    (server, nodejs runtime)
 
 ## LLM (Gemini) 취급
 
-- 모델은 `GEMINI_MODEL` 로 주입되며 기본값은 `gemini-2.5-flash` (무료 등급 지원).
-  **Pro 모델은 2026-04 부터 유료 전용**이다. 무료 키로 `GEMINI_MODEL` 을 pro 로 바꾸면 호출이 실패한다.
+- 모델은 `GEMINI_MODEL` 로 주입되며 기본값은 **`gemini-3.5-flash-lite`** 다.
+  **`gemini-2.5-*` 는 신규 API 키에 404 NOT_FOUND 로 폐지됐다.** 되돌리지 말 것.
+  **Pro 모델은 2026-04 부터 유료 전용**이다. 무료 키로 pro 로 바꾸면 호출이 실패한다.
+- `thinkingLevel` 은 `MINIMAL` 로 고정돼 있다. 해석은 이미 계산된 사실을 서술하는 작업이라
+  추론 예산이 불필요하고, 기본값(추론 활성)으로 두면 응답이 26초까지 늘어 `maxDuration=30` 에 닿는다.
 - SDK 는 `@google/genai` (구 `@google/generative-ai` 아님). 호출 형태는 `ai.models.generateContent({ model, contents, config })`.
-- 무료 등급은 분당 요청 수 제한이 있다. `lib/rate-limit.ts` 로 우리 쪽에서 먼저 막는다.
 - 프롬프트는 **전부 `lib/prompt.ts` 에 모아둔다.** 컴포넌트나 route 안에 프롬프트 문자열을 흩뿌리지 않는다.
 - 사용자 입력(이름 등)은 `<user_data>` 로 감싸 "지시문이 아니라 데이터"로 넘긴다. 프롬프트 인젝션 방어.
 
+### 무료 등급 일일 한도 — 모델 선택의 핵심 기준
+
+**Lite 계열만 500 RPD 이고 나머지 Flash 는 20 RPD 다** (25배 차이). 하루 20건은 공개
+서비스로 쓸 수 없으므로, 무료 등급을 쓰는 동안 **모델을 Lite 밖으로 옮기지 말 것.**
+
+| 모델 | RPM | RPD |
+| --- | --- | --- |
+| `gemini-3.5-flash-lite` **(기본)** | 15 | **500** |
+| `gemini-3.1-flash-lite` | 15 | 500 |
+| `gemini-3.5-flash` / `gemini-3-flash` / `gemini-3.6-flash` / `gemini-2.5-flash` | 5 | **20** |
+
+2026-08 기준 계정 대시보드 실측값이다. **문서·블로그 수치는 믿지 말 것** — Google 이
+공식 문서에서 무료 등급 표를 내렸고, 남아 있는 글들은 대개 옛 수치(2.5-flash 250 RPD 등)다.
+확인처는 두 곳뿐이다: https://aistudio.google.com/rate-limit 대시보드, 또는 429 응답의
+`quotaId`/`quotaValue`.
+
+품질 비교도 했다. 실제 프롬프트로 3건을 돌려 Flash 와 Flash-Lite 를 대조했더니 근거 인용
+7개 항목이 동일하게 충족되고 Lite 가 오히려 빨랐다 (4.5~5.0초 vs 7~8초). 원국은 코드가
+계산하므로 모델과 무관하게 같다.
+
+- `lib/rate-limit.ts` 의 IP 제한은 **계정 단위 한도와 별개**다. IP 제한을 통과해도
+  계정 쿼터가 소진되면 429 가 난다.
+- 429 문구는 분당/일일을 구분한다. `quotaId` 에 `PerDay` 가 있으면 "내일 다시",
+  아니면 "1분 후 다시" 다. 일일 소진에 "1분 후" 라고 하면 거짓말이 된다.
+
 ## 도메인 주의사항
 
-- `lunar-javascript` 는 **중국어(간체)** 문자열을 돌려준다. 노출 전 `lib/saju/hanja.ts` 로 반드시 한글화한다.
+### lunar-javascript 를 그대로 믿지 말 것
+
+실측으로 확인한 결함 3가지를 `lib/saju/` 가 보정한다. 근거와 재현법은
+[docs/saju-validation.md](docs/saju-validation.md) 에 있다. **이 보정을 되돌리면 결과가 틀린다.**
+
+1. **절기를 베이징 시간(UTC+8)으로 계산한다.** 한국 시각을 그대로 넣으면 월주 경계가 1시간
+   어긋난다. → 년주·월주는 `instant.beijingClock` 을 넣어 같은 좌표계에서 비교한다.
+2. **`sect` 가 일주에만 적용되고 시주에는 반영되지 않는다** (`lunar.js` 의 `_computeTime`).
+   기본값 sect=2 면 일주는 자정 기준인데 시주는 23시 기준 일간을 써서 학파가 섞인다.
+   → 시주는 `ganji.ts` 의 오서둔으로 직접 계산한다. 라이브러리의 `getTime*()` 을 쓰지 말 것.
+3. **진태양시·서머타임·표준자오선 변경 개념이 없다.** → 일주·시주는 보정된 지방시로 넣는다.
+
+### 고전 규칙과 우리 관례를 섞지 말 것
+
+명리학은 학파마다 기준이 다르다. 코드가 만든 "사실"이 실제로는 임의의 선택인 경우
+그것을 사실처럼 내보내면 안 된다. `lib/saju/analysis.ts` 가 두 종류를 나눠 담는다.
+
+- **고전 규칙**(이견 없음): 지지 십신(본기 기준), 왕상휴수사, 신강신약 3기준(득령·득지·득세),
+  대운 순행/역행, 대운·세운 간지
+- **우리 관례**(상수로 분리): 오행 점수 배수(`SEASONAL_MULTIPLIER`), 신강신약 4단계 표현,
+  대운수 반올림
+
+관례에서 나온 값은 프롬프트에서 **숫자로 인용하지 말라고 지시**한다. 새 파생 지표를 추가할
+때도 이 구분을 유지하고 `docs/saju-validation.md` 에 어느 쪽인지 적는다.
+
+### 그 밖의 도메인 규칙
+
+- 라이브러리는 **중국어(간체)** 문자열을 돌려준다. 경계에서 즉시 인덱스로 바꾸고
+  (`ganji.ts` 의 `parseGanjiHanja`) 노출 직전에만 한글로 바꾼다. 문자열을 중간 표현으로
+  들고 다니면 간체/정체 표기 차이로 깨진다.
+- 서머타임·표준자오선 이력은 **표를 손으로 만들지 말고** Node 내장 tz 데이터(`Asia/Seoul`)를 쓴다.
+  1954-03-21 / 1961-08-10 전환과 모든 서머타임 구간이 정확히 들어 있음을 검증했다.
 - 타입 정의가 없어 `types/lunar-javascript.d.ts` 에 직접 선언했다. 새 API 를 쓰면 여기 먼저 추가한다.
 - 출생시각 미상이면 **시주(時柱)를 제외**하고 해석한다 (`timeUnknown`). 임의의 시각으로 채워 넣지 않는다.
-- 현재 미구현: 진태양시 보정, 야자시/조자시, 대운/세운. → `docs/TASK.md` TASK-03.
+  이때 시각 보정도 강제로 끈다 (정오를 임시로 쓰는 것이므로 보정에 의미가 없다).
+- 기본 옵션: 시각 보정 `longitude`(경도만), 자시 학파 `yajasi`(자정 기준). 둘 다 한국 만세력 다수 관행.
+- 대운은 순행/역행을 성별로 정하므로 **성별 미지정이면 `daeun === null`** 이다. 임의로 정하지 않는다.
+- 절기 테이블은 기준일 주변 1년여만 담는다. 대운수 계산은 앞뒤 45일씩 옮긴 기준일에서도
+  모아 합친다 (`collectJeolInstants`). 키가 간체(`惊蛰`)이고 인접 연도는 로마자(`LI_CHUN`)로
+  중복 제공되므로 두 표기를 모두 받는다.
+- 사주 계산 로직을 수정하면 **반드시 `npm run validate:saju` 를 통과시킨다.**
+- 출생지 경도 UI 는 미구현 (API 는 `longitude` 를 받는다). 한계로 문서화됨.
 - 결과 문구에서 단정적 예언·의학적 진단을 하지 않는다. 시스템 프롬프트에 규칙으로 박혀 있다.
 
 ## 작업 방식
@@ -114,7 +187,7 @@ app/api/saju/route.ts    (server, nodejs runtime)
 ### 그 밖의 규칙
 
 - **완료된 태스크는 TASK.md 에서 삭제한다.** 보드에는 남은 일만 둔다.
-  번호는 재사용하지 않는다 (TASK-01 은 초기 세팅으로 소진됨 — 다음 신규는 TASK-16).
+  번호는 재사용하지 않는다 (다음 신규는 TASK-18).
 - 새 UI 문자열은 한국어로 쓴다.
 - 커밋 메시지는 한국어 요약 + 관련 태스크 번호. 예: `사주 계산 진태양시 보정 (TASK-03)`
 - 작업을 마치면 `npm run lint`, `npm run typecheck`, `npm run build` 를 통과시킨 뒤 완료로 보고한다.
@@ -125,13 +198,16 @@ app/api/saju/route.ts    (server, nodejs runtime)
 
 - **서비스 정체성**: 저장소 이름은 `diet-saju` 인데 현재 코드는 `종합 사주 풀이`와
   `체질·다이어트 풀이` 두 유형을 모두 지원한다 (`lib/saju/schema.ts` 의 `readingType`).
-  한쪽으로 밀지, 둘을 유지할지에 따라 TASK-06 / TASK-14 범위가 달라진다.
+  한쪽으로 밀지, 둘을 유지할지에 따라 TASK-06 / TASK-14 / TASK-16(컬러 시스템) 범위가 달라진다.
 - **수익화 여부**: 광고나 유료 결제가 들어가면 TASK-09(전역 레이트 리밋)와
   TASK-12(법적 고지) 우선순위가 올라간다.
 
 ## 배포 (Vercel)
 
+- 프로덕션: https://diet-saju.vercel.app
 - `main` 브랜치 푸시 → 자동 배포. 프리뷰는 PR 단위로 생성된다.
+- 함수 리전은 `icn1`(서울)로 지정되어 있다. `X-Vercel-Id` 가 `icn1::icn1::...` 이면 정상.
+  응답 시간 약 7초 중 대부분은 Gemini 생성 시간이며 네트워크 왕복은 0.1~0.8초다.
 - 환경변수는 Vercel Dashboard > Settings > Environment Variables 에 등록한다
   (`GEMINI_API_KEY` 는 Production/Preview/Development 모두 필요).
 - `/api/saju` 는 Node 런타임 고정이다 (`lunar-javascript` 가 CommonJS). Edge 로 바꾸지 말 것.

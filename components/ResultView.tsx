@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { Pillar, ReadingType, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 import { ReadingSections } from "./ReadingSections";
+import { ShareActions } from "./ShareActions";
 
 const OHAENG_COLOR: Record<string, string> = {
   목: "bg-ohaeng-mok text-ohaeng-mok-ink",
@@ -103,6 +104,9 @@ export function ResultView({
       <div aria-label="풀이" aria-busy={streaming} role="region">
         <ReadingSections reading={reading} readingType={readingType} streaming={streaming} />
       </div>
+
+      {/* 생성이 끝난 뒤에 보여준다 — 쓰는 중에 공유 버튼을 내밀면 미완성 결과를 퍼뜨린다. */}
+      {!streaming && <ShareActions chart={chart} readingType={readingType} />}
 
       <p className="text-center text-xs leading-relaxed text-ink-muted">
         이 풀이는 명리학 해석을 참고한 오락·참고용 콘텐츠이며, AI 가 작성했습니다.

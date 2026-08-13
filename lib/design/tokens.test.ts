@@ -168,8 +168,42 @@ describe("대비비 — UI 경계 (1.4.11, 3:1)", () => {
   });
 });
 
+describe("공유 카드(og:image) 팔레트가 globals.css 와 같다", () => {
+  // docs/og-card.html 은 미리 렌더해 두는 정적 카드라 CSS 를 import 할 수 없다.
+  // 값을 복사해 쓰므로 여기서 원본과 대조해 드리프트를 막는다. (TASK-10)
+  const OG = readFileSync(new URL("../../docs/og-card.html", import.meta.url), "utf8");
+  const declared = [...OG.matchAll(/(--raw-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)];
+
+  it("팔레트 선언을 읽어 온다", () => {
+    expect(declared.length).toBeGreaterThan(5);
+  });
+
+  it.each(declared.map((m) => [m[1]!, m[2]!]))("%s 가 원본과 일치한다", (name, value) => {
+    expect(raw[name], `${name} 이 globals.css 에 없다`).toBeDefined();
+    expect(value.toLowerCase()).toBe(raw[name]!.toLowerCase());
+  });
+
+  it("og 카드에 쓰인 hex 가 전부 팔레트 선언 안에 있다", () => {
+    // 팔레트 블록 밖에서 hex 를 직접 쓰면 여기서 잡힌다.
+    const all = [...OG.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((m) => m[0]!.toLowerCase());
+    const allowed = new Set(declared.map((m) => m[2]!.toLowerCase()));
+    expect(all.filter((hex) => !allowed.has(hex))).toEqual([]);
+  });
+});
+
 describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
-  const sources = ["app/page.tsx", "app/layout.tsx", "components/SajuForm.tsx", "components/ResultView.tsx"];
+  const sources = [
+    "app/page.tsx",
+    "app/layout.tsx",
+    "components/SajuForm.tsx",
+    "components/ResultView.tsx",
+    "components/ReadingSections.tsx",
+    "components/ShareActions.tsx",
+    "components/SiteFooter.tsx",
+    "components/FirstVisitNotice.tsx",
+    // 캔버스 카드도 색을 CSS 토큰에서 읽는다. hex 를 박으면 단일 소스가 깨진다.
+    "lib/share/draw-card.ts",
+  ];
 
   it.each(sources)("%s 에 hex 리터럴이 없다", (path) => {
     const code = readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Markdown from "react-markdown";
 import type { Pillar, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 
@@ -106,8 +107,13 @@ export function ResultView({
         )}
       </section>
 
-      <p className="text-center text-xs text-ink-muted">
-        이 풀이는 명리학 해석을 참고한 콘텐츠입니다. 의학적·법률적 조언이 아닙니다.
+      <p className="text-center text-xs leading-relaxed text-ink-muted">
+        이 풀이는 명리학 해석을 참고한 오락·참고용 콘텐츠이며, AI 가 작성했습니다.
+        <br />
+        의학적·법률적 조언이 아닙니다.{" "}
+        <Link href="/disclaimer" className="underline hover:text-brand-ink">
+          면책 고지
+        </Link>
       </p>
     </div>
   );

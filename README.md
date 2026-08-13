@@ -34,7 +34,7 @@ npm run dev                    # http://localhost:3000
 | `npm run start` | 빌드 결과 실행 |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Vitest 전체 (145건) |
+| `npm test` | Vitest 전체 |
 | `npm run test:watch` | 감시 모드 |
 | `npm run validate:saju` | 사주 계산 테스트만 ([검증 내용](docs/saju-validation.md)) |
 

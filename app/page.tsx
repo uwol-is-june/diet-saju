@@ -1,8 +1,9 @@
+import { FirstVisitNotice } from "@/components/FirstVisitNotice";
 import { SajuForm } from "@/components/SajuForm";
 
 export default function HomePage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-12">
+    <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <header className="mb-8 text-center">
         <p className="mb-2 text-sm font-medium tracking-widest text-brand-ink">
           DIET SAJU
@@ -15,6 +16,7 @@ export default function HomePage() {
         </p>
       </header>
 
+      <FirstVisitNotice />
       <SajuForm />
     </main>
   );

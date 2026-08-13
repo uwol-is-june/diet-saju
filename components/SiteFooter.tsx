@@ -1,0 +1,30 @@
+import Link from "next/link";
+
+/**
+ * 모든 페이지 하단에 붙는다 (app/layout.tsx).
+ * 법적 고지 접근 경로를 항상 노출하는 것이 목적이다.
+ */
+export function SiteFooter() {
+  return (
+    <footer className="mx-auto w-full max-w-2xl px-5 pb-10 text-center">
+      <div className="border-t border-line pt-6">
+        <nav className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
+          <Link href="/" className="text-ink-muted hover:text-brand-ink">
+            사주 풀이
+          </Link>
+          <Link href="/disclaimer" className="text-ink-muted hover:text-brand-ink">
+            면책 고지
+          </Link>
+          <Link href="/privacy" className="text-ink-muted hover:text-brand-ink">
+            개인정보 처리방침
+          </Link>
+        </nav>
+        <p className="mt-4 text-xs leading-relaxed text-ink-muted">
+          오락·참고 목적의 콘텐츠입니다. 의학적·법률적 조언이 아닙니다.
+          <br />
+          입력한 생년월일은 저장하지 않으며, 해석문 생성을 위해 Google 로 전송됩니다.
+        </p>
+      </div>
+    </footer>
+  );
+}

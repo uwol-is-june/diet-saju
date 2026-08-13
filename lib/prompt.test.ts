@@ -91,6 +91,25 @@ describe("체질 판정 블록", () => {
     expect(dietPrompt).toContain(chart.constitution.thermalExercise);
   });
 
+  it("재료 범주가 근거와 함께 들어간다 (TASK-27)", () => {
+    const { constitution } = chart;
+    for (const item of constitution.focus) {
+      expect(dietPrompt).toContain(item.foodBasis);
+      for (const group of item.foodGroups) {
+        expect(dietPrompt, `${group} 없음`).toContain(group);
+      }
+      expect(dietPrompt).toContain(item.foodHow);
+    }
+    expect(constitution.focus.length).toBeGreaterThan(0);
+  });
+
+  it("목록 밖 식품 이름을 쓰지 말라고 지시한다", () => {
+    // 완료 기준의 절반이 이 지시에 걸려 있다 — 목록을 닫아 두는 것은 코드가 하지만
+    // 본문에 다른 식품이 등장하지 않게 막는 것은 프롬프트뿐이다.
+    expect(dietPrompt).toContain("목록 밖의 식품 이름");
+    expect(dietPrompt).toContain('"재료 범주" 안에');
+  });
+
   it("다시 판정하지 말라고 지시한다", () => {
     expect(dietPrompt).toContain("다시 판정하지 말고");
   });
@@ -142,6 +161,28 @@ describe("표현 규칙", () => {
     for (const word of ["단식", "칼로리", "목표 체중", "간헐적 단식"]) {
       expect(dietPrompt, `${word} 금지 문구 없음`).toContain(word);
     }
+  });
+
+  it("식품에 효능·섭취량·상표를 붙이지 말라고 막는다 (TASK-27)", () => {
+    // 여기가 의학·영양 조언에 가장 가까이 가는 지점이다. 두 곳에서 막는다.
+    expect(dietPrompt).toContain("영양제·보조식품·건강기능식품·상표명");
+    expect(dietPrompt).toContain("섭취량");
+    const guide = dietPrompt.slice(dietPrompt.indexOf("## 잘 맞는 식습관"));
+    const sectionInstruction = guide.slice(0, guide.indexOf("## 잘 맞는 움직임"));
+    expect(sectionInstruction).toContain("효능을 붙이지 말 것");
+    expect(sectionInstruction).toContain("목록 밖의 식품 이름");
+  });
+
+  it("개인 변수를 모른다는 전제를 밝힌다", () => {
+    // 알레르기·지병·복약·임신 여부를 입력받지 않으므로 다량 섭취·제한을 권할 근거가 없다.
+    expect(dietPrompt).toContain("알레르기·지병·복약·임신 여부를 우리는 모릅니다");
+    expect(dietPrompt).toContain("많이 먹으라거나\n  끊으라고 하지 않습니다");
+  });
+
+  it("재료(오행)와 조리(한열)를 다른 층으로 다루라고 지시한다", () => {
+    // 섞으면 모델이 "이 재료는 몸을 따뜻하게 한다" 같은 새 판정을 만들어 낸다.
+    expect(dietPrompt).toContain("재료(오행)와 조리");
+    expect(dietPrompt).toContain("다른 층");
   });
 });
 

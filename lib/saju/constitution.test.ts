@@ -4,8 +4,10 @@ import {
   BODY_AXIS,
   DEFICIENT_RATIO,
   DIET_APPROACH_NOTE,
+  ELEMENT_FOOD,
   EXCESS_RATIO,
   FOCUS_GUIDE,
+  FOOD_HOW,
   GAIN_PATTERN_NOTE,
   METABOLISM_NOTE,
   THERMAL_GUIDE,
@@ -171,6 +173,85 @@ describe("오행 과다 / 부족 (우리 관례 — 임계값)", () => {
         expect(item.diet).toBe(FOCUS_GUIDE[item.element][item.level].diet);
         expect(item.exercise).toBe(FOCUS_GUIDE[item.element][item.level].exercise);
       }
+    }
+  });
+});
+
+describe("재료 범주 (TASK-27)", () => {
+  /**
+   * 완료 기준은 "같은 사주에 항상 같은 식품 목록" + "목록 밖 식품이 등장하지 않는다" 다.
+   * 뒤쪽은 프롬프트 지시라 여기서는 **목록이 결정론적이고 닫혀 있는지**를 본다.
+   */
+  it("다섯 오행 모두에 근거와 재료가 있다", () => {
+    for (const element of OHAENG_LIST) {
+      const food = ELEMENT_FOOD[element];
+      expect(food.basis.length).toBeGreaterThan(0);
+      expect(food.groups.length).toBeGreaterThanOrEqual(3);
+      expect(food.groups.every((group) => group.length > 0)).toBe(true);
+    }
+  });
+
+  it("오미·오색 배속(고전)을 근거로 적는다", () => {
+    // 배속 자체는 고전이고 재료 선택만 우리 관례다. 근거 문구가 그것을 밝혀야 한다.
+    const flavor: Record<Ohaeng, string> = {
+      목: "신맛",
+      화: "쓴맛",
+      토: "단맛",
+      금: "매운맛",
+      수: "짠맛",
+    };
+    for (const element of OHAENG_LIST) {
+      expect(ELEMENT_FOOD[element].basis).toContain(flavor[element]);
+    }
+  });
+
+  it("과다·부족마다 재료가 focus 에 실린다", () => {
+    for (const chart of SWEEP) {
+      const result = analyzeConstitution(inputFrom(chart));
+      for (const item of result.focus) {
+        expect(item.foodBasis).toBe(ELEMENT_FOOD[item.element].basis);
+        expect(item.foodGroups).toEqual(ELEMENT_FOOD[item.element].groups);
+        expect(item.foodHow).toBe(FOOD_HOW[item.level]);
+      }
+    }
+  });
+
+  it("부족은 곁들이기, 과다는 더 늘리지 않기까지만 말한다", () => {
+    // 알레르기·지병·복약을 모르므로 다량 섭취나 제한을 권할 근거가 없다.
+    expect(FOOD_HOW.부족).toContain("곁들이는");
+    expect(FOOD_HOW.부족).toContain("많이 먹으라는 뜻이 아니다");
+    expect(FOOD_HOW.과다).toContain("더 늘리지 않아도");
+    expect(FOOD_HOW.과다).toContain("끊으라는 뜻은 아니다");
+  });
+
+  it("재료 목록에 상표·보조식품·수치가 없다", () => {
+    const groups = OHAENG_LIST.flatMap((element) => [...ELEMENT_FOOD[element].groups]);
+    for (const group of groups) {
+      expect(group).not.toMatch(/\d/);
+      for (const word of ["영양제", "보조", "제품", "즙", "환", "추출"]) {
+        expect(group, `${group} 에 ${word}`).not.toContain(word);
+      }
+    }
+  });
+
+  it("성미(性味) 용어를 쓰지 않는다", () => {
+    // 식품의 온·냉 성질표는 출처가 한의학이다. 면책 고지가 "한의학과 무관" 을 약속하므로
+    // 조리·온도는 생활어(THERMAL_GUIDE)로 말하고 이 표에는 성질 용어를 넣지 않는다.
+    const all = OHAENG_LIST.flatMap((element) => [
+      ELEMENT_FOOD[element].basis,
+      ...ELEMENT_FOOD[element].groups,
+    ]);
+    for (const word of ["온성", "냉성", "평성", "성질이 따뜻", "성질이 차", "기운을 보"]) {
+      expect(all.filter((text) => text.includes(word))).toEqual([]);
+    }
+  });
+
+  it("치우침이 없으면 재료를 억지로 고르지 않는다", () => {
+    // focus 가 비면 재료도 없다. 없는 근거로 식품을 지어내지 않는 것이 맞다
+    // (프롬프트가 그 경우 한열·대사 기조 위주로 쓰라고 지시한다).
+    const evenCharts = SWEEP.filter((chart) => analyzeConstitution(inputFrom(chart)).even);
+    for (const chart of evenCharts) {
+      expect(analyzeConstitution(inputFrom(chart)).focus).toEqual([]);
     }
   });
 });
@@ -374,11 +455,17 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     ...Object.values(METABOLISM_NOTE),
     ...Object.values(GAIN_PATTERN_NOTE),
     ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
+    // 재료 범주 (TASK-27) — 사용자에게 그대로 인용되는 식품 이름이다
+    ...OHAENG_LIST.flatMap((element) => [
+      ELEMENT_FOOD[element].basis,
+      ...ELEMENT_FOOD[element].groups,
+    ]),
+    ...Object.values(FOOD_HOW),
   ];
 
   it("문구 표가 비어 있지 않다", () => {
     // 위 수집이 깨져 빈 배열이 되면 아래 검사가 통과해 버린다.
-    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 8);
+    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 8 + 20 + 2);
   });
 
   it.each(BANNED)("어느 문구에도 %s 가 없다", (word) => {

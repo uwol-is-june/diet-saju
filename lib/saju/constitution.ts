@@ -209,6 +209,47 @@ export const FOCUS_GUIDE: Record<Ohaeng, Record<"과다" | "부족", Guide>> = {
   },
 };
 
+/**
+ * 오행 → 재료 범주 (TASK-27).
+ *
+ * **고전**: 오행-오미 배속(목=신맛·화=쓴맛·토=단맛·금=매운맛·수=짠맛)과
+ * 오행-오색 배속(목=청·화=적·토=황·금=백·수=흑). 둘 다 명리학·한의학이 공유하는 상징 체계다.
+ * **우리 관례**: 그 배속에서 **한국에서 흔히 구하는 재료를 고른 목록.** 문헌값이 아니다.
+ *
+ * ## 왜 코드가 고르는가
+ *
+ * 식품 이름을 LLM 이 고르게 하면 같은 사주에 다른 목록이 나오고, 그때그때 효능이 붙는다.
+ * 체질 판정과 같은 이유로 **목록은 여기서 정하고 프롬프트가 "이 밖의 식품 이름을 쓰지
+ * 말라" 고 지시한다.**
+ *
+ * ## 지키는 선
+ *
+ * - **재료 범주까지만 쓴다.** 특정 상표·영양제·보조식품·다이어트 식단 이름을 넣지 않는다.
+ * - **성미(性味) 용어를 쓰지 않는다.** 온성·냉성 같은 한의학 어휘는 출처가 되는 체계이지만
+ *   그대로 내보내면 면책 고지의 "한의학과 무관" 약속이 깨진다. 조리·온도는 생활어로 쓰고,
+ *   그 판단은 `THERMAL_GUIDE` 가 이미 담고 있다 (여기서 표를 새로 만들지 않는다).
+ * - **효능을 말하지 않는다.** 이 표는 "무엇을 곁들일 수 있나" 만 말한다.
+ * - `constitution.test.ts` 가 금지 어휘·처방 어휘·숫자를 이 표에도 적용한다.
+ */
+export const ELEMENT_FOOD: Record<Ohaeng, { basis: string; groups: readonly string[] }> = {
+  목: { basis: "신맛·푸른색", groups: ["초록 잎채소", "나물과 새싹", "신맛이 도는 제철 과일"] },
+  화: { basis: "쓴맛·붉은색", groups: ["붉은 채소", "쓴맛이 도는 나물", "팥과 수수"] },
+  토: { basis: "단맛·노란색", groups: ["뿌리채소", "단호박과 고구마", "기장과 좁쌀"] },
+  금: { basis: "매운맛·흰색", groups: ["무와 양파, 대파", "버섯", "배와 도라지"] },
+  수: { basis: "짠맛·검은색", groups: ["콩과 두부", "해조류", "검은콩과 검은쌀"] },
+};
+
+/**
+ * 그 재료를 **어떻게 다룰지.** 과다·부족 어느 쪽이든 "많이 먹어라 / 끊어라" 로 가지 않는다.
+ *
+ * 알레르기·지병·복약·임신 여부를 입력받지 않으므로 특정 식품의 다량 섭취나 제한을 권할
+ * 근거가 없다. 그래서 부족은 **곁들이기**, 과다는 **더 늘리지 않기** 까지만 말한다.
+ */
+export const FOOD_HOW: Record<"과다" | "부족", string> = {
+  부족: "밥상에 한 가지씩 곁들이는 정도로 쓴다. 많이 먹으라는 뜻이 아니다.",
+  과다: "이미 넉넉한 계열이라 굳이 더 늘리지 않아도 된다. 끊으라는 뜻은 아니다.",
+};
+
 export const THERMAL_GUIDE: Record<ThermalTendency, Guide> = {
   한: {
     tendency: "몸이 차가운 쪽으로 기운 편",
@@ -299,6 +340,14 @@ export interface ConstitutionFocus {
   tendency: string;
   diet: string;
   exercise: string;
+
+  /**
+   * 재료 범주 (TASK-27). 오행-오미·오색 배속(고전)에서 고른 흔한 재료(우리 관례).
+   * **조리·온도는 여기 없다** — 한열(`thermalDiet`)이 정한다.
+   */
+  foodBasis: string;
+  foodGroups: readonly string[];
+  foodHow: string;
 }
 
 export interface ConstitutionAnalysis {
@@ -428,6 +477,7 @@ export function analyzeConstitution(input: ConstitutionInput): ConstitutionAnaly
 
 function toFocus(element: Ohaeng, level: "과다" | "부족"): ConstitutionFocus {
   const guide = FOCUS_GUIDE[element][level];
+  const food = ELEMENT_FOOD[element];
   return {
     element,
     level,
@@ -435,6 +485,9 @@ function toFocus(element: Ohaeng, level: "과다" | "부족"): ConstitutionFocus
     tendency: guide.tendency,
     diet: guide.diet,
     exercise: guide.exercise,
+    foodBasis: food.basis,
+    foodGroups: food.groups,
+    foodHow: FOOD_HOW[level],
   };
 }
 

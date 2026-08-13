@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   READING_TYPE_LABEL,
   READING_TYPES,
@@ -34,6 +34,26 @@ export function SajuForm() {
   const [reading, setReading] = useState("");
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // 입력마다 고유 id 를 만들어 label 과 명시적으로 연결한다.
+  // (label 로 감싸는 방식은 윤달 체크박스처럼 안에 또 label 이 들어갈 때 무효 HTML 이 된다)
+  const id = useId();
+  const fieldId = (key: string) => `${id}-${key}`;
+
+  /**
+   * 원국은 폼 아래에 그려지는데, 폼이 길어 모바일에서는 화면 밖이다.
+   * 그대로 두면 스트리밍이 시작돼도 "아무 일도 안 일어난" 것처럼 보인다.
+   * chart 는 요청당 한 번만 바뀌므로 이 효과도 결과당 한 번만 돈다.
+   */
+  useEffect(() => {
+    if (!chart) return;
+    const target = resultRef.current;
+    if (!target) return;
+    // `behavior: "smooth"` 를 명시하면 CSS scroll-behavior 가 무시되므로 여기서 판단한다.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }, [chart]);
 
   function stop() {
     abortRef.current?.abort();
@@ -138,11 +158,12 @@ export function SajuForm() {
     <div className="space-y-8">
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-2xl border border-line bg-surface p-6 shadow-sm"
+        className="space-y-5 rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6"
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="이름 (선택)">
+          <Field label="이름 (선택)" htmlFor={fieldId("name")}>
             <input
+              id={fieldId("name")}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -152,8 +173,9 @@ export function SajuForm() {
             />
           </Field>
 
-          <Field label="성별">
+          <Field label="성별" htmlFor={fieldId("gender")}>
             <select
+              id={fieldId("gender")}
               value={gender}
               onChange={(e) => setGender(e.target.value as typeof gender)}
               className={inputClass}
@@ -164,20 +186,22 @@ export function SajuForm() {
             </select>
           </Field>
 
-          <Field label="생년월일">
+          <Field label="생년월일" htmlFor={fieldId("birth-date")}>
             <input
+              id={fieldId("birth-date")}
               type="date"
               required
               value={birthDate}
               min="1900-01-01"
               max="2100-12-31"
               onChange={(e) => setBirthDate(e.target.value)}
-              className={inputClass}
+              className={dateInputClass}
             />
           </Field>
 
-          <Field label="양력 / 음력">
+          <Field label="양력 / 음력" htmlFor={fieldId("calendar")}>
             <select
+              id={fieldId("calendar")}
               value={calendar}
               onChange={(e) => setCalendar(e.target.value as typeof calendar)}
               className={inputClass}
@@ -186,49 +210,54 @@ export function SajuForm() {
               <option value="lunar">음력</option>
             </select>
             {calendar === "lunar" && (
-              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
+              <label className={`${checkboxLabelClass} mt-2`}>
                 <input
                   type="checkbox"
                   checked={isLeapMonth}
                   onChange={(e) => setIsLeapMonth(e.target.checked)}
-                  className="size-4 accent-brand-hover"
+                  className={checkboxClass}
                 />
                 윤달입니다
               </label>
             )}
           </Field>
 
-          <Field label="태어난 시각">
+          <Field label="태어난 시각" htmlFor={fieldId("birth-time")}>
             <input
+              id={fieldId("birth-time")}
               type="time"
               value={birthTime}
               disabled={timeUnknown}
               onChange={(e) => setBirthTime(e.target.value)}
-              className={`${inputClass} disabled:bg-surface-inset disabled:text-ink-muted`}
+              className={`${dateInputClass} disabled:bg-surface-inset disabled:text-ink-muted`}
             />
           </Field>
 
-          <div className="flex items-end">
-            <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-ink-soft">
+          {/* 데스크톱(2열)에서는 옆 칸 입력과 밑선을 맞추고, 모바일에서는 그냥 이어 붙인다. */}
+          <div className="flex items-center sm:items-end">
+            <label className={`${checkboxLabelClass} sm:pb-2.5`}>
               <input
                 type="checkbox"
                 checked={timeUnknown}
                 onChange={(e) => setTimeUnknown(e.target.checked)}
-                className="size-4 accent-brand-hover"
+                className={checkboxClass}
               />
               시각을 모릅니다 (시주 제외)
             </label>
           </div>
         </div>
 
-        <Field label="풀이 유형">
+        {/* 버튼 묶음은 label 로 감쌀 수 없다 (label 은 컨트롤 하나를 가리킨다) → fieldset/legend */}
+        <fieldset>
+          <legend className={labelClass}>풀이 유형</legend>
           <div className="flex flex-wrap gap-2">
             {READING_TYPES.map((type) => (
               <button
                 key={type}
                 type="button"
+                aria-pressed={readingType === type}
                 onClick={() => setReadingType(type)}
-                className={`rounded-full border px-4 py-2 text-sm transition ${
+                className={`min-h-11 rounded-full border px-4 py-2 text-sm transition ${
                   readingType === type
                     ? "border-brand bg-brand-subtle font-medium text-brand-ink"
                     : "border-line-strong text-ink-soft hover:border-brand"
@@ -238,39 +267,43 @@ export function SajuForm() {
               </button>
             ))}
           </div>
-        </Field>
+        </fieldset>
 
         <details className="rounded-xl border border-line-strong bg-surface-muted px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium text-ink-soft">
             만세력 고급 설정
           </summary>
           <div className="mt-4 space-y-4">
-            <Field label="출생시각 보정">
+            <Field label="출생시각 보정" htmlFor={fieldId("solar-time")}>
               <select
+                id={fieldId("solar-time")}
                 value={solarTimeMode}
                 onChange={(e) => setSolarTimeMode(e.target.value as typeof solarTimeMode)}
+                aria-describedby={fieldId("solar-time-hint")}
                 className={inputClass}
               >
                 <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
                 <option value="true">진태양시 (경도 + 균시차)</option>
                 <option value="standard">보정 없음 (시계시 그대로)</option>
               </select>
-              <p className="mt-1.5 text-xs text-ink-muted">
+              <p id={fieldId("solar-time-hint")} className="mt-1.5 text-xs text-ink-muted">
                 한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분 빠릅니다.
                 서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
               </p>
             </Field>
 
-            <Field label="자시(子時) 기준">
+            <Field label="자시(子時) 기준" htmlFor={fieldId("day-boundary")}>
               <select
+                id={fieldId("day-boundary")}
                 value={dayBoundary}
                 onChange={(e) => setDayBoundary(e.target.value as typeof dayBoundary)}
+                aria-describedby={fieldId("day-boundary-hint")}
                 className={inputClass}
               >
                 <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
                 <option value="jasi">자시파 (23시부터 다음날)</option>
               </select>
-              <p className="mt-1.5 text-xs text-ink-muted">
+              <p id={fieldId("day-boundary-hint")} className="mt-1.5 text-xs text-ink-muted">
                 23:00~23:59 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파 차이입니다.
                 그 시간대가 아니면 결과가 같습니다.
               </p>
@@ -290,6 +323,7 @@ export function SajuForm() {
           <button
             type="submit"
             disabled={loading || !birthDate}
+            aria-busy={loading}
             className="w-full rounded-xl bg-brand px-4 py-3.5 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-line-strong"
           >
             {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
@@ -301,33 +335,64 @@ export function SajuForm() {
         </p>
       </form>
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-danger bg-danger-subtle px-4 py-3 text-sm text-danger-ink"
-        >
-          {error}
-          {reading && (
-            <p className="mt-1 text-xs text-danger-ink">
-              아래 풀이는 중단 전까지 생성된 부분입니다.
-            </p>
-          )}
-        </div>
-      )}
+      {/* 자동 스크롤이 겨냥하는 지점. scroll-mt 만큼 위를 띄워 카드가 화면에 붙지 않게 한다. */}
+      <div ref={resultRef} className="scroll-mt-4 space-y-8">
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl border border-danger bg-danger-subtle px-4 py-3 text-sm text-danger-ink"
+          >
+            {error}
+            {reading && (
+              <p className="mt-1 text-xs text-danger-ink">
+                아래 풀이는 중단 전까지 생성된 부분입니다.
+              </p>
+            )}
+          </div>
+        )}
 
-      {chart && <ResultView chart={chart} reading={reading} streaming={streaming} />}
+        {chart && <ResultView chart={chart} reading={reading} streaming={streaming} />}
+      </div>
     </div>
   );
 }
 
+/**
+ * `text-base sm:text-sm` 인 이유: iOS Safari 는 글자 크기가 16px 미만인 입력에 포커스가
+ * 가면 화면을 확대한다. 확대되면 되돌아오지 않아 이후 입력이 전부 불편해진다.
+ * 데스크톱에서는 14px 로 되돌린다.
+ *
+ * `min-h-11`(44px)은 터치 타깃 최소 크기다. date/time 입력은 iOS 에서 기본 높이가
+ * 제각각이라 이 값이 없으면 옆 칸(select)과 밑선이 어긋난다.
+ */
 const inputClass =
-  "w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-placeholder focus:border-brand focus:ring-2 focus:ring-brand-border";
+  "min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-base text-ink transition placeholder:text-ink-placeholder focus:border-brand-hover sm:text-sm";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/** date/time 은 iOS 기본 스타일이 폭을 줄이고 안쪽 여백을 제멋대로 넣는다. */
+const dateInputClass = `${inputClass} appearance-none`;
+
+const labelClass = "mb-1.5 block text-sm font-medium text-ink-soft";
+
+/** 체크박스는 글상자보다 작아서, 라벨 전체를 44px 높이의 탭 영역으로 만든다. */
+const checkboxLabelClass =
+  "flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-soft";
+const checkboxClass = "size-5 shrink-0 accent-brand-hover";
+
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink-soft">{label}</span>
+    <div>
+      <label htmlFor={htmlFor} className={labelClass}>
+        {label}
+      </label>
       {children}
-    </label>
+    </div>
   );
 }

@@ -127,6 +127,31 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+
+  /* 포커스 링은 여기 한 곳에서 정한다.
+     컴포넌트마다 `focus:ring-*` 을 붙이면 빠뜨린 곳(버튼·summary·링크)이 생기고,
+     같은 클래스에 붙은 `outline-none` 과 충돌해 조용히 사라진다.
+
+     색은 brand 가 아니라 **brand-hover** 다. green500 은 흰 배경에서 1.82:1 이라
+     초점 표시 기준(WCAG 1.4.11, 3:1)에 미달한다. green600 은 3.10:1 이다. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-hover);
+    outline-offset: 2px;
+  }
+}
+
+/* 모션 최소화 설정을 존중한다. 스트리밍 커서의 pulse 는 마지막 키프레임(불투명)에서
+   멈추므로 "생성 중" 표시 자체는 남는다. 자동 스크롤은 JS 에서 따로 판단한다
+   (`behavior: "smooth"` 를 명시하면 CSS scroll-behavior 가 무시되기 때문). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* LLM 이 돌려주는 마크다운 렌더 영역 */

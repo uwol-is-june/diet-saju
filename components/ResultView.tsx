@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import Markdown from "react-markdown";
 import type { Pillar, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 
@@ -11,6 +12,9 @@ const OHAENG_COLOR: Record<string, string> = {
   금: "bg-ohaeng-geum text-ohaeng-geum-ink",
   수: "bg-ohaeng-su text-ohaeng-su-ink",
 };
+
+/** 카드 공통 — 모바일에서는 안쪽 여백을 줄여 4기둥 칸이 눌리지 않게 한다. */
+const CARD = "rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
 
 /**
  * 원국은 코드가 즉시 계산하므로 먼저 그린다. 풀이는 스트리밍으로 채워진다.
@@ -34,7 +38,7 @@ export function ResultView({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
+      <section className={CARD}>
         <h2 className="mb-1 text-lg font-bold">사주 원국</h2>
         <p className="mb-4 text-sm text-ink-muted">
           양력 {chart.solarDate} · 음력 {chart.lunarDate} · {chart.saencho}띠
@@ -44,7 +48,7 @@ export function ResultView({
           {pillars.map(({ label, pillar }) => (
             <div
               key={label}
-              className="rounded-xl bg-surface-inset p-3 text-center"
+              className="rounded-xl bg-surface-inset p-2.5 text-center sm:p-3"
             >
               <div className="mb-1 text-xs text-ink-muted">{label}</div>
               {pillar ? (
@@ -62,12 +66,13 @@ export function ResultView({
 
         <div className="mt-4 flex flex-wrap gap-2">
           {Object.entries(chart.ohaeng.count).map(([element, count]) => (
+            // 계절 기세는 배지 안에 글자로 이미 있다. title 속성은 터치·키보드에서
+            // 뜨지 않으므로 같은 내용을 중복해 넣지 않는다.
             <span
               key={element}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 OHAENG_COLOR[element] ?? "bg-surface-inset text-ink-soft"
               } ${count === 0 ? "opacity-40" : ""}`}
-              title={`계절 기세: ${chart.ohaeng.seasonalState[element as keyof typeof chart.ohaeng.seasonalState]}`}
             >
               {element} {count}
               <span className="ml-1 opacity-60">
@@ -92,11 +97,19 @@ export function ResultView({
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
 
-      <section
-        className="reading rounded-2xl border border-line bg-surface p-6 shadow-sm"
-        aria-busy={streaming}
-        aria-live="polite"
-      >
+      <section className={`reading ${CARD}`} aria-label="풀이" aria-busy={streaming}>
+        {/*
+          스트리밍 본문에 aria-live 를 걸면 글자가 늘어날 때마다 전체가 다시 읽혀 소음이 된다.
+          본문은 일반 영역으로 두고, 상태 변화만 따로 알린다 (role="status" = polite).
+        */}
+        <p className="sr-only" role="status">
+          {streaming
+            ? "풀이를 생성하고 있습니다."
+            : reading
+              ? "풀이 생성이 끝났습니다."
+              : ""}
+        </p>
+
         {reading ? (
           <>
             <Markdown>{reading}</Markdown>
@@ -137,16 +150,42 @@ function DaeunTable({
   seun: SajuChart["seun"];
 }) {
   const currentAge = seun[0]?.age;
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const currentRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * 대운 8~10칸은 어떤 화면에서도 가로로 넘친다. 현재 대운이 뒤쪽이면 처음엔 보이지 않아
+   * "지금 어디쯤인가"를 놓친다 → 열릴 때 현재 칸을 가운데로 당겨 둔다.
+   *
+   * scrollIntoView 를 쓰지 않는 이유: 세로 스크롤까지 움직여 폼에서 결과로 넘어오는
+   * 자동 스크롤과 싸운다. 가로 위치만 직접 계산한다.
+   */
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const current = currentRef.current;
+    if (!scroller || !current) return;
+    const offset =
+      current.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
+    const centered = scroller.scrollLeft + offset - (scroller.clientWidth - current.clientWidth) / 2;
+    scroller.scrollLeft = Math.max(0, centered);
+  }, [daeun]);
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
+    <section className={CARD}>
       <h2 className="mb-1 text-lg font-bold">대운 · 세운</h2>
       <p className="mb-4 text-sm text-ink-muted">
         {daeun.direction === "forward" ? "순행" : "역행"} · 첫 대운 {daeun.startAge}세부터
         <span className="text-ink-muted"> (절기까지 {daeun.daysToJeol}일 ÷ 3)</span>
       </p>
 
-      <div className="-mx-6 overflow-x-auto px-6">
+      {/*
+        카드 여백만큼 밖으로 늘려 화면 끝까지 스크롤되게 한다 (모바일 p-5, 데스크톱 p-6).
+        overscroll-x-contain: 끝까지 밀었을 때 iOS 의 뒤로가기 스와이프로 넘어가지 않게 막는다.
+      */}
+      <div
+        ref={scrollerRef}
+        className="-mx-5 overflow-x-auto overscroll-x-contain px-5 sm:-mx-6 sm:px-6"
+      >
         <div className="flex min-w-max gap-2">
           {daeun.periods.map((period) => {
             const isCurrent =
@@ -156,6 +195,7 @@ function DaeunTable({
             return (
               <div
                 key={period.startAge}
+                ref={isCurrent ? currentRef : undefined}
                 className={`w-20 shrink-0 rounded-xl p-3 text-center ${
                   isCurrent ? "bg-brand-subtle ring-1 ring-brand" : "bg-surface-inset"
                 }`}
@@ -168,6 +208,11 @@ function DaeunTable({
           })}
         </div>
       </div>
+
+      <p className="mt-2 text-xs text-ink-muted">
+        가로로 밀어 전체 대운을 볼 수 있습니다
+        {currentAge !== undefined && " · 강조된 칸이 현재 대운입니다"}
+      </p>
 
       <ul className="mt-4 space-y-1 border-t border-line pt-3 text-sm text-ink-soft">
         {seun.map((year) => (

@@ -67,11 +67,6 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
     state: chart.ohaeng.seasonalState[element as keyof typeof chart.ohaeng.seasonalState],
   }));
 
-  const chips =
-    readingType === "diet"
-      ? [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern]
-      : [`${chart.ohaeng.strongest} 기운이 강함`, chart.strength.verdict];
-
   const mark = (met: boolean) => (met ? "○" : "×");
   const strength = chart.strength;
 
@@ -82,9 +77,7 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
     )} · 득세 ${mark(strength.deukse)}`,
     // 현재 대운은 나이 구간을 빼고 간지·십신만 쓴다 (위 주석 참고).
     currentDaeunLabel(chart),
-    readingType === "diet"
-      ? `대사 기조 ${chart.constitution.metabolism}`
-      : `${chart.ohaeng.season} 기세 기준 · ${chart.ohaeng.strongest} 왕(旺)`,
+    TAIL_NOTE[readingType](chart),
   ].filter((note): note is string => note !== null);
 
   return {
@@ -92,11 +85,31 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
     pillars,
     badges,
     headline: `${chart.saencho}띠 · ${chart.ohaeng.season}에 태어난 사주`,
-    chips,
+    chips: CHIPS[readingType](chart),
     notes,
     footer: SITE,
   };
 }
+
+/**
+ * 유형별 판정 칩 — **`Record` 로 두어 유형을 늘리면 컴파일이 막히게 한다.**
+ * 삼항으로 두면 새 유형이 조용히 다른 유형의 칩을 달고 나간다.
+ *
+ * 칩은 카드 폭에 맞춰 **항상 두 개**다.
+ */
+const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
+  general: (chart) => [`${chart.ohaeng.strongest} 기운이 강함`, chart.strength.verdict],
+  diet: (chart) => [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern],
+  // 올해 연도는 개인정보가 아니다 (출생 연도가 아니라 기준 연도다).
+  yearly: (chart) => [`${chart.yearly.year}년 ${chart.yearly.ganji}`, chart.yearly.themeLabel],
+};
+
+/** 근거 줄 마지막 항목도 유형별로 다르다. */
+const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
+  general: (chart) => `${chart.ohaeng.season} 기세 기준 · ${chart.ohaeng.strongest} 왕(旺)`,
+  diet: (chart) => `대사 기조 ${chart.constitution.metabolism}`,
+  yearly: (chart) => `올해 작용 ${chart.yearly.effect} · 세운 십신 ${chart.yearly.sipsin}`,
+};
 
 /** 성별 미지정이면 대운이 없다 (순행·역행을 정할 수 없다) → 줄을 넣지 않는다. */
 function currentDaeunLabel(chart: SajuChart): string | null {

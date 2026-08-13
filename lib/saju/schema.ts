@@ -6,18 +6,27 @@ import type {
   StrengthAnalysis,
 } from "./analysis";
 import type { ConstitutionAnalysis } from "./constitution";
+import type { YearlyAnalysis } from "./yearly";
 
 /**
  * 사주 입력 스키마 — 클라이언트/서버 공용.
  * 서버는 이 스키마를 반드시 다시 통과시킨다 (클라이언트 검증은 UX용, 신뢰 대상 아님).
  */
 
-export const READING_TYPES = ["general", "diet"] as const;
+/**
+ * 풀이 유형. **순서가 UI 버튼 순서다.**
+ *
+ * 유형을 추가하면 타입이 강제하는 곳(섹션 계약·프롬프트 지침·공유 카드 칩)이 전부
+ * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
+ * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
+ */
+export const READING_TYPES = ["general", "diet", "yearly"] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
   diet: "체질·다이어트 풀이",
+  yearly: "올해 운세",
 };
 
 export const sajuInputSchema = z.object({
@@ -125,6 +134,11 @@ export interface SajuChart {
    * 리딩 유형과 무관하게 항상 계산한다. 지금은 `diet` 프롬프트만 근거로 쓴다.
    */
   constitution: ConstitutionAnalysis;
+  /**
+   * 올해 운세 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-15).
+   * 리딩 유형과 무관하게 항상 계산한다. 지금은 `yearly` 프롬프트만 근거로 쓴다.
+   */
+  yearly: YearlyAnalysis;
   /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */
   daeun: DaeunAnalysis | null;
   /** 세운 (기준 연도부터 3년) */

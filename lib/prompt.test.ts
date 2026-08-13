@@ -3,7 +3,12 @@ import { SYSTEM_INSTRUCTION, buildUserPrompt } from "./prompt";
 import { SECTION_SPECS } from "./reading/sections";
 import { BODY_AXIS } from "./saju/constitution";
 import { calculateSajuChart } from "./saju/pillars";
-import { READING_TYPES, sajuInputSchema, type SajuInput } from "./saju/schema";
+import {
+  READING_TYPES,
+  sajuInputSchema,
+  type ReadingType,
+  type SajuInput,
+} from "./saju/schema";
 
 /**
  * 프롬프트 조립 검증.
@@ -27,11 +32,24 @@ const DIET_INPUT = makeInput({
   gender: "female",
   readingType: "diet",
 });
-const GENERAL_INPUT = makeInput({ ...DIET_INPUT, readingType: "general" });
 
 const chart = calculateSajuChart(DIET_INPUT, FIXED_NOW);
-const dietPrompt = buildUserPrompt(DIET_INPUT, chart);
-const generalPrompt = buildUserPrompt(GENERAL_INPUT, chart);
+
+/**
+ * 유형마다 프롬프트를 하나씩 만들어 둔다.
+ * **`READING_TYPES` 에서 뽑으므로 유형을 늘리면 여기도 자동으로 늘어난다** —
+ * 삼항으로 골라 쓰면 새 유형이 조용히 다른 유형의 프롬프트로 검사된다(실제로 그렇게 새어
+ * 나가서 이 구조로 바꿨다).
+ */
+const PROMPTS = Object.fromEntries(
+  READING_TYPES.map((type) => [
+    type,
+    buildUserPrompt(makeInput({ ...DIET_INPUT, readingType: type }), chart),
+  ]),
+) as Record<ReadingType, string>;
+
+const dietPrompt = PROMPTS.diet;
+const generalPrompt = PROMPTS.general;
 
 describe("체질 판정 블록", () => {
   it("diet 유형에만 실린다", () => {
@@ -106,14 +124,14 @@ describe("섹션 계약 (TASK-06)", () => {
 
   it.each(READING_TYPES)("%s 지침의 제목이 계약과 순서까지 일치한다", (type) => {
     // 프롬프트가 부탁하는 제목과 렌더러가 찾는 제목이 어긋나면 화면이 폴백으로 떨어진다.
-    const prompt = type === "diet" ? dietPrompt : generalPrompt;
+    const prompt = PROMPTS[type];
     const headings = [...guideOf(prompt).matchAll(/^##(?!#)\s*(.+)$/gm)].map((m) => m[1]);
     expect(headings).toEqual(SECTION_SPECS[type].map((spec) => spec.title));
   });
 
   it.each(READING_TYPES)("%s 의 모든 섹션에 작성 지침이 붙는다", (type) => {
     // 지침이 비면 그 절은 모델이 알아서 채운다.
-    const prompt = type === "diet" ? dietPrompt : generalPrompt;
+    const prompt = PROMPTS[type];
     const guide = guideOf(prompt);
     for (const spec of SECTION_SPECS[type]) {
       const after = guide.slice(guide.indexOf(`## ${spec.title}\n`) + spec.title.length + 4);
@@ -125,6 +143,50 @@ describe("섹션 계약 (TASK-06)", () => {
   it("제목을 그대로 쓰라고 시스템 지시에 박아 뒀다", () => {
     // 계약을 강제하는 수단이 프롬프트뿐이므로 이 문장이 사라지면 형식이 흔들린다.
     expect(SYSTEM_INSTRUCTION).toContain("글자 하나 다르지 않게 그대로 쓰세요");
+  });
+});
+
+describe("올해 운세 판정 블록 (TASK-15)", () => {
+  const prompt = PROMPTS.yearly;
+
+  it("yearly 유형에만 실린다", () => {
+    expect(prompt).toContain("## 올해 운세 판정 (계산 완료 · 수정 금지)");
+    expect(generalPrompt).not.toContain("올해 운세 판정");
+    expect(dietPrompt).not.toContain("올해 운세 판정");
+  });
+
+  it("유형별 판정 블록이 서로 섞이지 않는다", () => {
+    // 체질 판정은 diet 만, 올해 운세 판정은 yearly 만 받아야 한다.
+    expect(prompt).not.toContain("체질 판정");
+    expect(dietPrompt).toContain("체질 판정");
+  });
+
+  it("코드가 정한 판정이 그대로 들어간다", () => {
+    const { yearly } = chart;
+    expect(prompt).toContain(`${yearly.year}년 ${yearly.ganji}`);
+    expect(prompt).toContain(yearly.effect);
+    expect(prompt).toContain(yearly.themeLabel);
+    expect(prompt).toContain(yearly.effectNote);
+    expect(prompt).toContain(yearly.themeNote);
+  });
+
+  it("다시 판정하지 말라고 지시한다", () => {
+    expect(prompt).toContain("다시 판정하지 말고");
+  });
+
+  it("월별 운세를 쓰지 말라고 못 박는다", () => {
+    // 월운은 계산하지 않는다. 지시가 없으면 모델이 지어낸다.
+    expect(prompt).toContain("월별 운세는 계산하지 않았다");
+    expect(prompt).toContain("시기를 특정하지 않는다");
+  });
+
+  it("사건 예고와 단정을 금지한다", () => {
+    expect(prompt).toContain("사건을 예고하지 않는다");
+    expect(prompt).toContain("성패를 단정하지 않습니다");
+  });
+
+  it("관례에서 나온 판정을 고전 규칙처럼 말하지 말라고 지시한다", () => {
+    expect(prompt).toContain("이 서비스가 정한 관례");
   });
 });
 

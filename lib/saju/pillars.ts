@@ -6,9 +6,11 @@ import {
   analyzeSeun,
   analyzeStrength,
   daeunDirection,
+  sexagenaryOfYear,
   type DaeunAnalysis,
 } from "./analysis";
 import { analyzeConstitution } from "./constitution";
+import { analyzeYearly } from "./yearly";
 import {
   ganjiToKorean,
   hourGanIndex,
@@ -151,6 +153,15 @@ export function calculateSajuChart(
     daeun: daeun ?? undefined,
   });
 
+  // 올해 운세도 원국에서 결정된다. 기준 연도의 세운(seun[0])을 쓴다.
+  const thisYearGanji = sexagenaryOfYear(referenceYear);
+  const yearly = analyzeYearly({
+    seun: seun[0]!,
+    gan: thisYearGanji.gan,
+    ji: thisYearGanji.ji,
+    constitution,
+  });
+
   return {
     solarDate: formatDate(solarWallClock),
     lunarDate: formatLunarDate(solarWallClock),
@@ -164,6 +175,7 @@ export function calculateSajuChart(
     ohaeng,
     strength,
     constitution,
+    yearly,
     daeun,
     seun,
     timeCorrection: {

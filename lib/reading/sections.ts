@@ -42,6 +42,12 @@ export const READING_SECTION_IDS = [
   "movement",
   "year-flow",
   "monthly-actions",
+  // yearly
+  "year-energy",
+  "year-theme",
+  "year-opportunity",
+  "year-caution",
+  "year-actions",
 ] as const;
 
 export type ReadingSectionId = (typeof READING_SECTION_IDS)[number];
@@ -76,6 +82,14 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "movement", title: "잘 맞는 움직임" },
     { id: "year-flow", title: "올해의 몸 흐름" },
     { id: "monthly-actions", title: "이번 달 실천 3가지" },
+  ],
+  yearly: [
+    { id: "summary", title: "한눈에 보기", emphasis: "summary" },
+    { id: "year-energy", title: "올해 들어오는 기운" },
+    { id: "year-theme", title: "올해의 주제" },
+    { id: "year-opportunity", title: "살리면 좋은 결" },
+    { id: "year-caution", title: "조심할 결" },
+    { id: "year-actions", title: "올해 실천 3가지" },
   ],
 };
 

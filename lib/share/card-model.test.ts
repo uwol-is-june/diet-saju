@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { calculateSajuChart } from "../saju/pillars";
-import { sajuInputSchema, type SajuInput } from "../saju/schema";
+import {
+  READING_TYPES,
+  READING_TYPE_LABEL,
+  sajuInputSchema,
+  type SajuInput,
+} from "../saju/schema";
 import { buildShareCardModel } from "./card-model";
 
 /**
@@ -27,7 +32,7 @@ const chart = calculateSajuChart(WITH_TIME, FIXED_NOW);
 const chartNoTime = calculateSajuChart(NO_TIME, FIXED_NOW);
 
 describe("카드에 생년월일을 넣지 않는다", () => {
-  it.each(["general", "diet"] as const)("%s 모델에 날짜 문자열이 없다", (type) => {
+  it.each(READING_TYPES)("%s 모델에 날짜 문자열이 없다", (type) => {
     const serialized = JSON.stringify(buildShareCardModel(chart, type));
     expect(serialized).not.toContain(chart.solarDate);
     expect(serialized).not.toContain(chart.lunarDate);
@@ -51,12 +56,31 @@ describe("카드에 생년월일을 넣지 않는다", () => {
 
   it("근거 줄에 나이를 넣지 않는다", () => {
     // 대운 구간을 나이로 적으면 출생 연도가 좁혀진다.
-    for (const type of ["general", "diet"] as const) {
+    for (const type of READING_TYPES) {
       for (const note of buildShareCardModel(chart, type).notes) {
         expect(note, note).not.toMatch(/\d+\s*세/);
         expect(note, note).not.toMatch(/\d{4}/);
       }
     }
+  });
+});
+
+describe("유형을 늘려도 카드가 깨지지 않는다", () => {
+  it.each(READING_TYPES)("%s 도 칩 2개·근거 줄·제목을 갖춘다", (type) => {
+    // Record 로 강제하지 않으면 새 유형이 다른 유형의 칩을 달고 나간다 (실제로 그럴 뻔했다).
+    const model = buildShareCardModel(chart, type);
+    expect(model.chips.length).toBe(2);
+    expect(model.chips.every((chip) => chip.length > 0)).toBe(true);
+    expect(model.notes.length).toBeGreaterThanOrEqual(2);
+    expect(model.typeLabel).toBe(READING_TYPE_LABEL[type]);
+  });
+
+  it("유형마다 칩이 서로 다르다", () => {
+    // 전부 같으면 분기가 죽은 것이다.
+    const joined = READING_TYPES.map((type) =>
+      buildShareCardModel(chart, type).chips.join("|"),
+    );
+    expect(new Set(joined).size).toBe(READING_TYPES.length);
   });
 });
 
@@ -153,10 +177,16 @@ describe("유형별 판정 칩", () => {
     ]);
   });
 
-  it("칩은 항상 두 개다 (카드 폭이 정해져 있다)", () => {
-    for (const type of ["general", "diet"] as const) {
-      expect(buildShareCardModel(chart, type).chips.length).toBe(2);
-    }
+  it("yearly 는 올해 간지와 주제를 쓴다", () => {
+    const model = buildShareCardModel(chart, "yearly");
+    expect(model.typeLabel).toBe("올해 운세");
+    expect(model.chips).toEqual([
+      `${chart.yearly.year}년 ${chart.yearly.ganji}`,
+      chart.yearly.themeLabel,
+    ]);
+    // 기준 연도는 출생 연도가 아니므로 카드에 실어도 된다.
+    expect(model.chips[0]).toContain(String(chart.yearly.year));
+    expect(model.notes.at(-1)).toContain(chart.yearly.effect);
   });
 });
 

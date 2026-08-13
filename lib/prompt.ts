@@ -68,16 +68,35 @@ const SECTION_INSTRUCTION: Record<Exclude<ReadingSectionId, "summary">, string> 
   "year-flow": `세운(그리고 대운이 있다면 함께)을 근거로 올해 몸 관리에서 주의할 결.
 대운 정보가 없다면 세운만으로 쓴다.`,
   "monthly-actions": "구체적이고 작게 시작할 수 있는 것. 위 판정에서 끌어온 것이어야 한다.",
+
+  // yearly
+  "year-energy": `올해 세운 간지와 그 오행을 근거로, 들어오는 기운이 원국의 어디에 닿는지 설명.
+**판정된 작용(보완/가중/중립)을 그대로 쓰고** 그 근거가 된 오행을 일상어로 풀어라.
+대운이 있다면 "큰 흐름 안에서 올해가 어디쯤인지" 를 한 문장으로 덧붙인다.`,
+  "year-theme": `판정된 주제를 그대로 쓰고, 근거가 된 세운 천간의 십신을 일상어로 풀어 설명한다.
+지지 십신도 함께 보고 겉으로 드러나는 결과 안에 깔린 결을 구분한다.`,
+  "year-opportunity": `위 작용과 주제를 근거로 올해 힘을 쓰면 남는 자리 2~3가지.
+막연한 격려가 아니라 "무엇을 하면" 이 들어가야 한다.`,
+  "year-caution": `같은 근거로 흔들리기 쉬운 자리.
+**사건을 예고하지 말고** 경향과 대처를 함께 쓴다. 불안을 조장하지 않는다.`,
+  "year-actions": "올해 안에 실행할 수 있는 것 3가지. 각 1~2문장. 위 판정에서 끌어온 것이어야 한다.",
 };
 
 /** 요약 절은 유형마다 요구하는 것이 다르다. */
 const SUMMARY_INSTRUCTION: Record<ReadingType, string> = {
   general: "3~4문장으로 이 사주의 핵심 기질을 요약.",
   diet: "3~4문장으로 이 사주가 보여주는 몸의 기질을 요약. **한열 판정과 대사 기조를 여기서 밝힌다.**",
+  yearly:
+    "3~4문장으로 올해가 이 사주에 어떤 해인지 요약. **세운 간지와 판정된 작용·주제를 여기서 밝힌다.**",
 };
 
 const TYPE_PREFACE: Record<ReadingType, string> = {
   general: "다음 순서로, 지정된 제목을 그대로 써서 작성하세요.",
+  yearly: `다음 순서로, 지정된 제목을 그대로 써서 작성하세요.
+올해 세운을 원국·대운과 견주어 해석하는 것이 핵심입니다.
+
+**위 "올해 운세 판정" 은 이미 확정된 결과입니다.** 다른 판정을 새로 만들지 말고, 그 판정이
+왜 그렇게 나왔는지를 원국 근거와 이어 붙여 사용자의 말로 풀어 쓰세요.`,
   diet: `다음 순서로, 지정된 제목을 그대로 써서 작성하세요.
 사주의 오행 균형을 몸의 기질(체질)로 연결해 해석하는 것이 핵심입니다.
 
@@ -88,6 +107,16 @@ const TYPE_PREFACE: Record<ReadingType, string> = {
 
 const TYPE_RULES: Record<ReadingType, string> = {
   general: "",
+  yearly: `
+# 표현 규칙 (반드시 지킬 것)
+- **사건을 예고하지 않는다.** "이사를 하게 된다", "돈이 들어온다", "사고를 조심하라" 처럼
+  일어날 일을 말하지 마세요. "~하는 흐름이 강해지므로 ~를 정해 두면 좋습니다" 처럼
+  경향과 대처로 씁니다.
+- **시기를 특정하지 않는다.** 몇 월에 무슨 일이 있다는 식으로 쓰지 마세요.
+  월별 운세는 이 서비스가 계산하지 않습니다.
+- 재물·건강·연애·시험의 성패를 단정하지 않습니다. 돈·투자에 대한 구체적 조언도 하지 않습니다.
+- 불안을 이용해 결론을 내지 않습니다. 조심할 결에는 반드시 대처를 함께 적습니다.
+- 올해가 몇 년이고 무슨 간지인지는 위 데이터에 있는 값을 그대로 쓰세요. 직접 계산하지 마세요.`,
   diet: `
 # 표현 규칙 (반드시 지킬 것)
 - **효능을 주장하지 않는다.** "○○에 좋다", "○○이 빠진다", "효과가 있다" 같은 문장을 쓰지 마세요.
@@ -172,6 +201,35 @@ ${focus}
   장기 이름을 들어 진단처럼 말하지 말 것.`;
 }
 
+/**
+ * 올해 운세 판정 블록 — `lib/saju/yearly.ts` 가 정한 결과를 그대로 옮긴다.
+ * 여기서 새로 판정하지 않는다.
+ */
+function buildYearlyBlock(yearly: SajuChart["yearly"]): string {
+  const basis = [
+    yearly.fills.length > 0 ? `원국에서 부족한 ${yearly.fills.join("·")}를 채운다` : null,
+    yearly.piles.length > 0 ? `원국에서 이미 과다한 ${yearly.piles.join("·")}에 더해진다` : null,
+  ].filter(Boolean);
+
+  return `## 올해 운세 판정 (계산 완료 · 수정 금지)
+
+- 올해: **${yearly.year}년 ${yearly.ganji}** (오행 ${yearly.ohaeng.join("·")})
+- 세운 천간십신 ${yearly.sipsin} / 지지십신 ${yearly.jiSipsin}
+- 올해가 속한 대운: ${yearly.daeunGanji ?? "성별 미지정으로 산출 불가 — 대운은 언급하지 말 것"}
+- 원국에 주는 작용: **${yearly.effect}**${
+    basis.length > 0 ? ` (근거: ${basis.join(" / ")})` : " (부족·과다 어느 쪽도 건드리지 않음)"
+  }
+  - ${yearly.effectNote}
+- 올해의 주제: **${yearly.themeLabel}** (십신 ${yearly.theme})
+  - ${yearly.themeNote}
+
+- 위 판정은 세운 오행과 원국의 오행 과부족, 십신 분포에서 **규칙표로 결정된 것**이다.
+  같은 사주·같은 연도면 항상 같은 판정이 나온다. 다시 판정하지 말고 이대로 서술하라.
+- 작용 3단계(보완·가중·중립)와 주제 대응표는 **이 서비스가 정한 관례**다. 절대적 규칙인 것처럼
+  "명리학에서는 ~라고 한다" 식으로 말하지 말고, 이 사주에서 읽히는 결로 서술하라.
+- **월별 운세는 계산하지 않았다.** 몇 월에 무엇이 있다는 식으로 쓰지 말 것.`;
+}
+
 export function buildUserPrompt(input: SajuInput, chart: SajuChart): string {
   const genderLabel = {
     male: "남성",
@@ -240,9 +298,13 @@ export function buildUserPrompt(input: SajuInput, chart: SajuChart): string {
     .filter(Boolean)
     .join("\n");
 
-  const isDiet = input.readingType === "diet";
-  // 체질 판정은 diet 유형에서만 근거로 쓴다. general 은 지금 형태를 그대로 둔다(확정 사항).
-  const constitutionBlock = isDiet ? `\n${buildConstitutionBlock(chart.constitution)}\n` : "";
+  // 유형별 판정 블록. general 은 지금 형태를 그대로 둔다(확정 사항).
+  const verdictBlock =
+    input.readingType === "diet"
+      ? `\n${buildConstitutionBlock(chart.constitution)}\n`
+      : input.readingType === "yearly"
+        ? `\n${buildYearlyBlock(chart.yearly)}\n`
+        : "";
 
   return `# 사주 원국 데이터 (계산 완료 · 수정 금지)
 
@@ -268,7 +330,7 @@ ${ohaeng}
 
 ## 신강 / 신약
 ${strengthBlock}
-${constitutionBlock}
+${verdictBlock}
 ## 대운(大運)
 ${daeunBlock}
 

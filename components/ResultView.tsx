@@ -3,16 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import type { Pillar, ReadingType, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
+import { DaeunTimeline } from "./charts/DaeunTimeline";
+import { OhaengBars } from "./charts/OhaengBars";
+import { OhaengCycle } from "./charts/OhaengCycle";
+import { ThermalScale } from "./charts/ThermalScale";
 import { ReadingSections } from "./ReadingSections";
 import { ShareActions } from "./ShareActions";
 
-const OHAENG_COLOR: Record<string, string> = {
-  목: "bg-ohaeng-mok text-ohaeng-mok-ink",
-  화: "bg-ohaeng-hwa text-ohaeng-hwa-ink",
-  토: "bg-ohaeng-to text-ohaeng-to-ink",
-  금: "bg-ohaeng-geum text-ohaeng-geum-ink",
-  수: "bg-ohaeng-su text-ohaeng-su-ink",
-};
+/* 오행 배지 톤 표는 `charts/OhaengBars.tsx` 로 옮겼다 (TASK-25에서 배지 줄을 막대로 교체). */
 
 /** 카드 공통 — 모바일에서는 안쪽 여백을 줄여 4기둥 칸이 눌리지 않게 한다. */
 const CARD = "rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
@@ -68,22 +66,12 @@ export function ResultView({
           ))}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {Object.entries(chart.ohaeng.count).map(([element, count]) => (
-            // 계절 기세는 배지 안에 글자로 이미 있다. title 속성은 터치·키보드에서
-            // 뜨지 않으므로 같은 내용을 중복해 넣지 않는다.
-            <span
-              key={element}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                OHAENG_COLOR[element] ?? "bg-surface-inset text-ink-soft"
-              } ${count === 0 ? "opacity-40" : ""}`}
-            >
-              {element} {count}
-              <span className="ml-1 opacity-60">
-                {chart.ohaeng.seasonalState[element as keyof typeof chart.ohaeng.seasonalState]}
-              </span>
-            </span>
-          ))}
+        {/*
+          배지 줄은 걷어냈다 — 막대 도식이 같은 것(오행·개수·계절 기세)을 더 잘 말한다.
+          같은 사실을 두 번 그리면 화면만 길어지고, 어느 쪽을 봐야 하는지 헷갈린다.
+        */}
+        <div className="mt-4 border-t border-line pt-4">
+          <OhaengBars ohaeng={chart.ohaeng} balance={chart.constitution.balance} />
         </div>
 
         <p className="mt-3 text-sm text-ink-soft">
@@ -97,6 +85,21 @@ export function ResultView({
         </p>
 
         <CorrectionNote correction={chart.timeCorrection} />
+      </section>
+
+      <section className={CARD}>
+        <h2 className="mb-1 text-lg font-bold">기운의 관계</h2>
+        <p className="mb-4 text-sm text-ink-muted">
+          오행은 서로 돕고(상생) 누르며(상극) 균형을 이룹니다.
+        </p>
+        <OhaengCycle ohaeng={chart.ohaeng} />
+
+        <div className="mt-5 border-t border-line pt-4">
+          <h3 className="mb-3 text-sm font-bold">
+            한열(조후) — <span className="text-brand-ink">{chart.constitution.thermal}</span>
+          </h3>
+          <ThermalScale constitution={chart.constitution} />
+        </div>
       </section>
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
@@ -155,6 +158,11 @@ function DaeunTable({
         {daeun.direction === "forward" ? "순행" : "역행"} · 첫 대운 {daeun.startAge}세부터
         <span className="text-ink-muted"> (절기까지 {daeun.daysToJeol}일 ÷ 3)</span>
       </p>
+
+      {/* 스크롤 없이 "지금 어디쯤인가" 부터 보여 준다. 아래 카드가 세부를 맡는다. */}
+      <div className="mb-4">
+        <DaeunTimeline daeun={daeun} currentAge={currentAge} />
+      </div>
 
       {/*
         카드 여백만큼 밖으로 늘려 화면 끝까지 스크롤되게 한다 (모바일 p-5, 데스크톱 p-6).

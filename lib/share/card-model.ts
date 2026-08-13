@@ -27,6 +27,14 @@ export interface ShareCardBadge {
   element: string;
   count: number;
   state: string;
+  /**
+   * 세력의 상대 비중 (0~1). 화면의 오행 막대와 **같은 시각 언어**를 카드에도 두기 위한
+   * 값이다 (TASK-25).
+   *
+   * 근거는 `score`(개수 × 계절 배수)인데 그 배수는 **우리 관례**라 절대 수치가 아니다.
+   * 그래서 화면과 똑같이 **길이로만 쓰고 숫자로 찍지 않는다.**
+   */
+  weight: number;
 }
 
 export interface ShareCardModel {
@@ -61,10 +69,13 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
     sipsin: pillar ? pillar.jiSipsin : "",
   }));
 
+  const scores = chart.ohaeng.score;
+  const maxScore = Math.max(...Object.values(scores), 1);
   const badges: ShareCardBadge[] = Object.entries(chart.ohaeng.count).map(([element, count]) => ({
     element,
     count,
     state: chart.ohaeng.seasonalState[element as keyof typeof chart.ohaeng.seasonalState],
+    weight: scores[element as keyof typeof scores] / maxScore,
   }));
 
   const mark = (met: boolean) => (met ? "○" : "×");

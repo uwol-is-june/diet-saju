@@ -156,6 +156,8 @@ export function drawShareCard(
   // ── 오행 배지 ──
   const badgeTop = boxTop + boxHeight + 56;
   const badgeHeight = 88;
+  /** 배지 아래 세력 막대. 아래 판정 칩과의 64px 간격 안에 들어간다. */
+  const BADGE_BAR_HEIGHT = 12;
   const badgeGap = 16;
   const badgeWidth = (CARD_WIDTH - PAD * 2 - badgeGap * 4) / 5;
 
@@ -180,6 +182,29 @@ export function drawShareCard(
     ctx.fillText(badge.state, center, badgeTop + 74);
     ctx.textAlign = "left";
     ctx.globalAlpha = 1;
+
+    /*
+      배지 아래 세력 막대 — 화면의 오행 막대와 같은 시각 언어를 카드에도 둔다 (TASK-25).
+      길이의 근거는 우리 관례(계절 배수)라 **숫자는 찍지 않고 길이로만** 말한다.
+      개수 0 이면 아예 그리지 않는다 (1px 조각이 남으면 "조금 있다" 로 읽힌다).
+    */
+    const barY = badgeTop + badgeHeight + 14;
+    roundRect(ctx, x, barY, badgeWidth, BADGE_BAR_HEIGHT, BADGE_BAR_HEIGHT / 2);
+    ctx.fillStyle = palette.surfaceInset;
+    ctx.fill();
+
+    if (badge.count > 0) {
+      roundRect(
+        ctx,
+        x,
+        barY,
+        Math.max(badgeWidth * badge.weight, BADGE_BAR_HEIGHT),
+        BADGE_BAR_HEIGHT,
+        BADGE_BAR_HEIGHT / 2,
+      );
+      ctx.fillStyle = colors.fg;
+      ctx.fill();
+    }
   });
 
   // ── 판정 칩 ──

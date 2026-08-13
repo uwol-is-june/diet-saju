@@ -156,6 +156,68 @@
   }
 }
 
+/* ============================================================================
+   도식·섹션 등장 애니메이션 (TASK-25)
+   ----------------------------------------------------------------------------
+   **키프레임은 전부 `from` 만 쓴다.** 쉬는 상태(요소의 기본 스타일)가 이미 최종 모습이고
+   애니메이션은 "숨은 상태에서 출발" 하기만 한다. 이렇게 두면 아래 모션 최소화 규칙이
+   재생 시간을 0.01ms 로 줄이는 순간 **최종 모습이 그대로 남는다** — `to` 로 최종값을
+   지정하면 재생이 사실상 사라지면서 숨은 상태에 갇힌다.
+
+   재생이 **한 번만** 되는 것도 CSS 에 맡긴다. 스트리밍 중에는 컴포넌트가 조각마다 다시
+   렌더되는데, CSS 애니메이션은 같은 요소에 같은 속성이 남아 있는 동안 다시 시작하지
+   않는다. 그래서 JS 로 "이미 재생했는가" 를 들고 있지 않아도 글이 떨리지 않는다.
+   (단 요소가 다시 mount 되면 재생된다 → 섹션 key 를 안정적으로 유지할 것)
+   ========================================================================== */
+@keyframes chart-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes chart-draw {
+  from {
+    stroke-dashoffset: var(--draw-length);
+  }
+}
+@keyframes chart-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes chart-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes chart-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+}
+
+/* 컴포넌트는 이 클래스만 붙이고 지연은 인라인 `animationDelay` 로 준다.
+   Tailwind 의 임의값(`[animation:…]`)으로 쓰면 값 안의 공백·괄호를 이스케이프해야 해서
+   읽기 나쁘고, 애니메이션 정의가 키프레임에서 멀어진다. */
+.anim-grow-x {
+  transform-origin: left;
+  animation: chart-grow-x 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-draw {
+  animation: chart-draw 0.55s ease-out both;
+}
+.anim-pop {
+  animation: chart-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-fade {
+  animation: chart-fade 0.5s ease-out both;
+}
+/* 섹션이 처음 나타날 때 한 번. mount 시점에만 걸리므로 조각마다 다시 재생되지 않는다. */
+.anim-rise {
+  animation: chart-rise 0.35s ease-out both;
+}
+
 /* 모션 최소화 설정을 존중한다. 스트리밍 커서의 pulse 는 마지막 키프레임(불투명)에서
    멈추므로 "생성 중" 표시 자체는 남는다. 자동 스크롤은 JS 에서 따로 판단한다
    (`behavior: "smooth"` 를 명시하면 CSS scroll-behavior 가 무시되기 때문). */

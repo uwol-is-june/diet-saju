@@ -241,6 +241,11 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     "components/ShareActions.tsx",
     "components/SiteFooter.tsx",
     "components/FirstVisitNotice.tsx",
+    // 도식 (TASK-25) — SVG 의 fill/stroke 도 토큰에서만 온다
+    "components/charts/OhaengBars.tsx",
+    "components/charts/OhaengCycle.tsx",
+    "components/charts/ThermalScale.tsx",
+    "components/charts/DaeunTimeline.tsx",
     // 캔버스 카드도 색을 CSS 토큰에서 읽는다. hex 를 박으면 단일 소스가 깨진다.
     "lib/share/draw-card.ts",
   ];

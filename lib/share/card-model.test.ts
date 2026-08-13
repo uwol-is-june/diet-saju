@@ -151,10 +151,15 @@ describe("오행 배지", () => {
 
   it("개수와 계절 기세가 원국과 일치한다", () => {
     const model = buildShareCardModel(chart, "diet");
+    const maxScore = Math.max(...Object.values(chart.ohaeng.score));
     for (const badge of model.badges) {
       const key = badge.element as keyof typeof chart.ohaeng.count;
       expect(badge.count).toBe(chart.ohaeng.count[key]);
       expect(badge.state).toBe(chart.ohaeng.seasonalState[key]);
+      // 세력 막대 길이 (TASK-25). 화면 막대와 같은 근거를 쓴다.
+      expect(badge.weight).toBeCloseTo(chart.ohaeng.score[key] / maxScore, 6);
+      expect(badge.weight).toBeGreaterThanOrEqual(0);
+      expect(badge.weight).toBeLessThanOrEqual(1);
     }
   });
 });

@@ -70,7 +70,7 @@ export function ReadingSections({
       )}
 
       {summary && (
-        <section className="rounded-2xl border border-brand-border bg-brand-subtle p-5 shadow-sm sm:p-6">
+        <section className="anim-rise rounded-2xl border border-brand-border bg-brand-subtle p-5 shadow-sm sm:p-6">
           <h2 className="mb-2 text-sm font-bold tracking-wide text-brand-ink">
             {summary.title}
           </h2>
@@ -81,8 +81,17 @@ export function ReadingSections({
       {rest.length > 0 && (
         <section className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
           <div className="divide-y divide-line">
-            {rest.map((section) => (
-              <article key={section.title} className="py-5 first:pt-0 last:pb-0">
+            {rest.map((section, index) => (
+              /*
+                key 는 **제목이 아니라 id** 다 (TASK-25). 계약에 없는 제목은 도착하는 대로
+                글자가 늘어나므로 제목을 key 로 쓰면 조각마다 remount 되고, 그러면 등장
+                애니메이션이 매번 다시 재생돼 글이 떨린다. 계약에 있는 섹션은 잘린 제목도
+                접두어로 맞춰지므로 id 가 처음부터 안정적이다.
+              */
+              <article
+                key={section.id ?? `unmatched-${index}`}
+                className="anim-rise py-5 first:pt-0 last:pb-0"
+              >
                 <h2 className="mb-2 text-base font-bold">{section.title}</h2>
                 <Body section={section} showCursor={streaming && isLast(section)} />
               </article>

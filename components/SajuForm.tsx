@@ -201,7 +201,7 @@ export function SajuForm() {
               min="1900-01-01"
               max="2100-12-31"
               onChange={(e) => setBirthDate(e.target.value)}
-              className={dateInputClass}
+              className={nativeDateClass(birthDate)}
             />
           </Field>
 
@@ -215,8 +215,16 @@ export function SajuForm() {
               <option value="solar">양력</option>
               <option value="lunar">음력</option>
             </select>
-            {calendar === "lunar" && (
-              <label className={`${checkboxLabelClass} mt-2`}>
+          </Field>
+
+          {/* 윤달 체크박스는 **전체 폭 행**으로 내린다 (TASK-22).
+              `양력/음력` 칸 안에 두면 그 행이 44px 높아지고, 짝인 `생년월일` 칸이 함께
+              늘어나 입력 밑에 52px 빈칸이 생긴다 (그리드 행은 형제 칸까지 잡아당긴다).
+              `sm:col-start-2` 로 오른쪽 열에만 두어도 왼쪽에 같은 크기의 공백이 남으므로
+              보이는 결과가 같다 — 폭을 다 쓰는 것이 유일한 해법이다. */}
+          {calendar === "lunar" && (
+            <div className="sm:col-span-2">
+              <label className={checkboxLabelClass}>
                 <input
                   type="checkbox"
                   checked={isLeapMonth}
@@ -225,31 +233,36 @@ export function SajuForm() {
                 />
                 윤달입니다
               </label>
-            )}
-          </Field>
+            </div>
+          )}
 
-          <Field label="태어난 시각" htmlFor={fieldId("birth-time")}>
-            <input
-              id={fieldId("birth-time")}
-              type="time"
-              value={birthTime}
-              disabled={timeUnknown}
-              onChange={(e) => setBirthTime(e.target.value)}
-              className={`${dateInputClass} disabled:bg-surface-inset disabled:text-ink-muted`}
-            />
-          </Field>
-
-          {/* 데스크톱(2열)에서는 옆 칸 입력과 밑선을 맞추고, 모바일에서는 그냥 이어 붙인다. */}
-          <div className="flex items-center sm:items-end">
-            <label className={`${checkboxLabelClass} sm:pb-2.5`}>
-              <input
-                type="checkbox"
-                checked={timeUnknown}
-                onChange={(e) => setTimeUnknown(e.target.checked)}
-                className={checkboxClass}
-              />
-              시각을 모릅니다 (시주 제외)
+          {/* 시각도 같은 이유로 전체 폭 행이다. `시각을 모릅니다` 를 짝 칸에 두면 그 칸에는
+              라벨이 없어 오른쪽 위가 뚫려 보이고, `태어난 시각` 칸 안에 넣으면 위와 같은
+              빈칸이 생긴다. 안쪽 그리드가 바깥과 같은 `gap-4` 2열이라 시각 입력의 폭·좌우
+              위치가 바로 위 `생년월일` 과 정확히 맞는다. */}
+          <div className="sm:col-span-2">
+            <label htmlFor={fieldId("birth-time")} className={labelClass}>
+              태어난 시각
             </label>
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+              <input
+                id={fieldId("birth-time")}
+                type="time"
+                value={birthTime}
+                disabled={timeUnknown}
+                onChange={(e) => setBirthTime(e.target.value)}
+                className={`${nativeDateClass(birthTime)} disabled:bg-surface-inset disabled:text-ink-muted`}
+              />
+              <label className={checkboxLabelClass}>
+                <input
+                  type="checkbox"
+                  checked={timeUnknown}
+                  onChange={(e) => setTimeUnknown(e.target.checked)}
+                  className={checkboxClass}
+                />
+                시각을 모릅니다 (시주 제외)
+              </label>
+            </div>
           </div>
         </div>
 
@@ -378,11 +391,23 @@ export function SajuForm() {
  * `min-h-11`(44px)은 터치 타깃 최소 크기다. date/time 입력은 iOS 에서 기본 높이가
  * 제각각이라 이 값이 없으면 옆 칸(select)과 밑선이 어긋난다.
  */
-const inputClass =
-  "min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-base text-ink transition placeholder:text-ink-placeholder focus:border-brand-hover sm:text-sm";
+const inputBaseClass =
+  "min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-base transition placeholder:text-ink-placeholder focus:border-brand-hover sm:text-sm";
 
-/** date/time 은 iOS 기본 스타일이 폭을 줄이고 안쪽 여백을 제멋대로 넣는다. */
-const dateInputClass = `${inputClass} appearance-none`;
+const inputClass = `${inputBaseClass} text-ink`;
+
+/**
+ * date/time 은 iOS 기본 스타일이 폭을 줄이고 안쪽 여백을 제멋대로 넣는다.
+ *
+ * 글자색을 **여기서 정하지 않는** 이유: native date/time 은 값이 없을 때
+ * `연도-월-일`·`-- --:--` 를 본문 색으로 그려서, 옆 칸의
+ * `placeholder:text-ink-placeholder` 와 톤이 어긋나 미완성처럼 보인다 (TASK-22).
+ * 비어 있는 동안만 자리표시자 색으로 낮추는데, `text-ink` 를 미리 붙여 두면
+ * 두 유틸리티가 같은 레이어에서 겹쳐 승자가 CSS 출력 순서에 달리게 된다.
+ * 자리표시자 문자열 자체는 브라우저·로케일이 정하므로 바꿀 수 없다.
+ */
+const nativeDateClass = (value: string) =>
+  `${inputBaseClass} appearance-none ${value ? "text-ink" : "text-ink-placeholder"}`;
 
 const labelClass = "mb-1.5 block text-sm font-medium text-ink-soft";
 

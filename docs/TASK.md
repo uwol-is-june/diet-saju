@@ -140,3 +140,22 @@ TASK-03 / TASK-04 완료 후 착수.
 
 - [ ] 올해 운세 / 궁합 / 직업 적성 중 우선순위 결정
 - [ ] `readingType` 확장이 프롬프트·UI·캐시 키에 일관 반영되는지 확인
+
+### [TASK-18] 프로덕션 모델 교체 · **(H)** · ⬜ 대기
+
+코드 기본값은 이미 `gemini-3.5-flash-lite` 다. 프로덕션은 Vercel 환경변수 `GEMINI_MODEL` 이
+`gemini-3.5-flash` 로 덮어쓰고 있어 **하루 20건 · 응답 24초**로 돌고 있다.
+링크를 남에게 공유하기 전에는 반드시 처리한다 (타임아웃 30초까지 여유가 5.6초뿐이다).
+
+CLI 계정(`seojunincar-8503`)과 실제 배포 프로젝트의 계정이 달라 코드에서 처리할 수 없다.
+대시보드 작업이다.
+
+- [ ] Vercel > diet-saju > Settings > Environment Variables 에서
+      `GEMINI_MODEL` 을 `gemini-3.5-flash-lite` 로 수정 (Production/Preview/Development)
+- [ ] Redeploy (환경변수는 재배포해야 반영된다)
+- [ ] `POST /api/saju` 응답의 `model` 필드가 `gemini-3.5-flash-lite` 인지 확인
+- [ ] 응답 시간이 10초 이내로 떨어졌는지 확인
+- [ ] 잘못 생성된 빈 Vercel 프로젝트 삭제 — `seojunincar-8503s-projects` 스코프의
+      `diet-saju`(Production URL 이 `--`, 배포 이력 0건). 실제 서비스 프로젝트와 다른 계정이다
+
+→ 완료 기준: 프로덕션이 lite 로 돌고 응답이 10초 이내다. 일일 한도 500건.

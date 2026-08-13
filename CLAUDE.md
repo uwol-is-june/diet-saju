@@ -187,7 +187,7 @@ app/api/saju/route.ts    (server, nodejs runtime)
 ### 그 밖의 규칙
 
 - **완료된 태스크는 TASK.md 에서 삭제한다.** 보드에는 남은 일만 둔다.
-  번호는 재사용하지 않는다 (다음 신규는 TASK-18).
+  번호는 재사용하지 않는다 (다음 신규는 TASK-19).
 - 새 UI 문자열은 한국어로 쓴다.
 - 커밋 메시지는 한국어 요약 + 관련 태스크 번호. 예: `사주 계산 진태양시 보정 (TASK-03)`
 - 작업을 마치면 `npm run lint`, `npm run typecheck`, `npm run build` 를 통과시킨 뒤 완료로 보고한다.
@@ -210,5 +210,11 @@ app/api/saju/route.ts    (server, nodejs runtime)
   응답 시간 약 7초 중 대부분은 Gemini 생성 시간이며 네트워크 왕복은 0.1~0.8초다.
 - 환경변수는 Vercel Dashboard > Settings > Environment Variables 에 등록한다
   (`GEMINI_API_KEY` 는 Production/Preview/Development 모두 필요).
+- **Vercel CLI 는 배포 계정과 다른 계정으로 로그인되어 있다.** CLI 로 환경변수를 읽거나
+  고칠 수 없으니 대시보드에서 처리한다. `vercel link --yes` 를 쓰지 말 것 — 기존 프로젝트를
+  찾는 게 아니라 **같은 이름의 빈 프로젝트를 새로 만든다** (실제로 한 번 만들어졌다).
+  `vercel link`/`vercel env pull` 은 `.env.local` 을 덮어쓰고 `.gitignore` 에 `.env*` 를
+  덧붙인다. 후자는 나중 줄이라 `!.env.example` 예외를 무력화하므로 특히 주의.
+- 프로덕션 모델이 코드 기본값과 다를 수 있다. 확인은 `POST /api/saju` 응답의 `model` 필드로 한다.
 - `/api/saju` 는 Node 런타임 고정이다 (`lunar-javascript` 가 CommonJS). Edge 로 바꾸지 말 것.
 - 함수 타임아웃은 `maxDuration = 30`. Hobby 플랜 상한을 넘기지 않도록 주의한다.

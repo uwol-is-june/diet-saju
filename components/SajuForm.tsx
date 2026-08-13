@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   READING_TYPE_LABEL,
   READING_TYPES,
   type ReadingType,
-  type SajuReadingResponse,
+  type SajuChart,
+  type SajuStreamEvent,
 } from "@/lib/saju/schema";
 import { ResultView } from "./ResultView";
 
@@ -29,18 +30,35 @@ export function SajuForm() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<SajuReadingResponse | null>(null);
+  const [chart, setChart] = useState<SajuChart | null>(null);
+  const [reading, setReading] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
+  function stop() {
+    abortRef.current?.abort();
+  }
+
+  /**
+   * 응답은 NDJSON 스트림이다. 원국(chart)이 먼저 오고 풀이가 조각(delta)으로 이어진다.
+   * 스트림이 시작된 뒤의 실패는 error 이벤트로 오며, 그때까지 받은 풀이는 그대로 둔다.
+   */
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    setResult(null);
+    setChart(null);
+    setReading("");
     setLoading(true);
+    setStreaming(false);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const response = await fetch("/api/saju", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           name: name.trim() || undefined,
           birthDate,
@@ -54,16 +72,65 @@ export function SajuForm() {
         }),
       });
 
-      const data = await response.json();
+      // 스트림 시작 전 실패는 일반 JSON + 상태 코드로 온다.
       if (!response.ok) {
+        const data = await response.json().catch(() => null);
         setError(data?.error ?? "요청에 실패했습니다.");
         return;
       }
-      setResult(data as SajuReadingResponse);
-    } catch {
-      setError("네트워크 오류가 발생했습니다. 연결을 확인해 주세요.");
+      if (!response.body) {
+        setError("응답을 읽을 수 없습니다.");
+        return;
+      }
+
+      setStreaming(true);
+      const decoder = new TextDecoder();
+      const readerStream = response.body.getReader();
+      let buffer = "";
+
+      const handleLine = (line: string) => {
+        if (!line.trim()) return;
+        let event: SajuStreamEvent;
+        try {
+          event = JSON.parse(line) as SajuStreamEvent;
+        } catch {
+          return; // 잘린 줄은 버린다 (버퍼가 다음 조각에서 이어 붙는다)
+        }
+        switch (event.type) {
+          case "chart":
+            setChart(event.chart);
+            setLoading(false);
+            break;
+          case "delta":
+            setReading((previous) => previous + event.text);
+            break;
+          case "error":
+            setError(event.error);
+            break;
+          case "done":
+            break;
+        }
+      };
+
+      while (true) {
+        const { done, value } = await readerStream.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? ""; // 마지막 조각은 아직 완성되지 않았을 수 있다
+        for (const line of lines) handleLine(line);
+      }
+      if (buffer.trim()) handleLine(buffer);
+    } catch (caught) {
+      // 사용자가 중단한 경우는 오류가 아니다.
+      if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+        setError("네트워크 오류가 발생했습니다. 연결을 확인해 주세요.");
+      }
     } finally {
       setLoading(false);
+      setStreaming(false);
+      abortRef.current = null;
     }
   }
 
@@ -211,13 +278,23 @@ export function SajuForm() {
           </div>
         </details>
 
-        <button
-          type="submit"
-          disabled={loading || !birthDate}
-          className="w-full rounded-xl bg-violet-600 px-4 py-3.5 font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-stone-300"
-        >
-          {loading ? "사주를 읽고 있습니다…" : "사주 풀이 받기"}
-        </button>
+        {streaming ? (
+          <button
+            type="button"
+            onClick={stop}
+            className="w-full rounded-xl border border-stone-300 px-4 py-3.5 font-semibold text-stone-600 transition hover:bg-stone-50"
+          >
+            생성 중단
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={loading || !birthDate}
+            className="w-full rounded-xl bg-violet-600 px-4 py-3.5 font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-stone-300"
+          >
+            {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
+          </button>
+        )}
 
         <p className="text-center text-xs text-stone-400">
           입력한 정보는 저장하지 않고, 풀이 생성에만 사용됩니다.
@@ -230,10 +307,15 @@ export function SajuForm() {
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
         >
           {error}
+          {reading && (
+            <p className="mt-1 text-xs text-red-600/80">
+              아래 풀이는 중단 전까지 생성된 부분입니다.
+            </p>
+          )}
         </div>
       )}
 
-      {result && <ResultView result={result} />}
+      {chart && <ResultView chart={chart} reading={reading} streaming={streaming} />}
     </div>
   );
 }

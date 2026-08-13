@@ -30,7 +30,7 @@ npm run validate:saju # 사주 계산 테스트만 (= vitest run lib/saju)
 
 ```
 components/SajuForm.tsx  (client)
-        │  POST /api/saju
+        │  POST /api/saju  →  NDJSON 스트림 응답
         ▼
 app/api/saju/route.ts    (server, nodejs runtime)
         ├─ lib/rate-limit.ts   IP 기준 분당 제한
@@ -56,6 +56,26 @@ app/api/saju/route.ts    (server, nodejs runtime)
    다른 파일에서 `process.env.GEMINI_API_KEY` 를 직접 읽는 코드를 추가하지 말 것.
 
 4. **클라이언트 컴포넌트에서 Gemini 를 직접 호출하지 않는다.** 항상 `/api/saju` 경유.
+
+### 스트리밍 응답 규약
+
+`/api/saju` 는 NDJSON 스트림을 돌려준다 (한 줄에 이벤트 하나, `SajuStreamEvent`).
+순서는 `chart` → `delta*` → `done` 이다.
+
+**상태 코드를 쓸 수 있는 구간은 스트림을 열기 전까지다.** 200 본문을 쓰기 시작하면
+되돌릴 수 없다. 그래서 실패를 두 갈래로 나눈다.
+
+| 시점 | 실패 | 응답 |
+| --- | --- | --- |
+| 스트림 전 | 레이트 리밋 / 입력 검증 / 사주 계산 / 서버 설정 | JSON + 429·400·500 |
+| 스트림 후 | Gemini 호출 실패 (쿼터·안전정책 등) | 200 + `error` 이벤트 |
+
+원국은 코드가 10ms 안에 계산하는데 Gemini 첫 조각은 약 1초 뒤에 온다. 상태 코드를
+정하려고 Gemini 를 기다리면 이미 확정된 사실을 붙잡고 있게 되므로, **원국을 먼저 보내고
+Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 유효한 결과다.
+(TASK-13 관측을 붙일 때는 상태 코드만 세면 안 된다 — `error` 이벤트도 집계해야 한다.)
+
+실측(로컬, 워밍업 후): 원국 60~70ms · 첫 글자 1.0~1.3초 · 전체 4.2~4.4초.
 
 ## 보안 규칙 (env / 키)
 

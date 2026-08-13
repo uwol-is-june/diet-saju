@@ -132,3 +132,19 @@ export interface SajuReadingResponse {
   reading: string;
   model: string;
 }
+
+/**
+ * 스트리밍 응답의 이벤트. 한 줄에 하나씩 JSON 으로 보낸다 (NDJSON).
+ *
+ * 원국은 코드가 즉시 계산하므로 첫 이벤트로 바로 내보낼 수 있다. 사용자는 LLM 을
+ * 기다리는 동안 자기 사주팔자를 먼저 본다.
+ *
+ * `error` 는 **스트림이 시작된 뒤** 발생한 실패에만 쓴다. 시작 전 실패(입력 오류·쿼터
+ * 소진 등)는 일반 JSON 응답 + 상태 코드로 처리한다 — 200 본문을 쓰기 시작하면
+ * 상태 코드를 되돌릴 수 없기 때문이다.
+ */
+export type SajuStreamEvent =
+  | { type: "chart"; chart: SajuChart; model: string }
+  | { type: "delta"; text: string }
+  | { type: "done" }
+  | { type: "error"; error: string };

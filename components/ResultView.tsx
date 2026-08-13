@@ -1,7 +1,7 @@
 "use client";
 
 import Markdown from "react-markdown";
-import type { Pillar, SajuReadingResponse, TimeCorrectionInfo } from "@/lib/saju/schema";
+import type { Pillar, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 
 const OHAENG_COLOR: Record<string, string> = {
   목: "bg-emerald-100 text-emerald-800",
@@ -11,8 +11,19 @@ const OHAENG_COLOR: Record<string, string> = {
   수: "bg-sky-100 text-sky-800",
 };
 
-export function ResultView({ result }: { result: SajuReadingResponse }) {
-  const { chart, reading } = result;
+/**
+ * 원국은 코드가 즉시 계산하므로 먼저 그린다. 풀이는 스트리밍으로 채워진다.
+ * `streaming` 이 true 면 아직 생성 중이라는 표시를 붙인다.
+ */
+export function ResultView({
+  chart,
+  reading,
+  streaming = false,
+}: {
+  chart: SajuChart;
+  reading: string;
+  streaming?: boolean;
+}) {
   const pillars: { label: string; pillar: Pillar | null }[] = [
     { label: "연주", pillar: chart.year },
     { label: "월주", pillar: chart.month },
@@ -80,8 +91,19 @@ export function ResultView({ result }: { result: SajuReadingResponse }) {
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
 
-      <section className="reading rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
-        <Markdown>{reading}</Markdown>
+      <section
+        className="reading rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
+        aria-busy={streaming}
+        aria-live="polite"
+      >
+        {reading ? (
+          <>
+            <Markdown>{reading}</Markdown>
+            {streaming && <StreamingCursor />}
+          </>
+        ) : (
+          <p className="text-sm text-stone-400">풀이를 쓰고 있습니다…</p>
+        )}
       </section>
 
       <p className="text-center text-xs text-stone-400">
@@ -91,12 +113,22 @@ export function ResultView({ result }: { result: SajuReadingResponse }) {
   );
 }
 
+/** 생성 중임을 알리는 커서. 텍스트가 멈춰 있어도 살아 있다는 신호가 된다. */
+function StreamingCursor() {
+  return (
+    <span
+      aria-hidden
+      className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-violet-500 align-middle"
+    />
+  );
+}
+
 function DaeunTable({
   daeun,
   seun,
 }: {
-  daeun: NonNullable<SajuReadingResponse["chart"]["daeun"]>;
-  seun: SajuReadingResponse["chart"]["seun"];
+  daeun: NonNullable<SajuChart["daeun"]>;
+  seun: SajuChart["seun"];
 }) {
   const currentAge = seun[0]?.age;
 

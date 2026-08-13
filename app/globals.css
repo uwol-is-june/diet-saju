@@ -1,22 +1,128 @@
 @import "tailwindcss";
 
-@theme {
-  --color-ink: #1c1917;
-  --color-ink-soft: #57534e;
-  --color-paper: #faf8f5;
-  --color-paper-deep: #f2ede6;
-  --color-brand: #7c3aed;
-  --color-brand-soft: #ede9fe;
+/* ============================================================================
+   1층 — 원시 팔레트 (raw palette)
+   ----------------------------------------------------------------------------
+   출처와 추출 방법은 docs/design-tokens.md 참고.
+   **컴포넌트에서 직접 쓰지 않는다.** 여기 값은 "무슨 색인가"만 말하고,
+   "어디에 쓰는가"는 2층 시맨틱 토큰이 정한다.
+
+   `#1C7D4A` 처럼 출처에 없던 값은 대비비(WCAG AA)를 맞추기 위해 파생한 것이다.
+   원본 green600 `#25A762` 은 흰 배경에서 3.10:1 로 본문 텍스트 기준(4.5:1)에 미달한다.
+   ========================================================================== */
+:root {
+  /* 그린 (키컬러) */
+  --raw-green-50: #eafaf2;
+  --raw-green-100: #d5f6e4;
+  --raw-green-500: #50d88f;
+  --raw-green-600: #25a762;
+  --raw-green-700: #1c7d4a; /* 파생 — 연한 배경 위 텍스트용 */
+
+  /* 뉴트럴 */
+  --raw-gray-50: #f1f2f3;
+  --raw-gray-100: #e4e6e7;
+  --raw-gray-200: #c9cccf;
+  --raw-gray-300: #aeb3b7;
+  --raw-gray-400: #939a9f;
+  --raw-gray-450: #8f959a; /* 파생 — UI 경계 3:1 확보용 */
+  --raw-gray-500: #6d676c;
+  --raw-gray-700: #363a3d;
+  --raw-gray-900: #181a1b;
+  --raw-gray-box: #f6f5fa;
+
+  /* 상태색 */
+  --raw-blue-500: #3385ff;
+  --raw-blue-700: #296acc; /* 파생 */
+  --raw-red-500: #ff3a4a;
+  --raw-red-100: #ffe7e9; /* 파생 */
+  --raw-red-700: #c92e3a; /* 파생 */
+  --raw-yellow-500: #f6c72b;
+  --raw-yellow-100: #fef8e6; /* 파생 */
+  --raw-yellow-700: #8a6f18; /* 파생 */
+
+  /* 페이지 배경 (따뜻한 화이트) */
+  --raw-white-warm: #fdfffb;
+
+  /* 오행 배지 배경 — 각 색을 흰색과 88% 섞은 톤 */
+  --raw-ohaeng-mok-bg: #e5f4ec;
+  --raw-ohaeng-hwa-bg: #ffe7e9;
+  --raw-ohaeng-to-bg: #fef8e6;
+  --raw-ohaeng-geum-bg: #ededed;
+  --raw-ohaeng-su-bg: #e7f0ff;
+}
+
+/* ============================================================================
+   2층 — 시맨틱 토큰
+   ----------------------------------------------------------------------------
+   컴포넌트는 **이것만** 참조한다 (`bg-brand`, `text-secondary` …).
+   팔레트를 갈아끼울 때는 1층 값만 바꾸면 된다.
+
+   대비비는 lib/design/tokens.test.ts 가 이 파일을 파싱해 검증한다.
+   토큰을 추가하면 그 테스트에도 조합을 넣을 것.
+   ========================================================================== */
+@theme inline {
+  /* 브랜드 */
+  --color-brand: var(--raw-green-500);
+  --color-brand-hover: var(--raw-green-600);
+  --color-brand-subtle: var(--raw-green-50);
+  --color-brand-border: var(--raw-green-100);
+  --color-brand-ink: var(--raw-green-700);
+  /* 브랜드 배경 위에 올리는 텍스트·아이콘.
+     green500 은 밝아서 흰 텍스트가 1.82:1 밖에 안 된다 → 어두운 잉크를 쓴다 (9.61:1). */
+  --color-on-brand: var(--raw-gray-900);
+
+  /* 표면 */
+  --color-canvas: var(--raw-white-warm);
+  --color-surface: #ffffff;
+  --color-surface-muted: var(--raw-gray-box);
+  --color-surface-inset: var(--raw-gray-50);
+
+  /* 텍스트 — `ink` 로 이름 붙인 이유: `--color-text-*` 는 유틸리티가
+     `text-text-secondary` 처럼 겹쳐 읽기 나빠진다. */
+  --color-ink: var(--raw-gray-900);
+  --color-ink-soft: var(--raw-gray-700);
+  --color-ink-muted: var(--raw-gray-500);
+  /* 자리표시자·장식 전용. 의미 있는 텍스트에 쓰지 말 것 (2.85:1). */
+  --color-ink-placeholder: var(--raw-gray-400);
+
+  /* 선 — `--color-border` 는 `border-border` 가 되므로 `line` 을 쓴다. */
+  --color-line: var(--raw-gray-100);
+  /* 폼 컨트롤 경계 — UI 요소는 3:1 이 필요하다. */
+  --color-line-strong: var(--raw-gray-450);
+
+  /* 상태 */
+  --color-link: var(--raw-blue-700);
+  --color-danger: var(--raw-red-500);
+  --color-danger-subtle: var(--raw-red-100);
+  --color-danger-ink: var(--raw-red-700);
+  --color-warning: var(--raw-yellow-500);
+  --color-warning-subtle: var(--raw-yellow-100);
+  --color-warning-ink: var(--raw-yellow-700);
+
+  /* 오행 (목화토금수) — 배지와 TASK-10 OG 이미지가 공유한다 */
+  --color-ohaeng-mok: var(--raw-ohaeng-mok-bg);
+  --color-ohaeng-mok-ink: var(--raw-green-700);
+  --color-ohaeng-hwa: var(--raw-ohaeng-hwa-bg);
+  --color-ohaeng-hwa-ink: var(--raw-red-700);
+  --color-ohaeng-to: var(--raw-ohaeng-to-bg);
+  --color-ohaeng-to-ink: var(--raw-yellow-700);
+  --color-ohaeng-geum: var(--raw-ohaeng-geum-bg);
+  --color-ohaeng-geum-ink: var(--raw-gray-500);
+  --color-ohaeng-su: var(--raw-ohaeng-su-bg);
+  --color-ohaeng-su-ink: var(--raw-blue-700);
+
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, "Segoe UI", "Malgun Gothic", sans-serif;
 }
 
 @layer base {
   html {
+    /* 다크 모드는 도입하지 않는다 (판단 근거는 docs/design-tokens.md).
+       라이트 고정임을 브라우저에 알려 폼 컨트롤이 반전되지 않게 한다. */
     color-scheme: light;
   }
   body {
-    background: var(--color-paper);
+    background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -56,4 +162,8 @@
 .reading strong {
   color: var(--color-ink);
   font-weight: 600;
+}
+.reading a {
+  color: var(--color-link);
+  text-decoration: underline;
 }

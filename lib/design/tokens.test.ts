@@ -1,0 +1,185 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+/**
+ * 컬러 토큰 검증 (TASK-16).
+ *
+ * `app/globals.css` 를 **파싱해서** 검사한다. 값을 여기 복사해 두면 한쪽이 반드시 낡으므로,
+ * CSS 를 단일 소스로 두고 테스트는 그걸 읽는다.
+ *
+ * 검사 두 가지
+ *  1. 실제로 쓰이는 배경·전경 조합이 WCAG AA 를 넘는지
+ *  2. 컴포넌트에 raw hex / Tailwind 기본 색상이 남아 있지 않은지 (TASK-16 완료 기준)
+ */
+
+const CSS = readFileSync(new URL("../../app/globals.css", import.meta.url), "utf8");
+
+/** `--raw-*` 원시 팔레트를 읽는다 */
+function readRawPalette(): Record<string, string> {
+  const palette: Record<string, string> = {};
+  for (const match of CSS.matchAll(/(--raw-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)) {
+    palette[match[1]!] = match[2]!;
+  }
+  return palette;
+}
+
+/** `--color-*` 시맨틱 토큰을 원시 팔레트까지 따라가 실제 hex 로 해석한다 */
+function readSemanticTokens(): Record<string, string> {
+  const raw = readRawPalette();
+  const tokens: Record<string, string> = {};
+  for (const match of CSS.matchAll(/(--color-[\w-]+):\s*([^;]+);/g)) {
+    const [, name, value] = match;
+    const trimmed = value!.trim();
+    const varMatch = /^var\((--raw-[\w-]+)\)$/.exec(trimmed);
+    if (varMatch) {
+      const resolved = raw[varMatch[1]!];
+      if (resolved) tokens[name!] = resolved;
+    } else if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+      tokens[name!] = trimmed;
+    }
+  }
+  return tokens;
+}
+
+const channel = (value: number) => {
+  const c = value / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+
+function luminance(hex: string): number {
+  const body = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(body.slice(i, i + 2), 16)) as [
+    number,
+    number,
+    number,
+  ];
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function contrast(a: string, b: string): number {
+  const [brighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (brighter + 0.05) / (darker + 0.05);
+}
+
+const tokens = readSemanticTokens();
+const raw = readRawPalette();
+
+function hex(token: string): string {
+  const value = tokens[token];
+  if (!value) throw new Error(`토큰을 찾지 못했습니다: ${token} (globals.css 확인)`);
+  return value;
+}
+
+describe("토큰 정의", () => {
+  it("원시 팔레트가 읽힌다", () => {
+    expect(Object.keys(raw).length).toBeGreaterThan(15);
+  });
+
+  it("모든 시맨틱 토큰이 hex 로 해석된다", () => {
+    // var() 참조가 깨지면 여기서 잡힌다
+    const expected = [
+      "--color-brand", "--color-brand-hover", "--color-brand-subtle", "--color-brand-border",
+      "--color-brand-ink", "--color-on-brand",
+      "--color-canvas", "--color-surface", "--color-surface-muted", "--color-surface-inset",
+      "--color-ink", "--color-ink-soft", "--color-ink-muted", "--color-ink-placeholder",
+      "--color-line", "--color-line-strong",
+      "--color-link", "--color-danger", "--color-danger-subtle", "--color-danger-ink",
+      "--color-warning", "--color-warning-subtle", "--color-warning-ink",
+      "--color-ohaeng-mok", "--color-ohaeng-mok-ink",
+      "--color-ohaeng-hwa", "--color-ohaeng-hwa-ink",
+      "--color-ohaeng-to", "--color-ohaeng-to-ink",
+      "--color-ohaeng-geum", "--color-ohaeng-geum-ink",
+      "--color-ohaeng-su", "--color-ohaeng-su-ink",
+    ];
+    for (const token of expected) {
+      expect(tokens[token], `${token} 미해석`).toMatch(/^#[0-9a-fA-F]{6}$/);
+    }
+  });
+});
+
+describe("대비비 — 본문 텍스트 (AA 4.5:1)", () => {
+  const pairs: [string, string, string][] = [
+    ["본문", "--color-ink", "--color-surface"],
+    ["본문 on canvas", "--color-ink", "--color-canvas"],
+    ["보조 텍스트", "--color-ink-soft", "--color-surface"],
+    ["약한 텍스트", "--color-ink-muted", "--color-surface"],
+    ["보조 on muted 배경", "--color-ink-soft", "--color-surface-muted"],
+    ["약한 on inset 배경", "--color-ink-muted", "--color-surface-inset"],
+    ["링크", "--color-link", "--color-surface"],
+    ["링크 on canvas", "--color-link", "--color-canvas"],
+    ["브랜드 텍스트", "--color-brand-ink", "--color-surface"],
+    ["브랜드 텍스트 on subtle", "--color-brand-ink", "--color-brand-subtle"],
+    ["에러 텍스트", "--color-danger-ink", "--color-surface"],
+    ["에러 텍스트 on subtle", "--color-danger-ink", "--color-danger-subtle"],
+    ["경고 텍스트 on subtle", "--color-warning-ink", "--color-warning-subtle"],
+  ];
+
+  it.each(pairs)("%s", (_label, fg, bg) => {
+    expect(contrast(hex(fg), hex(bg))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("대비비 — 버튼 (AA 4.5:1)", () => {
+  it("기본 상태: 브랜드 배경 위 on-brand 텍스트", () => {
+    // green500 은 밝아서 흰 텍스트가 1.82:1 이다. 어두운 잉크를 쓰는 이유.
+    expect(contrast(hex("--color-on-brand"), hex("--color-brand"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("흰 텍스트는 브랜드 배경에서 쓸 수 없다", () => {
+    // 이 단정이 깨지면(=흰 텍스트가 통과하면) 팔레트가 어두워진 것이다.
+    // 그때는 --color-on-brand 를 흰색으로 되돌릴 수 있다.
+    expect(contrast("#FFFFFF", hex("--color-brand"))).toBeLessThan(4.5);
+  });
+
+  it("hover 상태도 통과한다", () => {
+    expect(contrast(hex("--color-on-brand"), hex("--color-brand-hover"))).toBeGreaterThanOrEqual(
+      4.5,
+    );
+  });
+
+  it("비활성 상태도 통과한다", () => {
+    expect(contrast(hex("--color-on-brand"), hex("--color-line-strong"))).toBeGreaterThanOrEqual(
+      4.5,
+    );
+  });
+});
+
+describe("대비비 — 오행 배지 (AA 4.5:1)", () => {
+  it.each(["mok", "hwa", "to", "geum", "su"])("%s 배지", (element) => {
+    const bg = hex(`--color-ohaeng-${element}`);
+    const fg = hex(`--color-ohaeng-${element}-ink`);
+    expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("다섯 배지 배경이 서로 구분된다", () => {
+    const backgrounds = ["mok", "hwa", "to", "geum", "su"].map((e) => hex(`--color-ohaeng-${e}`));
+    expect(new Set(backgrounds).size).toBe(5);
+  });
+});
+
+describe("대비비 — UI 경계 (1.4.11, 3:1)", () => {
+  it("폼 컨트롤 테두리는 3:1 을 넘는다", () => {
+    expect(contrast(hex("--color-line-strong"), hex("--color-surface"))).toBeGreaterThanOrEqual(3);
+  });
+
+  it("장식용 구분선은 3:1 을 요구하지 않는다", () => {
+    // --color-line 은 의미 전달용이 아니다. 폼 컨트롤에 쓰면 안 된다는 것을 명시해 둔다.
+    expect(contrast(hex("--color-line"), hex("--color-surface"))).toBeLessThan(3);
+  });
+});
+
+describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
+  const sources = ["app/page.tsx", "app/layout.tsx", "components/SajuForm.tsx", "components/ResultView.tsx"];
+
+  it.each(sources)("%s 에 hex 리터럴이 없다", (path) => {
+    const code = readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+    expect(code).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+
+  it.each(sources)("%s 에 Tailwind 기본 색상 유틸리티가 없다", (path) => {
+    const code = readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+    const builtins =
+      /\b(?:bg|text|border|ring|accent|divide|outline|placeholder|caret|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b/;
+    expect(code).not.toMatch(builtins);
+  });
+});

@@ -4,11 +4,11 @@ import Markdown from "react-markdown";
 import type { Pillar, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 
 const OHAENG_COLOR: Record<string, string> = {
-  목: "bg-emerald-100 text-emerald-800",
-  화: "bg-red-100 text-red-800",
-  토: "bg-amber-100 text-amber-800",
-  금: "bg-slate-200 text-slate-800",
-  수: "bg-sky-100 text-sky-800",
+  목: "bg-ohaeng-mok text-ohaeng-mok-ink",
+  화: "bg-ohaeng-hwa text-ohaeng-hwa-ink",
+  토: "bg-ohaeng-to text-ohaeng-to-ink",
+  금: "bg-ohaeng-geum text-ohaeng-geum-ink",
+  수: "bg-ohaeng-su text-ohaeng-su-ink",
 };
 
 /**
@@ -33,9 +33,9 @@ export function ResultView({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
         <h2 className="mb-1 text-lg font-bold">사주 원국</h2>
-        <p className="mb-4 text-sm text-stone-500">
+        <p className="mb-4 text-sm text-ink-muted">
           양력 {chart.solarDate} · 음력 {chart.lunarDate} · {chart.saencho}띠
         </p>
 
@@ -43,17 +43,17 @@ export function ResultView({
           {pillars.map(({ label, pillar }) => (
             <div
               key={label}
-              className="rounded-xl bg-stone-50 p-3 text-center"
+              className="rounded-xl bg-surface-inset p-3 text-center"
             >
-              <div className="mb-1 text-xs text-stone-400">{label}</div>
+              <div className="mb-1 text-xs text-ink-muted">{label}</div>
               {pillar ? (
                 <>
                   <div className="text-xl font-bold tracking-tight">{pillar.ganji}</div>
-                  <div className="mt-1 text-xs text-stone-500">{pillar.sipsin}</div>
-                  <div className="text-xs text-stone-400">{pillar.jiSipsin}</div>
+                  <div className="mt-1 text-xs text-ink-muted">{pillar.sipsin}</div>
+                  <div className="text-xs text-ink-muted">{pillar.jiSipsin}</div>
                 </>
               ) : (
-                <div className="py-2 text-xs text-stone-400">시각 미상</div>
+                <div className="py-2 text-xs text-ink-muted">시각 미상</div>
               )}
             </div>
           ))}
@@ -64,7 +64,7 @@ export function ResultView({
             <span
               key={element}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
-                OHAENG_COLOR[element] ?? "bg-stone-100 text-stone-700"
+                OHAENG_COLOR[element] ?? "bg-surface-inset text-ink-soft"
               } ${count === 0 ? "opacity-40" : ""}`}
               title={`계절 기세: ${chart.ohaeng.seasonalState[element as keyof typeof chart.ohaeng.seasonalState]}`}
             >
@@ -76,10 +76,10 @@ export function ResultView({
           ))}
         </div>
 
-        <p className="mt-3 text-sm text-stone-600">
+        <p className="mt-3 text-sm text-ink-soft">
           {chart.ohaeng.season}에 태어나 <strong>{chart.ohaeng.strongest}</strong> 기운이 가장
           강하고, 신강·신약은 <strong>{chart.strength.verdict}</strong>입니다
-          <span className="text-stone-400">
+          <span className="text-ink-muted">
             {" "}
             (득령 {chart.strength.deukryeong ? "○" : "×"} · 득지{" "}
             {chart.strength.deukji ? "○" : "×"} · 득세 {chart.strength.deukse ? "○" : "×"})
@@ -92,7 +92,7 @@ export function ResultView({
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
 
       <section
-        className="reading rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
+        className="reading rounded-2xl border border-line bg-surface p-6 shadow-sm"
         aria-busy={streaming}
         aria-live="polite"
       >
@@ -102,11 +102,11 @@ export function ResultView({
             {streaming && <StreamingCursor />}
           </>
         ) : (
-          <p className="text-sm text-stone-400">풀이를 쓰고 있습니다…</p>
+          <p className="text-sm text-ink-muted">풀이를 쓰고 있습니다…</p>
         )}
       </section>
 
-      <p className="text-center text-xs text-stone-400">
+      <p className="text-center text-xs text-ink-muted">
         이 풀이는 명리학 해석을 참고한 콘텐츠입니다. 의학적·법률적 조언이 아닙니다.
       </p>
     </div>
@@ -118,7 +118,7 @@ function StreamingCursor() {
   return (
     <span
       aria-hidden
-      className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-violet-500 align-middle"
+      className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-brand align-middle"
     />
   );
 }
@@ -133,11 +133,11 @@ function DaeunTable({
   const currentAge = seun[0]?.age;
 
   return (
-    <section className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
       <h2 className="mb-1 text-lg font-bold">대운 · 세운</h2>
-      <p className="mb-4 text-sm text-stone-500">
+      <p className="mb-4 text-sm text-ink-muted">
         {daeun.direction === "forward" ? "순행" : "역행"} · 첫 대운 {daeun.startAge}세부터
-        <span className="text-stone-400"> (절기까지 {daeun.daysToJeol}일 ÷ 3)</span>
+        <span className="text-ink-muted"> (절기까지 {daeun.daysToJeol}일 ÷ 3)</span>
       </p>
 
       <div className="-mx-6 overflow-x-auto px-6">
@@ -151,22 +151,22 @@ function DaeunTable({
               <div
                 key={period.startAge}
                 className={`w-20 shrink-0 rounded-xl p-3 text-center ${
-                  isCurrent ? "bg-violet-50 ring-1 ring-violet-300" : "bg-stone-50"
+                  isCurrent ? "bg-brand-subtle ring-1 ring-brand" : "bg-surface-inset"
                 }`}
               >
-                <div className="text-xs text-stone-400">{period.startAge}세</div>
+                <div className="text-xs text-ink-muted">{period.startAge}세</div>
                 <div className="text-base font-bold">{period.ganji}</div>
-                <div className="mt-0.5 text-[11px] text-stone-500">{period.sipsin}</div>
+                <div className="mt-0.5 text-[11px] text-ink-muted">{period.sipsin}</div>
               </div>
             );
           })}
         </div>
       </div>
 
-      <ul className="mt-4 space-y-1 border-t border-stone-100 pt-3 text-sm text-stone-600">
+      <ul className="mt-4 space-y-1 border-t border-line pt-3 text-sm text-ink-soft">
         {seun.map((year) => (
           <li key={year.year}>
-            <span className="text-stone-400">{year.year}년 ({year.age}세)</span>{" "}
+            <span className="text-ink-muted">{year.year}년 ({year.age}세)</span>{" "}
             <strong>{year.ganji}</strong> · {year.sipsin}/{year.jiSipsin}
           </li>
         ))}
@@ -204,7 +204,7 @@ function CorrectionNote({ correction }: { correction: TimeCorrectionInfo }) {
   if (notes.length === 0) return null;
 
   return (
-    <ul className="mt-4 space-y-1 border-t border-stone-100 pt-3 text-xs text-stone-500">
+    <ul className="mt-4 space-y-1 border-t border-line pt-3 text-xs text-ink-muted">
       {notes.map((note) => (
         <li key={note}>· {note}</li>
       ))}

@@ -138,7 +138,7 @@ export function SajuForm() {
     <div className="space-y-8">
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
+        className="space-y-5 rounded-2xl border border-line bg-surface p-6 shadow-sm"
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="이름 (선택)">
@@ -186,12 +186,12 @@ export function SajuForm() {
               <option value="lunar">음력</option>
             </select>
             {calendar === "lunar" && (
-              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-stone-600">
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-ink-soft">
                 <input
                   type="checkbox"
                   checked={isLeapMonth}
                   onChange={(e) => setIsLeapMonth(e.target.checked)}
-                  className="size-4 accent-violet-600"
+                  className="size-4 accent-brand-hover"
                 />
                 윤달입니다
               </label>
@@ -204,17 +204,17 @@ export function SajuForm() {
               value={birthTime}
               disabled={timeUnknown}
               onChange={(e) => setBirthTime(e.target.value)}
-              className={`${inputClass} disabled:bg-stone-100 disabled:text-stone-400`}
+              className={`${inputClass} disabled:bg-surface-inset disabled:text-ink-muted`}
             />
           </Field>
 
           <div className="flex items-end">
-            <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-stone-600">
+            <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-ink-soft">
               <input
                 type="checkbox"
                 checked={timeUnknown}
                 onChange={(e) => setTimeUnknown(e.target.checked)}
-                className="size-4 accent-violet-600"
+                className="size-4 accent-brand-hover"
               />
               시각을 모릅니다 (시주 제외)
             </label>
@@ -230,8 +230,8 @@ export function SajuForm() {
                 onClick={() => setReadingType(type)}
                 className={`rounded-full border px-4 py-2 text-sm transition ${
                   readingType === type
-                    ? "border-violet-600 bg-violet-50 font-medium text-violet-700"
-                    : "border-stone-200 text-stone-600 hover:border-stone-300"
+                    ? "border-brand bg-brand-subtle font-medium text-brand-ink"
+                    : "border-line-strong text-ink-soft hover:border-brand"
                 }`}
               >
                 {READING_TYPE_LABEL[type]}
@@ -240,8 +240,8 @@ export function SajuForm() {
           </div>
         </Field>
 
-        <details className="rounded-xl border border-stone-200 bg-stone-50/60 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-stone-700">
+        <details className="rounded-xl border border-line-strong bg-surface-muted px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium text-ink-soft">
             만세력 고급 설정
           </summary>
           <div className="mt-4 space-y-4">
@@ -255,7 +255,7 @@ export function SajuForm() {
                 <option value="true">진태양시 (경도 + 균시차)</option>
                 <option value="standard">보정 없음 (시계시 그대로)</option>
               </select>
-              <p className="mt-1.5 text-xs text-stone-500">
+              <p className="mt-1.5 text-xs text-ink-muted">
                 한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분 빠릅니다.
                 서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
               </p>
@@ -270,7 +270,7 @@ export function SajuForm() {
                 <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
                 <option value="jasi">자시파 (23시부터 다음날)</option>
               </select>
-              <p className="mt-1.5 text-xs text-stone-500">
+              <p className="mt-1.5 text-xs text-ink-muted">
                 23:00~23:59 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파 차이입니다.
                 그 시간대가 아니면 결과가 같습니다.
               </p>
@@ -282,7 +282,7 @@ export function SajuForm() {
           <button
             type="button"
             onClick={stop}
-            className="w-full rounded-xl border border-stone-300 px-4 py-3.5 font-semibold text-stone-600 transition hover:bg-stone-50"
+            className="w-full rounded-xl border border-line-strong px-4 py-3.5 font-semibold text-ink-soft transition hover:bg-surface-inset"
           >
             생성 중단
           </button>
@@ -290,13 +290,13 @@ export function SajuForm() {
           <button
             type="submit"
             disabled={loading || !birthDate}
-            className="w-full rounded-xl bg-violet-600 px-4 py-3.5 font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-stone-300"
+            className="w-full rounded-xl bg-brand px-4 py-3.5 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-line-strong"
           >
             {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
           </button>
         )}
 
-        <p className="text-center text-xs text-stone-400">
+        <p className="text-center text-xs text-ink-muted">
           입력한 정보는 저장하지 않고, 풀이 생성에만 사용됩니다.
         </p>
       </form>
@@ -304,11 +304,11 @@ export function SajuForm() {
       {error && (
         <div
           role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="rounded-xl border border-danger bg-danger-subtle px-4 py-3 text-sm text-danger-ink"
         >
           {error}
           {reading && (
-            <p className="mt-1 text-xs text-red-600/80">
+            <p className="mt-1 text-xs text-danger-ink">
               아래 풀이는 중단 전까지 생성된 부분입니다.
             </p>
           )}
@@ -321,12 +321,12 @@ export function SajuForm() {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-100";
+  "w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-placeholder focus:border-brand focus:ring-2 focus:ring-brand-border";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-stone-700">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-ink-soft">{label}</span>
       {children}
     </label>
   );

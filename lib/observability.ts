@@ -23,10 +23,12 @@ import type { ReadingType } from "./saju/schema";
  *
  * ## 어디로 나가는가
  *
- * 지금은 stdout 한 곳이다. Vercel 은 stdout 의 JSON 을 Runtime Logs 에서 구조화해 보여 준다.
- * **Vercel Web Analytics 의 custom events 는 Hobby 플랜에서 쓸 수 없어**(문서의 요금표에서
- * Hobby 칸이 `-`) 지표를 대시보드 패널로 올리지 못한다. 그래서 이 모듈은 싱크를 하나로
- * 두고, 외부 수집기를 붙일 때 `emit` 만 갈아끼우게 해 뒀다. 남은 작업은 TASK.md 참고.
+ * **stdout 한 곳뿐이다.** Vercel 이 stdout 의 JSON 을 Runtime Logs 에서 구조화해 보여 준다.
+ * 에러 추적 서비스도 방문자 분석 도구도 붙이지 않기로 확정했다 (2026-08-13 · CLAUDE.md).
+ * 그래서 개인정보 처리방침이 "방문자 분석 도구를 전혀 쓰지 않습니다" 를 약속할 수 있다.
+ *
+ * 나중에 외부 수집기가 필요해지면 `emit` 만 갈아끼우면 된다. 그때 **제3자가 늘어나므로**
+ * `app/privacy/page.tsx` 4항(제3자 전송)과 5항을 같은 커밋에서 고쳐야 한다.
  */
 
 export type SajuOutcome =

@@ -71,7 +71,7 @@ export function FirstVisitNotice() {
         <button
           type="button"
           onClick={dismiss}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition hover:bg-brand-hover"
+          className="rounded-lg bg-brand-solid px-4 py-2 text-sm font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover"
         >
           확인했습니다
         </button>

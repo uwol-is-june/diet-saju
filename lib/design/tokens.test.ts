@@ -80,6 +80,8 @@ describe("토큰 정의", () => {
     const expected = [
       "--color-brand", "--color-brand-hover", "--color-brand-subtle", "--color-brand-border",
       "--color-brand-ink", "--color-on-brand",
+      "--color-brand-solid", "--color-brand-solid-hover", "--color-on-brand-solid",
+      "--color-brand-solid-disabled", "--color-on-brand-solid-disabled",
       "--color-canvas", "--color-surface", "--color-surface-muted", "--color-surface-inset",
       "--color-ink", "--color-ink-soft", "--color-ink-muted", "--color-ink-placeholder",
       "--color-line", "--color-line-strong",
@@ -119,28 +121,66 @@ describe("대비비 — 본문 텍스트 (AA 4.5:1)", () => {
   });
 });
 
-describe("대비비 — 버튼 (AA 4.5:1)", () => {
-  it("기본 상태: 브랜드 배경 위 on-brand 텍스트", () => {
+describe("대비비 — 연한 브랜드 면 (AA 4.5:1)", () => {
+  // `--color-brand`(green500)는 채운 버튼이 아니라 연한 강조 면·커서·링에 쓴다.
+  it("브랜드 면 위 on-brand 텍스트", () => {
     // green500 은 밝아서 흰 텍스트가 1.82:1 이다. 어두운 잉크를 쓰는 이유.
     expect(contrast(hex("--color-on-brand"), hex("--color-brand"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("흰 텍스트는 브랜드 배경에서 쓸 수 없다", () => {
+  it("흰 텍스트는 브랜드 면에서 쓸 수 없다", () => {
     // 이 단정이 깨지면(=흰 텍스트가 통과하면) 팔레트가 어두워진 것이다.
     // 그때는 --color-on-brand 를 흰색으로 되돌릴 수 있다.
+    // 채운 버튼은 별도 토큰(--color-brand-solid)을 쓰므로 여기 영향을 받지 않는다.
     expect(contrast("#FFFFFF", hex("--color-brand"))).toBeLessThan(4.5);
   });
 
-  it("hover 상태도 통과한다", () => {
+  it("brand-hover 면도 통과한다", () => {
     expect(contrast(hex("--color-on-brand"), hex("--color-brand-hover"))).toBeGreaterThanOrEqual(
       4.5,
     );
   });
+});
 
-  it("비활성 상태도 통과한다", () => {
-    expect(contrast(hex("--color-on-brand"), hex("--color-line-strong"))).toBeGreaterThanOrEqual(
-      4.5,
+describe("대비비 — 채운 버튼 (AA 4.5:1, TASK-21)", () => {
+  it("기본 상태", () => {
+    expect(
+      contrast(hex("--color-on-brand-solid"), hex("--color-brand-solid")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("hover 상태", () => {
+    expect(
+      contrast(hex("--color-on-brand-solid"), hex("--color-brand-solid-hover")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("비활성 상태", () => {
+    expect(
+      contrast(hex("--color-on-brand-solid-disabled"), hex("--color-brand-solid-disabled")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("hover 가 기본보다 어둡다", () => {
+    // "hover 인데 더 밝아짐" 같은 실수를 막는다.
+    expect(luminance(hex("--color-brand-solid-hover"))).toBeLessThan(
+      luminance(hex("--color-brand-solid")),
     );
+  });
+
+  it("비활성이 기본과 밝기로 구분된다", () => {
+    // 색상(초록↔회색)만으로 구분되면 색각 이상에서 같아 보인다. 명도차를 강제한다.
+    // 회색으로 "채우는" 방식이 여기서 걸린다 — gray500 은 green700 과 1.07:1 이다.
+    expect(
+      contrast(hex("--color-brand-solid"), hex("--color-brand-solid-disabled")),
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  it("중간 밝기 초록에는 어느 글씨색도 통과하지 않는 사각지대가 있다", () => {
+    // TASK-21 의 핵심 근거. "조금만 어둡게" 로 타협하면 더 나빠진다는 것을 고정해 둔다.
+    const midGreen = "#1F9155";
+    expect(contrast("#FFFFFF", midGreen)).toBeLessThan(4.5);
+    expect(contrast(hex("--color-ink"), midGreen)).toBeLessThan(4.5);
   });
 });
 

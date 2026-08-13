@@ -330,7 +330,7 @@ export function SajuForm() {
             type="submit"
             disabled={loading || !birthDate}
             aria-busy={loading}
-            className="w-full rounded-xl bg-brand px-4 py-3.5 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-line-strong"
+            className="w-full rounded-xl bg-brand-solid px-4 py-3.5 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
           >
             {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
           </button>

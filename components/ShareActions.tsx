@@ -86,7 +86,7 @@ export function ShareActions({
           type="button"
           onClick={saveImage}
           disabled={busy}
-          className="min-h-11 flex-1 rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-line-strong"
+          className="min-h-11 flex-1 rounded-xl bg-brand-solid px-4 py-3 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
         >
           {busy ? "이미지를 만들고 있습니다…" : "이미지로 저장"}
         </button>

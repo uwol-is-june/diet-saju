@@ -24,6 +24,9 @@ const DIET_FULL = `## 한눈에 보기
 ## 살이 붙는 패턴
 패턴 설명입니다.
 
+## 잘 맞는 다이어트 방법
+접근 순서 설명입니다.
+
 ## 잘 맞는 식습관
 - 항목 하나
 - 항목 둘
@@ -73,7 +76,7 @@ describe("섹션 계약", () => {
 describe("완성된 풀이 파싱", () => {
   const parsed = parseReadingSections(DIET_FULL, "diet", false);
 
-  it("계약된 7개 섹션을 순서대로 잡는다", () => {
+  it("계약된 섹션을 순서대로 전부 잡는다", () => {
     expect(parsed.sections.map((s) => s.id)).toEqual(
       SECTION_SPECS.diet.map((spec) => spec.id),
     );
@@ -113,7 +116,7 @@ describe("스트리밍 도중 파싱", () => {
       expect(parsed.sections.length).toBeGreaterThanOrEqual(previousCount);
       previousCount = parsed.sections.length;
     }
-    expect(previousCount).toBe(7);
+    expect(previousCount).toBe(SECTION_SPECS.diet.length);
   });
 
   it("마지막 섹션만 미완이고 나머지는 완결이다", () => {

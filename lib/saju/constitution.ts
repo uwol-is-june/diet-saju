@@ -83,6 +83,47 @@ const PATTERN_OF_GROUP: Record<SipsinGroup, GainPattern> = {
   인성: "정체형",
 };
 
+// ── 5. 다이어트 접근 순서 (TASK-24) ────────────────────────────────────────
+export type DietApproach = "활동량 우선" | "리듬 고정 우선" | "식사량 조절 우선" | "회복 우선";
+
+/** 살이 붙는 패턴이 어느 쪽에 걸리는지 — 접근 순서 판정의 두 번째 축 */
+export type GainSite = "움직임" | "먹는 것";
+
+/**
+ * **우리 관례**: 살이 붙는 패턴 → 걸리는 지점.
+ *
+ * 근거는 `GAIN_PATTERN_NOTE` 의 각 문구다. 비겁·인성 쪽은 "활동량이 줄면 붙는" 결이고,
+ * 식상·재성·관성 쪽은 먹는 양·시각·상황에서 붙는 결이다.
+ */
+const SITE_OF_PATTERN: Record<GainPattern, GainSite> = {
+  근육형: "움직임",
+  정체형: "움직임",
+  식욕형: "먹는 것",
+  불규칙형: "먹는 것",
+  스트레스형: "먹는 것",
+};
+
+/**
+ * **우리 관례**: 대사 기조 × 걸리는 지점 → 무엇을 먼저 고정하는가.
+ *
+ * `METABOLISM_NOTE` 가 이미 순서를 가리키고 있다 — 발산형은 "쓰는 양을 늘리는 순서",
+ * 축적형은 "수면과 끼니를 먼저 고정하고 강도는 나중에". 그 순서를 독립된 축으로 올리고,
+ * 걸리는 지점으로 어느 쪽을 먼저 만질지 갈랐다.
+ *
+ * **2×2 라서 동점이 생기지 않는다.** 두 입력이 각각 이미 결정론적이므로(대사 기조는
+ * 신강신약에서, 패턴은 십신 우세 그룹에서 — 그쪽 동점은 고전 십신 순서로 이미 고정됨)
+ * 같은 사주면 항상 같은 방식이 나온다. 축을 더 넣을 때는 동점 처리를 반드시 함께 고정할 것.
+ *
+ * **한열을 판정에 넣지 않았다.** 한열은 "무엇을 먼저 고정하는가" 와 다른 층이다 —
+ * 같은 순서를 어느 온도·시간대에 실행하느냐를 정한다. 그래서 방식은 위 두 축으로 정하고,
+ * 한열은 `THERMAL_GUIDE` 의 항목으로 실행 조건에 붙는다. 한열을 여기 섞으면 값이 20가지가
+ * 되면서 각 칸의 근거를 설명할 수 없게 된다.
+ */
+const APPROACH_TABLE: Record<MetabolismTendency, Record<GainSite, DietApproach>> = {
+  발산형: { 움직임: "활동량 우선", "먹는 것": "식사량 조절 우선" },
+  축적형: { 움직임: "회복 우선", "먹는 것": "리듬 고정 우선" },
+};
+
 // ── 문구 테이블 ────────────────────────────────────────────────────────────
 /**
  * 여기 문자열은 프롬프트가 아니라 **판정에 딸린 근거 데이터**다.
@@ -216,6 +257,39 @@ export const GAIN_PATTERN_NOTE: Record<GainPattern, string> = {
     "받아들이고 쌓는 쪽이 강한 결이다. 활동량이 줄면 바로 붙으므로 앉아 있는 시간을 끊어 주는 것이 먼저다.",
 };
 
+/**
+ * 접근 순서에 딸린 근거 문구 (TASK-24).
+ *
+ * `order` 는 **무엇을 먼저 하고 무엇을 나중에 하는가**, `caution` 은 그 순서를 지킬 때
+ * 흔히 어긋나는 지점이다. 둘 다 생활 습관 수준을 넘지 않는다 — 단식·특정 식단 이름·
+ * 칼로리·목표 체중 같은 것은 넣지 않는다 (`constitution.test.ts` 가 막는다).
+ */
+export const DIET_APPROACH_NOTE: Record<DietApproach, { order: string; caution: string }> = {
+  "활동량 우선": {
+    order:
+      "쓰는 양을 먼저 늘리고 먹는 양은 그다음에 손댄다. 앉아 있는 시간을 끊는 것이 첫 단계다.",
+    caution:
+      "한 번에 강도를 올리면 며칠 만에 멈춘다. 같은 강도를 자주 반복하는 쪽이 오래간다.",
+  },
+  "식사량 조절 우선": {
+    order:
+      "먹는 양과 순서를 먼저 손대고 움직임은 지금 하던 만큼 유지한다. 그릇 크기와 먹는 순서가 첫 단계다.",
+    caution:
+      "끼니를 거르는 방식으로 양을 줄이면 다음 끼니에 몰린다. 줄이는 것은 끼니 수가 아니라 한 번의 양이다.",
+  },
+  "리듬 고정 우선": {
+    order:
+      "먹는 시각과 자는 시각을 먼저 고정하고, 양과 강도는 리듬이 잡힌 뒤에 손댄다.",
+    caution:
+      "메뉴를 먼저 바꾸면 시각이 다시 흐트러진다. 무엇을 먹을지보다 언제 먹을지가 먼저다.",
+  },
+  "회복 우선": {
+    order: "잠과 쉬는 시간을 먼저 확보하고, 활동량은 그다음에 조금씩 올린다.",
+    caution:
+      "지탱하는 힘이 얇은 상태에서 강도를 올리면 회복이 밀려 오히려 멈춘다. 늘리는 것은 한 번의 길이가 아니라 횟수부터다.",
+  },
+};
+
 // ── 판정 ───────────────────────────────────────────────────────────────────
 export interface ConstitutionFocus {
   element: Ohaeng;
@@ -252,6 +326,15 @@ export interface ConstitutionAnalysis {
   dominantGroup: SipsinGroup;
   gainPattern: GainPattern;
   gainPatternNote: string;
+
+  /**
+   * 다이어트 접근 순서 — 대사 기조 × 걸리는 지점 (우리 관례, TASK-24).
+   * "무엇을 먼저 고정하는가" 를 정한다. LLM 이 다시 정하지 않는다.
+   */
+  gainSite: GainSite;
+  dietApproach: DietApproach;
+  dietApproachOrder: string;
+  dietApproachCaution: string;
 
   /** 과다·부족 오행마다의 관리 축. 과다 먼저, 그다음 부족 (오행 순서 유지) */
   focus: ConstitutionFocus[];
@@ -303,6 +386,11 @@ export function analyzeConstitution(input: ConstitutionInput): ConstitutionAnaly
   );
   const gainPattern = PATTERN_OF_GROUP[dominantGroup];
 
+  // ── 다이어트 접근 순서 ──
+  // 2×2 표라 동점이 없다. 두 입력이 이미 결정론적이므로 같은 사주면 같은 방식이 나온다.
+  const gainSite = SITE_OF_PATTERN[gainPattern];
+  const dietApproach = APPROACH_TABLE[metabolism][gainSite];
+
   // ── 관리 축 ──
   const focus: ConstitutionFocus[] = [
     ...excess.map((element) => toFocus(element, "과다")),
@@ -328,6 +416,11 @@ export function analyzeConstitution(input: ConstitutionInput): ConstitutionAnaly
     dominantGroup,
     gainPattern,
     gainPatternNote: GAIN_PATTERN_NOTE[gainPattern],
+
+    gainSite,
+    dietApproach,
+    dietApproachOrder: DIET_APPROACH_NOTE[dietApproach].order,
+    dietApproachCaution: DIET_APPROACH_NOTE[dietApproach].caution,
 
     focus,
   };

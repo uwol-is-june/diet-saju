@@ -114,10 +114,11 @@ describe("근거 줄", () => {
     expect(notes.every((note) => note.length > 0)).toBe(true);
   });
 
-  it("diet 는 대사 기조를, general 은 계절 기세를 덧붙인다", () => {
-    expect(buildShareCardModel(chart, "diet").notes).toContain(
-      `대사 기조 ${chart.constitution.metabolism}`,
-    );
+  it("diet 는 접근 순서와 대사 기조를, general 은 계절 기세를 덧붙인다", () => {
+    // 접근 순서는 대사 기조에서 파생된 결론이라 근거와 함께 한 줄에 둔다 (TASK-24).
+    const tail = buildShareCardModel(chart, "diet").notes.at(-1)!;
+    expect(tail).toContain(chart.constitution.dietApproach);
+    expect(tail).toContain(`대사 기조 ${chart.constitution.metabolism}`);
     expect(buildShareCardModel(chart, "general").notes.at(-1)).toContain(chart.ohaeng.season);
   });
 });

@@ -57,12 +57,23 @@ describe("체질 판정 블록", () => {
     expect(generalPrompt).not.toContain("체질 판정");
   });
 
-  it("코드가 정한 판정 네 축이 그대로 들어간다", () => {
+  it("코드가 정한 판정 축이 그대로 들어간다", () => {
     const { constitution } = chart;
     expect(dietPrompt).toContain(constitution.thermal);
     expect(dietPrompt).toContain(constitution.metabolism);
     expect(dietPrompt).toContain(constitution.gainPattern);
     expect(dietPrompt).toContain(constitution.dominantGroup);
+    // 다이어트 접근 순서 (TASK-24)
+    expect(dietPrompt).toContain(constitution.dietApproach);
+    expect(dietPrompt).toContain(constitution.gainSite);
+    expect(dietPrompt).toContain(constitution.dietApproachOrder);
+    expect(dietPrompt).toContain(constitution.dietApproachCaution);
+  });
+
+  it("접근 순서가 우리 관례임을 밝히고 새로 만들지 말라고 한다", () => {
+    // 2×2 대응표는 관례다. 절대 규칙처럼 서술되면 사실이 아닌 것을 사실로 내보낸다.
+    expect(dietPrompt).toContain("이 서비스가 정한 관례");
+    expect(dietPrompt).toContain("다른 순서를 새로 만들지 말 것");
   });
 
   it("과다·부족 오행과 그 관리 축이 들어간다", () => {
@@ -115,6 +126,22 @@ describe("표현 규칙", () => {
   it("전문가 상담 권고를 요구한다", () => {
     // app/disclaimer/page.tsx 가 같은 내용을 약속하고 있다.
     expect(dietPrompt).toContain("전문가와 상의하도록 권하는 한 문장");
+  });
+
+  it("감량 방법을 처방하지 말라고 두 곳에서 막는다 (TASK-24)", () => {
+    // 방법을 제시하는 절이 생겼으므로 유형 규칙과 섹션 지침 양쪽에 선을 둔다.
+    // 한쪽만 있으면 그 절만 읽는 모델이 선을 못 본다.
+    expect(dietPrompt).toContain("감량 방법을 처방하지 않는다");
+    const guide = dietPrompt.slice(dietPrompt.indexOf("## 잘 맞는 다이어트 방법"));
+    const sectionInstruction = guide.slice(0, guide.indexOf("## 잘 맞는 식습관"));
+    expect(sectionInstruction).toContain("칼로리");
+    expect(sectionInstruction).toContain("목표 체중");
+  });
+
+  it("식단 이름·단식·기간을 금지 목록으로 적어 둔다", () => {
+    for (const word of ["단식", "칼로리", "목표 체중", "간헐적 단식"]) {
+      expect(dietPrompt, `${word} 금지 문구 없음`).toContain(word);
+    }
   });
 });
 

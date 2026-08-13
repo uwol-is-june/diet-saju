@@ -38,6 +38,7 @@ export const READING_SECTION_IDS = [
   // diet
   "constitution",
   "gain-pattern",
+  "diet-approach",
   "eating",
   "movement",
   "year-flow",
@@ -78,6 +79,7 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "constitution", title: "오행으로 본 체질" },
     { id: "gain-pattern", title: "살이 붙는 패턴" },
+    { id: "diet-approach", title: "잘 맞는 다이어트 방법" },
     { id: "eating", title: "잘 맞는 식습관" },
     { id: "movement", title: "잘 맞는 움직임" },
     { id: "year-flow", title: "올해의 몸 흐름" },

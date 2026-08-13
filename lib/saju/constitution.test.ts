@@ -3,6 +3,7 @@ import { analyzeOhaeng, analyzeStrength, type OhaengAnalysis } from "./analysis"
 import {
   BODY_AXIS,
   DEFICIENT_RATIO,
+  DIET_APPROACH_NOTE,
   EXCESS_RATIO,
   FOCUS_GUIDE,
   GAIN_PATTERN_NOTE,
@@ -10,6 +11,7 @@ import {
   THERMAL_GUIDE,
   analyzeConstitution,
   type ConstitutionInput,
+  type DietApproach,
   type ThermalTendency,
 } from "./constitution";
 import {
@@ -266,6 +268,74 @@ describe("살이 붙는 패턴 — 십신 분포에서 온다", () => {
   });
 });
 
+describe("다이어트 접근 순서 (TASK-24)", () => {
+  /**
+   * 완료 기준은 "같은 사주에 항상 같은 다이어트 방식" 이다.
+   * 2×2 표라 동점이 없고, 두 입력이 각각 이미 결정론적이다.
+   */
+  it("같은 입력이면 항상 같은 방식이 나온다", () => {
+    for (const chart of SWEEP) {
+      const first = analyzeConstitution(inputFrom(chart));
+      const second = analyzeConstitution(inputFrom(chart));
+      expect(second.dietApproach).toBe(first.dietApproach);
+      expect(second.gainSite).toBe(first.gainSite);
+    }
+  });
+
+  it("대사 기조 × 걸리는 지점 2×2 표를 그대로 따른다", () => {
+    // 표를 코드에서 다시 읽지 않고 여기 박아 둔다 — 표가 조용히 바뀌면 걸린다.
+    const expected: Record<string, DietApproach> = {
+      "발산형/움직임": "활동량 우선",
+      "발산형/먹는 것": "식사량 조절 우선",
+      "축적형/움직임": "회복 우선",
+      "축적형/먹는 것": "리듬 고정 우선",
+    };
+    for (const chart of SWEEP) {
+      const result = analyzeConstitution(inputFrom(chart));
+      expect(result.dietApproach).toBe(expected[`${result.metabolism}/${result.gainSite}`]);
+    }
+  });
+
+  it("살이 붙는 패턴이 걸리는 지점으로 옳게 갈린다", () => {
+    const site = { 근육형: "움직임", 정체형: "움직임", 식욕형: "먹는 것", 불규칙형: "먹는 것", 스트레스형: "먹는 것" };
+    for (const chart of SWEEP) {
+      const result = analyzeConstitution(inputFrom(chart));
+      expect(result.gainSite).toBe(site[result.gainPattern]);
+    }
+  });
+
+  it("네 방식이 표본에서 모두 나온다", () => {
+    // 한 칸이라도 도달 불가면 표가 사실상 3분류다.
+    const seen = new Set(SWEEP.map((chart) => analyzeConstitution(inputFrom(chart)).dietApproach));
+    expect(seen.size).toBe(4);
+  });
+
+  it("한열이 방식을 바꾸지 않는다", () => {
+    // 한열은 "무엇을 먼저" 가 아니라 "어느 온도·시간대에" 를 정한다 (판정에서 뺀 이유).
+    // 같은 대사 기조·같은 패턴이면 한열이 달라도 방식이 같아야 한다.
+    const byKey = new Map<string, Set<DietApproach>>();
+    for (const chart of SWEEP) {
+      const result = analyzeConstitution(inputFrom(chart));
+      const key = `${result.metabolism}/${result.gainPattern}`;
+      if (!byKey.has(key)) byKey.set(key, new Set());
+      byKey.get(key)!.add(result.dietApproach);
+    }
+    for (const [key, approaches] of byKey) {
+      expect(approaches.size, `${key} 에서 방식이 갈렸다`).toBe(1);
+    }
+  });
+
+  it("방식마다 순서와 어긋나는 지점이 함께 실린다", () => {
+    for (const chart of SWEEP) {
+      const result = analyzeConstitution(inputFrom(chart));
+      expect(result.dietApproachOrder).toBe(DIET_APPROACH_NOTE[result.dietApproach].order);
+      expect(result.dietApproachCaution).toBe(DIET_APPROACH_NOTE[result.dietApproach].caution);
+      expect(result.dietApproachOrder.length).toBeGreaterThan(10);
+      expect(result.dietApproachCaution.length).toBeGreaterThan(10);
+    }
+  });
+});
+
 describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () => {
   /**
    * 면책 고지(`app/disclaimer/page.tsx`)가 "진단이나 치료 방법이 아니다" 라고 약속한다.
@@ -275,6 +345,15 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     "치료", "완치", "처방", "진단", "질병", "질환", "증상", "효능", "효과",
     "약효", "해독", "독소", "면역", "항암", "염증", "혈압", "혈당", "콜레스테롤",
     "보장", "빠집니다", "빠진다", "낫는다", "반드시",
+  ];
+
+  /**
+   * 감량 "방법" 은 의학·영양 조언에 가장 가까이 간다 (TASK-24). 어휘 금지만으로는
+   * 부족해서 **처방으로 읽히는 것들**을 따로 막는다.
+   */
+  const BANNED_PRESCRIPTION = [
+    "단식", "칼로리", "kcal", "kg", "그램", "저탄", "고지", "키토", "원푸드",
+    "체중 감량 목표", "목표 체중", "주 동안", "일주일에", "보조제", "영양제",
   ];
 
   /** 사용자에게 나갈 수 있는 문구 전부 (BODY_AXIS.classical 은 내보내지 않으므로 제외) */
@@ -294,16 +373,31 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     ]),
     ...Object.values(METABOLISM_NOTE),
     ...Object.values(GAIN_PATTERN_NOTE),
+    ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
   ];
 
   it("문구 표가 비어 있지 않다", () => {
     // 위 수집이 깨져 빈 배열이 되면 아래 검사가 통과해 버린다.
-    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5);
+    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 8);
   });
 
   it.each(BANNED)("어느 문구에도 %s 가 없다", (word) => {
     const offenders = userFacing.filter((text) => text.includes(word));
     expect(offenders).toEqual([]);
+  });
+
+  it.each(BANNED_PRESCRIPTION)("어느 문구에도 %s 가 없다 (처방 금지)", (word) => {
+    const offenders = userFacing.filter((text) => text.includes(word));
+    expect(offenders).toEqual([]);
+  });
+
+  it("숫자를 목표로 제시하지 않는다", () => {
+    // "3kg", "1,200칼로리", "2주" 같은 수치가 섞이면 처방으로 읽힌다.
+    // 접근 순서 문구는 순서와 습관만 말한다.
+    for (const note of Object.values(DIET_APPROACH_NOTE)) {
+      expect(note.order).not.toMatch(/\d/);
+      expect(note.caution).not.toMatch(/\d/);
+    }
   });
 
   it("판정 결과에 장부 이름이 실려 나가지 않는다", () => {

@@ -104,10 +104,18 @@ const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
   yearly: (chart) => [`${chart.yearly.year}년 ${chart.yearly.ganji}`, chart.yearly.themeLabel],
 };
 
-/** 근거 줄 마지막 항목도 유형별로 다르다. */
+/**
+ * 근거 줄 마지막 항목도 유형별로 다르다.
+ *
+ * diet 에 접근 순서를 **칩이 아니라 여기** 넣은 이유 (TASK-24): 칩은 두 개로 고정돼 있고
+ * 그 자리는 체질 자체(한열·패턴)가 쓴다. 접근 순서는 대사 기조에서 파생된 결론이라
+ * 원래 이 줄에 있던 대사 기조와 같은 자리에 두는 것이 맞다. 둘을 함께 적어 두면
+ * "무엇에서 이 순서가 나왔는지" 가 카드에서도 보인다.
+ */
 const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
   general: (chart) => `${chart.ohaeng.season} 기세 기준 · ${chart.ohaeng.strongest} 왕(旺)`,
-  diet: (chart) => `대사 기조 ${chart.constitution.metabolism}`,
+  diet: (chart) =>
+    `방식 ${chart.constitution.dietApproach} · 대사 기조 ${chart.constitution.metabolism}`,
   yearly: (chart) => `올해 작용 ${chart.yearly.effect} · 세운 십신 ${chart.yearly.sipsin}`,
 };
 

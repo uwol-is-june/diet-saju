@@ -1,6 +1,8 @@
 # 디자인 토큰 — 컬러 팔레트
 
-TASK-16 의 입력 자료. 실제 적용 상태는 `app/globals.css` 의 `@theme` 블록이 기준이다.
+팔레트의 **출처와 선택 근거**를 남긴 문서다. 적용된 값의 기준은 `app/globals.css` 이고,
+대비비는 `lib/design/tokens.test.ts` 가 그 파일을 파싱해 검증한다.
+색을 바꿀 때는 globals.css 1층(`--raw-*`)을 고치고 이 문서의 근거도 갱신한다.
 
 ## 출처
 

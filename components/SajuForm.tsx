@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth-time";
 import {
   READING_TYPE_LABEL,
   READING_TYPES,
@@ -17,7 +18,13 @@ import { ResultView } from "./ResultView";
 export function SajuForm() {
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
+  /**
+   * 시·분을 따로 들고 제출할 때만 `HH:mm` 으로 조립한다 (TASK-23).
+   * 서버 계약(`sajuInputSchema.birthTime`)은 `HH:mm` 그대로다 — 그걸 바꾸면
+   * 만세력 테스트가 전부 영향을 받는다.
+   */
+  const [birthHour, setBirthHour] = useState("");
+  const [birthMinute, setBirthMinute] = useState("");
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [calendar, setCalendar] = useState<"solar" | "lunar">("solar");
   const [isLeapMonth, setIsLeapMonth] = useState(false);
@@ -45,6 +52,14 @@ export function SajuForm() {
   // (label 로 감싸는 방식은 윤달 체크박스처럼 안에 또 label 이 들어갈 때 무효 HTML 이 된다)
   const id = useId();
   const fieldId = (key: string) => `${id}-${key}`;
+
+  /**
+   * 한쪽만 고른 상태를 **조용히 버리지 않는다.** 시만 골라도 통과시키면 분을 0 으로
+   * 채우는 셈이고, 경도 보정 때문에 시주 경계가 정시가 아닌 시각에 놓이므로
+   * (예: 01:31 은 자시, 01:33 은 축시) 그 0 이 시주를 바꿀 수 있다.
+   */
+  const timeIncomplete = !timeUnknown && (birthHour === "") !== (birthMinute === "");
+  const birthTime = composeBirthTime(birthHour, birthMinute);
 
   /**
    * 원국은 폼 아래에 그려지는데, 폼이 길어 모바일에서는 화면 밖이다.
@@ -237,22 +252,48 @@ export function SajuForm() {
           )}
 
           {/* 시각도 같은 이유로 전체 폭 행이다. `시각을 모릅니다` 를 짝 칸에 두면 그 칸에는
-              라벨이 없어 오른쪽 위가 뚫려 보이고, `태어난 시각` 칸 안에 넣으면 위와 같은
-              빈칸이 생긴다. 안쪽 그리드가 바깥과 같은 `gap-4` 2열이라 시각 입력의 폭·좌우
-              위치가 바로 위 `생년월일` 과 정확히 맞는다. */}
-          <div className="sm:col-span-2">
-            <label htmlFor={fieldId("birth-time")} className={labelClass}>
-              태어난 시각
-            </label>
+              라벨이 없어 오른쪽 위가 뚫려 보이고, 시각 칸 안에 넣으면 위와 같은 빈칸이
+              생긴다. 안쪽 그리드가 바깥과 같은 `gap-4` 2열이라 시각 컨트롤의 폭·좌우
+              위치가 바로 위 `생년월일` 과 정확히 맞는다.
+
+              드롭다운 두 개는 각각 라벨이 필요하므로 `fieldset`/`legend` 로 묶는다
+              (`legend` 하나가 두 컨트롤을 아우르고, 개별 구분은 `aria-label` 이 한다).
+              `min-w-0` 은 fieldset 이 내용보다 좁아지지 못하는 기본 동작을 푼다. */}
+          <fieldset className="min-w-0 sm:col-span-2">
+            <legend className={labelClass}>태어난 시각</legend>
             <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
-              <input
-                id={fieldId("birth-time")}
-                type="time"
-                value={birthTime}
-                disabled={timeUnknown}
-                onChange={(e) => setBirthTime(e.target.value)}
-                className={`${nativeDateClass(birthTime)} disabled:bg-surface-inset disabled:text-ink-muted`}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  id={fieldId("birth-hour")}
+                  aria-label="태어난 시"
+                  value={birthHour}
+                  disabled={timeUnknown}
+                  onChange={(e) => setBirthHour(e.target.value)}
+                  className={selectTimeClass(birthHour)}
+                >
+                  <option value="">시 선택</option>
+                  {HOUR_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  id={fieldId("birth-minute")}
+                  aria-label="태어난 분"
+                  value={birthMinute}
+                  disabled={timeUnknown}
+                  onChange={(e) => setBirthMinute(e.target.value)}
+                  className={selectTimeClass(birthMinute)}
+                >
+                  <option value="">분 선택</option>
+                  {MINUTE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <label className={checkboxLabelClass}>
                 <input
                   type="checkbox"
@@ -263,7 +304,17 @@ export function SajuForm() {
                 시각을 모릅니다 (시주 제외)
               </label>
             </div>
-          </div>
+            {timeIncomplete ? (
+              <p role="alert" className="mt-1.5 text-xs text-danger-ink">
+                시와 분을 모두 골라 주세요. 시각을 모르면 옆의 체크박스를 눌러 주세요.
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-ink-muted">
+                분까지 고를수록 정확합니다. 경도 보정(약 −32분) 때문에 시주(時柱) 경계가
+                정시가 아닌 시각에 놓입니다.
+              </p>
+            )}
+          </fieldset>
         </div>
 
         {/* 버튼 묶음은 label 로 감쌀 수 없다 (label 은 컨트롤 하나를 가리킨다) → fieldset/legend */}
@@ -323,8 +374,8 @@ export function SajuForm() {
                 <option value="jasi">자시파 (23시부터 다음날)</option>
               </select>
               <p id={fieldId("day-boundary-hint")} className="mt-1.5 text-xs text-ink-muted">
-                23:00~23:59 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파 차이입니다.
-                그 시간대가 아니면 결과가 같습니다.
+                23:00~23:59(오후 11시대) 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파
+                차이입니다. 그 시간대가 아니면 결과가 같습니다.
               </p>
             </Field>
           </div>
@@ -341,7 +392,7 @@ export function SajuForm() {
         ) : (
           <button
             type="submit"
-            disabled={loading || !birthDate}
+            disabled={loading || !birthDate || timeIncomplete}
             aria-busy={loading}
             className="w-full rounded-xl bg-brand-solid px-4 py-3.5 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
           >
@@ -397,17 +448,22 @@ const inputBaseClass =
 const inputClass = `${inputBaseClass} text-ink`;
 
 /**
- * date/time 은 iOS 기본 스타일이 폭을 줄이고 안쪽 여백을 제멋대로 넣는다.
+ * `type="date"` 는 iOS 기본 스타일이 폭을 줄이고 안쪽 여백을 제멋대로 넣는다.
  *
- * 글자색을 **여기서 정하지 않는** 이유: native date/time 은 값이 없을 때
- * `연도-월-일`·`-- --:--` 를 본문 색으로 그려서, 옆 칸의
- * `placeholder:text-ink-placeholder` 와 톤이 어긋나 미완성처럼 보인다 (TASK-22).
- * 비어 있는 동안만 자리표시자 색으로 낮추는데, `text-ink` 를 미리 붙여 두면
- * 두 유틸리티가 같은 레이어에서 겹쳐 승자가 CSS 출력 순서에 달리게 된다.
- * 자리표시자 문자열 자체는 브라우저·로케일이 정하므로 바꿀 수 없다.
+ * 글자색을 **여기서 정하지 않는** 이유: native date 는 값이 없을 때 `연도-월-일` 을
+ * 본문 색으로 그려서, 옆 칸의 `placeholder:text-ink-placeholder` 와 톤이 어긋나
+ * 미완성처럼 보인다 (TASK-22). 비어 있는 동안만 자리표시자 색으로 낮추는데,
+ * `text-ink` 를 미리 붙여 두면 두 유틸리티가 같은 레이어에서 겹쳐 승자가 CSS 출력
+ * 순서에 달리게 된다. 자리표시자 문자열 자체는 브라우저·로케일이 정하므로 못 바꾼다.
  */
 const nativeDateClass = (value: string) =>
   `${inputBaseClass} appearance-none ${value ? "text-ink" : "text-ink-placeholder"}`;
+
+/** 시·분 드롭다운. 아직 안 고른 상태의 `시 선택` 은 자리표시자 톤으로 낮춘다. */
+const selectTimeClass = (value: string) =>
+  `${inputBaseClass} ${value ? "text-ink" : "text-ink-placeholder"}` +
+  " disabled:bg-surface-inset disabled:text-ink-muted";
+
 
 const labelClass = "mb-1.5 block text-sm font-medium text-ink-soft";
 

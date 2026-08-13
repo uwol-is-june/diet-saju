@@ -8,6 +8,7 @@ import {
   daeunDirection,
   type DaeunAnalysis,
 } from "./analysis";
+import { analyzeConstitution } from "./constitution";
 import {
   ganjiToKorean,
   hourGanIndex,
@@ -119,6 +120,18 @@ export function calculateSajuChart(
     hour: hourGanji,
   });
 
+  // 체질 판정은 리딩 유형과 무관하게 원국에서 결정된다. 유형별로 다르게 계산하면
+  // "같은 사주는 같은 판정" 이 깨진다. diet 프롬프트만 이 값을 근거로 쓴다.
+  const constitution = analyzeConstitution({
+    ilgan,
+    year: yearGanji,
+    month: monthGanji,
+    day: dayGanji,
+    hour: hourGanji,
+    ohaeng,
+    strength,
+  });
+
   // 대운은 순행/역행을 성별로 정하므로 성별 미지정이면 낼 수 없다.
   const daeun =
     input.gender === "unspecified"
@@ -150,6 +163,7 @@ export function calculateSajuChart(
     ilgan: ganjiToKorean(dayGanji).slice(0, 1),
     ohaeng,
     strength,
+    constitution,
     daeun,
     seun,
     timeCorrection: {

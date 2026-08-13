@@ -245,6 +245,30 @@ export function isSupportingSipsin(sipsin: Sipsin): boolean {
   return sipsin === "비견" || sipsin === "겁재" || sipsin === "편인" || sipsin === "정인";
 }
 
+/**
+ * 십신 10종을 묶는 고전 5분류. 음양 짝(편/정)을 하나로 본다.
+ * 순서도 고전 순서(비겁→식상→재성→관성→인성)이며, 동점일 때의 우선순위로 쓴다.
+ */
+export const SIPSIN_GROUPS = ["비겁", "식상", "재성", "관성", "인성"] as const;
+export type SipsinGroup = (typeof SIPSIN_GROUPS)[number];
+
+const SIPSIN_GROUP_OF: Record<Sipsin, SipsinGroup> = {
+  비견: "비겁",
+  겁재: "비겁",
+  식신: "식상",
+  상관: "식상",
+  편재: "재성",
+  정재: "재성",
+  편관: "관성",
+  정관: "관성",
+  편인: "인성",
+  정인: "인성",
+};
+
+export function sipsinGroup(sipsin: Sipsin): SipsinGroup {
+  return SIPSIN_GROUP_OF[sipsin];
+}
+
 // ── 60갑자 순행/역행 ──────────────────────────────────────────────────────
 /** 60갑자 인덱스를 step 만큼 옮긴다 (음수면 역행). */
 export function shiftSexagenary(index60: number, step: number): number {

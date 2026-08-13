@@ -49,31 +49,104 @@ const GENERAL_SECTIONS = `다음 순서로 작성하세요.
 
 const DIET_SECTIONS = `다음 순서로 작성하세요. 사주의 오행 균형을 몸의 기질(체질)로 연결해 해석하는 것이 핵심입니다.
 
+**위 "체질 판정" 은 이미 확정된 결과입니다.** 다른 판정을 새로 만들지 말고, 그 판정이
+왜 그렇게 나왔는지를 원국 근거와 이어 붙여 사용자의 말로 풀어 쓰세요. 판정에 딸린
+식습관·움직임 항목은 문장을 그대로 베끼지 말고 근거로 삼아 다시 쓰세요.
+
 ## 한눈에 보기
-3~4문장으로 이 사주가 보여주는 몸의 기질을 요약.
+3~4문장으로 이 사주가 보여주는 몸의 기질을 요약. **한열 판정과 대사 기조를 여기서 밝힌다.**
 
 ## 오행으로 본 체질
-오행 분포와 일간을 근거로 신체 에너지의 강약, 소화·순환·수분 대사 경향을 설명.
+과다·부족으로 판정된 오행과 그 "관리 축"을 근거로 몸의 결을 설명.
 **신강/신약 판정과 태어난 계절의 기세를 반드시 근거로 언급**하고, 득령·득지·득세 중
 무엇이 충족됐는지를 일상어로 풀어 "몸을 지탱하는 힘이 어디서 오는가"로 연결한다.
 
 ## 살이 붙는 패턴
-이 기질이 어떤 상황에서 체중 증가로 이어지기 쉬운지 (스트레스형, 식욕형, 정체형 등).
+판정된 패턴 이름을 그대로 쓰고, 그 근거가 된 십신 우세 그룹을 일상어로 풀어 설명한다.
+어떤 상황에서 체중 증가로 이어지기 쉬운지를 구체적인 장면으로 보여준다.
 
 ## 잘 맞는 식습관
-권할 만한 음식 결과 식사 리듬 3~4가지. 특정 식품을 치료제처럼 말하지 말 것.
+"관리 축" 과 "한열" 의 식습관 항목에서 3~4가지를 뽑아 쓴다. 판정에 없는 것을 지어내지 않는다.
+특정 식품을 치료제처럼 말하지 말 것.
 
 ## 잘 맞는 움직임
-기질에 맞는 운동 강도와 종류.
+"관리 축" 과 "한열" 의 움직임 항목을 근거로 강도·종류·시간대를 쓴다.
 
 ## 올해의 몸 흐름
 세운(그리고 대운이 있다면 함께)을 근거로 올해 몸 관리에서 주의할 결.
 대운 정보가 없다면 세운만으로 쓴다.
 
 ## 이번 달 실천 3가지
-구체적이고 작게 시작할 수 있는 것.
+구체적이고 작게 시작할 수 있는 것. 위 판정에서 끌어온 것이어야 한다.
 
-주의: 의학적 진단이나 치료 효과를 주장하지 마세요. 체중·건강 문제는 전문가 상담을 권하는 한 문장을 마지막에 덧붙이세요.`;
+# 표현 규칙 (반드시 지킬 것)
+- **효능을 주장하지 않는다.** "○○에 좋다", "○○이 빠진다", "효과가 있다" 같은 문장을 쓰지 마세요.
+  "~하는 편이 몸에 덜 부담이 됩니다" 처럼 생활 습관 수준의 서술로 씁니다.
+- **장기 이름으로 상태를 말하지 않는다.** "간이 약하다", "위장이 나쁘다" 같은 표현 대신
+  "소화 리듬", "회복 속도" 처럼 생활에서 느끼는 결로 씁니다.
+- 질병·증상·진단·치료·해독 같은 의학 용어를 쓰지 않습니다.
+- 이 체질 판정은 **명리학 오행 해석**입니다. 한의학의 사상체질이나 건강검진 결과와
+  같은 것으로 말하지 마세요.
+- 체중·건강 문제는 전문가와 상의하도록 권하는 한 문장을 마지막에 덧붙이세요.`;
+
+/**
+ * 체질 판정 블록 — `lib/saju/constitution.ts` 가 정한 결과를 그대로 옮긴다.
+ * 여기서 새로 판정하지 않는다. 이 파일이 하는 일은 배치와 지시뿐이다.
+ *
+ * 한열 눈금 점수(`thermalScore`)와 오행 점수는 **우리 관례**라 숫자로 내보내지 않는다.
+ * 십신 글자 수는 원국에서 센 사실이므로 그대로 쓴다.
+ */
+function buildConstitutionBlock(constitution: SajuChart["constitution"]): string {
+  const balanceLine = constitution.even
+    ? "치우침 없이 고른 편 (과다·부족으로 판정된 오행 없음)"
+    : [
+        constitution.excess.length > 0 ? `과다 ${constitution.excess.join("·")}` : null,
+        constitution.deficient.length > 0 ? `부족 ${constitution.deficient.join("·")}` : null,
+      ]
+        .filter(Boolean)
+        .join(" / ");
+
+  const dominantCount = constitution.sipsinGroups[constitution.dominantGroup];
+
+  const header = [
+    `- 오행 균형: ${balanceLine}`,
+    `- 한열(조후): **${constitution.thermal}** — ${constitution.thermalTendency}`,
+    `- 대사 기조: **${constitution.metabolism}** — ${constitution.metabolismNote}`,
+    `- 살이 붙는 패턴: **${constitution.gainPattern}** (십신 우세 ${constitution.dominantGroup} ${dominantCount}자) — ${constitution.gainPatternNote}`,
+  ].join("\n");
+
+  const focus =
+    constitution.focus.length > 0
+      ? constitution.focus
+          .map((item) =>
+            [
+              `- ${item.element} ${item.level} · 몸의 결: ${item.axis}`,
+              `  - 경향: ${item.tendency}`,
+              `  - 식습관: ${item.diet}`,
+              `  - 움직임: ${item.exercise}`,
+            ].join("\n"),
+          )
+          .join("\n")
+      : "- 과다·부족으로 판정된 오행이 없다. 특정 오행을 몰아 지적하지 말고 한열과 대사 기조 위주로 쓸 것.";
+
+  return `## 체질 판정 (계산 완료 · 수정 금지)
+
+${header}
+
+### 관리 축 — 과다·부족 오행에서 나온 것
+${focus}
+
+### 한열에서 나온 것
+- 식습관: ${constitution.thermalDiet}
+- 움직임: ${constitution.thermalExercise}
+
+- 위 판정은 오행 점수·왕상휴수사·신강신약·십신 분포에서 **규칙표로 결정된 것**이다.
+  같은 사주면 항상 같은 판정이 나온다. 다시 판정하지 말고 이대로 서술하라.
+- 한열 판정은 조후(調候) 논리다 — 태어난 계절의 한난을 먼저 보고 원국의 화·수 세력으로
+  보정했다. 근거를 말할 때 이 순서로 설명하면 된다.
+- 오행-신체 배속은 명리학의 상징 체계이지 몸 상태를 측정한 것이 아니다.
+  장기 이름을 들어 진단처럼 말하지 말 것.`;
+}
 
 export function buildUserPrompt(input: SajuInput, chart: SajuChart): string {
   const genderLabel = {
@@ -143,7 +216,10 @@ export function buildUserPrompt(input: SajuInput, chart: SajuChart): string {
     .filter(Boolean)
     .join("\n");
 
-  const sections = input.readingType === "diet" ? DIET_SECTIONS : GENERAL_SECTIONS;
+  const isDiet = input.readingType === "diet";
+  const sections = isDiet ? DIET_SECTIONS : GENERAL_SECTIONS;
+  // 체질 판정은 diet 유형에서만 근거로 쓴다. general 은 지금 형태를 그대로 둔다(확정 사항).
+  const constitutionBlock = isDiet ? `\n${buildConstitutionBlock(chart.constitution)}\n` : "";
 
   return `# 사주 원국 데이터 (계산 완료 · 수정 금지)
 
@@ -169,7 +245,7 @@ ${ohaeng}
 
 ## 신강 / 신약
 ${strengthBlock}
-
+${constitutionBlock}
 ## 대운(大運)
 ${daeunBlock}
 

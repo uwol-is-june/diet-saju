@@ -5,6 +5,7 @@ import type {
   SeunYear,
   StrengthAnalysis,
 } from "./analysis";
+import type { ConstitutionAnalysis } from "./constitution";
 
 /**
  * 사주 입력 스키마 — 클라이언트/서버 공용.
@@ -119,6 +120,11 @@ export interface SajuChart {
   ohaeng: OhaengAnalysis;
   /** 신강/신약 — 득령·득지·득세 3기준 */
   strength: StrengthAnalysis;
+  /**
+   * 체질 경향 — 오행 균형·조후·신강신약·십신 분포에서 **코드가** 정한다 (TASK-14).
+   * 리딩 유형과 무관하게 항상 계산한다. 지금은 `diet` 프롬프트만 근거로 쓴다.
+   */
+  constitution: ConstitutionAnalysis;
   /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */
   daeun: DaeunAnalysis | null;
   /** 세운 (기준 연도부터 3년) */

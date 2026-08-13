@@ -32,6 +32,11 @@ export function SajuForm() {
   const [error, setError] = useState<string | null>(null);
   const [chart, setChart] = useState<SajuChart | null>(null);
   const [reading, setReading] = useState("");
+  /**
+   * 요청을 보낼 때 고른 유형. 폼의 `readingType` 을 그대로 쓰면, 생성 중에 사용자가
+   * 토글을 바꾸는 순간 섹션 계약이 갈려 화면이 폴백으로 떨어진다.
+   */
+  const [resultType, setResultType] = useState<ReadingType>("general");
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -68,6 +73,7 @@ export function SajuForm() {
     setError(null);
     setChart(null);
     setReading("");
+    setResultType(readingType);
     setLoading(true);
     setStreaming(false);
 
@@ -351,7 +357,14 @@ export function SajuForm() {
           </div>
         )}
 
-        {chart && <ResultView chart={chart} reading={reading} streaming={streaming} />}
+        {chart && (
+          <ResultView
+            chart={chart}
+            reading={reading}
+            readingType={resultType}
+            streaming={streaming}
+          />
+        )}
       </div>
     </div>
   );

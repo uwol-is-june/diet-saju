@@ -154,7 +154,15 @@
   }
 }
 
-/* LLM 이 돌려주는 마크다운 렌더 영역 */
+/* LLM 이 돌려주는 마크다운 렌더 영역.
+   **본문에만 붙인다** — 섹션 제목에 붙이면 아래 `.reading h2` 가 컴포넌트의 Tailwind
+   유틸리티를 이겨 버린다 (이 블록은 @layer 밖이라 utilities 보다 우선한다).
+   섹션별 렌더는 components/ReadingSections.tsx 참고. */
+
+/* 마지막 요소의 아래 여백은 카드 패딩과 겹쳐 어색해진다. */
+.reading > :last-child {
+  margin-bottom: 0;
+}
 .reading h2 {
   font-size: 1.125rem;
   font-weight: 700;

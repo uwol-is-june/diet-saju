@@ -29,7 +29,17 @@ export class GeminiError extends Error {
 export interface GenerateOptions {
   systemInstruction: string;
   prompt: string;
-  /** 기본 0.9 — 해석문이라 약간 높게 둔다. */
+  /**
+   * 기본 0.9 — 해석문이라 약간 높게 둔다.
+   *
+   * TASK-06 에서 0.9 와 0.6 을 실측해 **유지하기로 결정**했다. 같은 입력 반복 실행에서
+   * 섹션 제목 준수 12/12, 체질 판정 인용 12/12, 금지 어휘 0건으로 둘이 같았고,
+   * 회차 간 단어 일치도(Jaccard)는 0.9 에서 0.343 · 0.6 에서 0.308 로 **온도를 낮춘 쪽이
+   * 오히려 낮았다**(표본 3회씩이라 차이는 잡음 범위). 변동은 온도가 아니라 자유 서술이라는
+   * 과제 성격에서 온다 — 낮춰도 일관성을 얻지 못하고 문장만 단조로워진다.
+   *
+   * 같은 입력에 같은 문장이 필요하면 온도가 아니라 캐싱으로 풀어야 한다 (TASK-08).
+   */
   temperature?: number;
   maxOutputTokens?: number;
   /**

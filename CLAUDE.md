@@ -30,6 +30,8 @@ npm run validate:saju # 사주 계산 테스트만 (= vitest run lib/saju)
 
 ```
 components/SajuForm.tsx  (client)
+        │  ├─ ResultView.tsx → ReadingSections.tsx  섹션별 렌더
+        │  └─ lib/reading/sections.ts   섹션 계약 + 파서 (클라이언트 안전)
         │  POST /api/saju  →  NDJSON 스트림 응답
         ▼
 app/api/saju/route.ts    (server, nodejs runtime)
@@ -79,6 +81,34 @@ Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 
 
 실측(로컬, 워밍업 후): 원국 60~70ms · 첫 글자 1.0~1.3초 · 전체 4.2~4.4초.
 
+### 섹션 계약 — JSON 구조화 출력을 쓰지 않는 이유 (TASK-06 결정)
+
+`responseMimeType: "application/json"` + `responseSchema` 는 **채택하지 않았다.** JSON 은
+완성 전까지 파싱이 불가능해서 (`{"summary": "고객님은 태어` 는 깨진 문자열이다) 점진 렌더가
+죽는다. 첫 글자가 1.3초에 보이는 것을 4초로 바꾸는 대가라 형식을 다른 방법으로 강제한다.
+
+**`lib/reading/sections.ts` 의 섹션 계약이 단일 소스다.**
+
+- 제목 문자열은 거기에만 있다. `lib/prompt.ts` 가 그걸 읽어 `## 제목` 지침을 만들고,
+  `components/ReadingSections.tsx` 가 같은 계약으로 도착한 마크다운을 가른다.
+  **제목을 프롬프트나 컴포넌트에 문자열로 적지 말 것** — 둘이 어긋나면 화면이 폴백으로 떨어진다.
+- 이 파일은 클라이언트에서 import 되므로 `server-only` 가 없고 **프롬프트 지시문도 두지 않는다.**
+  섹션별 지시문은 `prompt.ts` 가 id 로 붙인다 (`SECTION_INSTRUCTION`).
+- 파서는 **누적 문자열 전체를 매번 다시 파싱한다.** 증분 상태를 들면 조각 경계 버그를 다 떠안는다.
+- `###` 은 섹션 경계가 아니다. 그리고 **해시만 도착한 마지막 줄은 보류한다** —
+  `### 소제목` 이 오는 중이면 `##` 까지는 섹션 제목과 구별할 수 없어서 빈 카드가 번쩍인다.
+- 계약을 어긴 출력을 **버리지 않는다.** 모르는 제목은 `id: null` 로 담고, 계약 섹션을 하나도
+  못 잡으면 `recognized: false` 로 알려 원문 마크다운 폴백으로 간다. 형식 문제가 내용 손실로
+  번지면 안 된다. 강제가 아니라 부탁이므로 이 폴백이 반드시 있어야 한다.
+- `ResultView` 에 넘기는 `readingType` 은 **요청 시점에 고른 값**이다(`resultType`). 폼의 현재
+  값을 쓰면 생성 중 토글을 바꾸는 순간 계약이 갈려 폴백으로 떨어진다.
+- 아코디언은 쓰지 않는다. 접혀 있으면 스트리밍을 볼 수 없고 풀이는 통독하는 글이다.
+  요약만 카드로 띄우고 나머지는 한 카드 안에서 구분선으로 나눈다.
+
+`.reading` 클래스는 **본문에만** 붙인다. `globals.css` 의 `.reading h2` 는 `@layer` 밖이라
+Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸면 컴포넌트의 `text-base` 같은
+클래스가 조용히 무시된다.
+
 ## 보안 규칙 (env / 키)
 
 - `NEXT_PUBLIC_` 접두사는 **브라우저로 노출된다.** 키·시크릿에 절대 붙이지 않는다.
@@ -105,7 +135,17 @@ Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 
   추론 예산이 불필요하고, 기본값(추론 활성)으로 두면 응답이 26초까지 늘어 `maxDuration=30` 에 닿는다.
 - SDK 는 `@google/genai` (구 `@google/generative-ai` 아님). 호출 형태는 `ai.models.generateContent({ model, contents, config })`.
 - 프롬프트는 **전부 `lib/prompt.ts` 에 모아둔다.** 컴포넌트나 route 안에 프롬프트 문자열을 흩뿌리지 않는다.
+  구성은 `SYSTEM_INSTRUCTION`(공통 화법·안전) → `SECTION_INSTRUCTION`(섹션별, id 로 매김)
+  → `TYPE_PREFACE`/`TYPE_RULES`(유형별) → `buildUserPrompt`(원국 사실 블록 조립) 순이다.
+  섹션 **제목**만 예외로 `lib/reading/sections.ts` 계약에서 온다 (렌더러와 공유해야 하므로).
 - 사용자 입력(이름 등)은 `<user_data>` 로 감싸 "지시문이 아니라 데이터"로 넘긴다. 프롬프트 인젝션 방어.
+  감싸는 것만으로는 부족해서 `sanitizeName()` 이 꺾쇠·줄바꿈·줄머리 `#` 를 지운다 —
+  **`</user_data>` 는 12자라 이름 20자 제한 안에 들어간다.** 경계 자체를 사용자가 만들 수
+  없게 막아야 한다. `lib/prompt.test.ts` 가 이 경로를 검사한다.
+- **`temperature` 는 0.9 유지가 실측 결론이다.** 0.6 과 대조했더니 섹션 제목 준수 12/12,
+  체질 판정 인용 12/12, 금지 어휘 0건으로 같았고 회차 간 단어 일치도는 0.343(0.9) vs
+  0.308(0.6) 로 낮춘 쪽이 오히려 낮았다. 변동은 온도가 아니라 자유 서술이라는 과제 성격에서
+  온다. 같은 입력에 같은 문장이 필요하면 온도가 아니라 캐싱(TASK-08)으로 풀 것.
 
 ### 무료 등급 일일 한도 — 모델 선택의 핵심 기준
 

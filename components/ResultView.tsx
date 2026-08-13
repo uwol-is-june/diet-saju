@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import Markdown from "react-markdown";
-import type { Pillar, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
+import type { Pillar, ReadingType, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
+import { ReadingSections } from "./ReadingSections";
 
 const OHAENG_COLOR: Record<string, string> = {
   목: "bg-ohaeng-mok text-ohaeng-mok-ink",
@@ -23,10 +23,13 @@ const CARD = "rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
 export function ResultView({
   chart,
   reading,
+  readingType,
   streaming = false,
 }: {
   chart: SajuChart;
   reading: string;
+  /** **요청할 때** 고른 유형. 폼의 현재 값이 아니다 — 섹션 계약이 유형별로 다르다. */
+  readingType: ReadingType;
   streaming?: boolean;
 }) {
   const pillars: { label: string; pillar: Pillar | null }[] = [
@@ -97,28 +100,9 @@ export function ResultView({
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
 
-      <section className={`reading ${CARD}`} aria-label="풀이" aria-busy={streaming}>
-        {/*
-          스트리밍 본문에 aria-live 를 걸면 글자가 늘어날 때마다 전체가 다시 읽혀 소음이 된다.
-          본문은 일반 영역으로 두고, 상태 변화만 따로 알린다 (role="status" = polite).
-        */}
-        <p className="sr-only" role="status">
-          {streaming
-            ? "풀이를 생성하고 있습니다."
-            : reading
-              ? "풀이 생성이 끝났습니다."
-              : ""}
-        </p>
-
-        {reading ? (
-          <>
-            <Markdown>{reading}</Markdown>
-            {streaming && <StreamingCursor />}
-          </>
-        ) : (
-          <p className="text-sm text-ink-muted">풀이를 쓰고 있습니다…</p>
-        )}
-      </section>
+      <div aria-label="풀이" aria-busy={streaming} role="region">
+        <ReadingSections reading={reading} readingType={readingType} streaming={streaming} />
+      </div>
 
       <p className="text-center text-xs leading-relaxed text-ink-muted">
         이 풀이는 명리학 해석을 참고한 오락·참고용 콘텐츠이며, AI 가 작성했습니다.
@@ -129,16 +113,6 @@ export function ResultView({
         </Link>
       </p>
     </div>
-  );
-}
-
-/** 생성 중임을 알리는 커서. 텍스트가 멈춰 있어도 살아 있다는 신호가 된다. */
-function StreamingCursor() {
-  return (
-    <span
-      aria-hidden
-      className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-brand align-middle"
-    />
   );
 }
 

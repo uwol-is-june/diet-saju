@@ -117,8 +117,14 @@ export default function PrivacyPage() {
 
         <h2>9. 문의</h2>
         <p>
-          문의 창구: <strong>(운영자 연락처 준비 중)</strong>
+          개인정보 처리와 관련한 문의는 아래로 보내 주세요.
         </p>
+        <ul>
+          <li>운영자: uwol</li>
+          <li>
+            이메일: <a href="mailto:seojun.incar@gmail.com">seojun.incar@gmail.com</a>
+          </li>
+        </ul>
       </div>
     </main>
   );

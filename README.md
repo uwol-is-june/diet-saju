@@ -34,7 +34,9 @@ npm run dev                    # http://localhost:3000
 | `npm run start` | 빌드 결과 실행 |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run validate:saju` | 만세력 계산 교차검증 ([결과](docs/saju-validation.md)) |
+| `npm test` | Vitest 전체 (145건) |
+| `npm run test:watch` | 감시 모드 |
+| `npm run validate:saju` | 사주 계산 테스트만 ([검증 내용](docs/saju-validation.md)) |
 
 ## 구조
 
@@ -55,8 +57,8 @@ lib/
     pillars.ts          만세력 계산 → 원국
     time-correction.ts  진태양시·서머타임·표준자오선 보정
     ganji.ts            간지 테이블·십신·시주 규칙 (순수 함수)
-scripts/
-  validate-saju.ts      계산 교차검증
+    analysis.ts         오행 강약·신강신약·대운·세운 (순수 함수)
+    *.test.ts           계산 교차검증 (Vitest)
 docs/
   TASK.md               태스크 보드
   saju-validation.md    만세력 검증 결과와 한계

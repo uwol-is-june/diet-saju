@@ -15,11 +15,14 @@ npm run build      # 프로덕션 빌드 (배포 전 필수)
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
 
-npm run validate:saju   # 만세력 계산 교차검증 (사주 계산 로직 수정 시 필수)
+npm test              # Vitest 전체 (145건)
+npm run test:watch    # 감시 모드
+npm run validate:saju # 사주 계산 테스트만 (= vitest run lib/saju)
 ```
 
-`validate:saju` 는 `tsx --conditions react-server` 로 돈다. `react-server` 조건이 없으면
-`import "server-only"` 가 예외를 던진다.
+테스트는 `lib/**/*.test.ts` 에 코드와 나란히 둔다. `vitest.config.mts` 가 `server-only` 를
+빈 모듈로 별칭 처리한다 — 이게 없으면 `pillars.ts` import 가 예외를 던진다.
+설정 파일이 `.mts` 인 이유는 `.ts` 로 두면 Vite 가 CJS 로 읽어 경고가 나기 때문이다.
 
 ## 아키텍처
 
@@ -150,6 +153,9 @@ app/api/saju/route.ts    (server, nodejs runtime)
   모아 합친다 (`collectJeolInstants`). 키가 간체(`惊蛰`)이고 인접 연도는 로마자(`LI_CHUN`)로
   중복 제공되므로 두 표기를 모두 받는다.
 - 사주 계산 로직을 수정하면 **반드시 `npm run validate:saju` 를 통과시킨다.**
+  테스트는 같은 라이브러리를 두 번 부르지 않는다 — 60갑자 연속성·오호둔·오서둔을
+  테스트 안에서 독립 구현해 대조하고, 절기는 천문 공표값과 맞춘다. 새 규칙을 넣으면
+  같은 방식으로 문헌값을 테스트에 박아 둔다.
 - 출생지 경도 UI 는 미구현 (API 는 `longitude` 를 받는다). 한계로 문서화됨.
 - 결과 문구에서 단정적 예언·의학적 진단을 하지 않는다. 시스템 프롬프트에 규칙으로 박혀 있다.
 
@@ -190,7 +196,8 @@ app/api/saju/route.ts    (server, nodejs runtime)
   번호는 재사용하지 않는다 (다음 신규는 TASK-19).
 - 새 UI 문자열은 한국어로 쓴다.
 - 커밋 메시지는 한국어 요약 + 관련 태스크 번호. 예: `사주 계산 진태양시 보정 (TASK-03)`
-- 작업을 마치면 `npm run lint`, `npm run typecheck`, `npm run build` 를 통과시킨 뒤 완료로 보고한다.
+- 작업을 마치면 `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` 를
+  통과시킨 뒤 완료로 보고한다. 같은 네 개를 `.github/workflows/ci.yml` 이 푸시·PR 마다 돌린다.
 
 ## 미확정 결정사항
 

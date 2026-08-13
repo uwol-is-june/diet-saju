@@ -4,21 +4,6 @@
 
 ---
 
-## Phase 1 — 사주 계산 정확도
-
-### [TASK-05] 사주 계산 테스트 · **(S)** · ⬜ 대기
-
-- [ ] Vitest 도입 (`npm run test`)
-- [ ] `scripts/validate-saju.ts` 의 검증 97건을 테스트로 이식 (전수 대조는 느려서 표본으로 축소)
-- [ ] `lib/saju/ganji.ts` 순수 함수 전수 테스트 (십신 10×10, 시주 10×12, 왕상휴수사, 한자 파싱)
-- [ ] `lib/saju/analysis.ts` — 대운 순행/역행, 대운수 경계, 세운 매핑
-- [ ] `lib/saju/time-correction.ts` — 자오선 전환/서머타임 경계 날짜 테스트
-- [ ] CI 에서 `npm run test` 실행
-
-→ 완료 기준: TASK-03 검증 케이스가 테스트로 고정되어 있다.
-
----
-
 ## Phase 2 — LLM 품질과 비용
 
 ### [TASK-06] 프롬프트 고도화 + 구조화 출력 · **(O)** · ⬜ 대기

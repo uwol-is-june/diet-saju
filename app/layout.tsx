@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
@@ -22,6 +23,13 @@ export default function RootLayout({
       <body>
         {children}
         <SiteFooter />
+        {/*
+          방문 통계 (TASK-13). 쿠키를 쓰지 않고 개별 방문자를 식별하지 않는다 —
+          수집 항목은 app/privacy/page.tsx 6항에 그대로 적어 뒀다.
+          이 서비스의 URL 에는 쿼리 파라미터가 없어 생년월일이 경로로 새지 않는다.
+          `/api/*` 는 클라이언트 스크립트가 붙지 않으므로 계측 대상이 아니다.
+        */}
+        <Analytics />
       </body>
     </html>
   );

@@ -16,11 +16,26 @@ function getClient(): GoogleGenAI {
   return client;
 }
 
+/**
+ * 실패 종류 — 사용자 문구와 지표를 **같은 분류에서** 만든다.
+ *
+ * 두 곳에서 따로 판별하면 반드시 어긋난다. 특히 일일/분당 쿼터 구분은 사용자에게
+ * "내일 다시" 냐 "1분 후 다시" 냐로 나가므로 틀리면 거짓말이 된다.
+ */
+export type GeminiFailureKind =
+  | "quota_day"
+  | "quota_minute"
+  | "auth"
+  | "safety"
+  | "empty"
+  | "unknown";
+
 export class GeminiError extends Error {
   readonly name = "GeminiError";
   constructor(
     message: string,
     readonly status: number = 502,
+    readonly kind: GeminiFailureKind = "unknown",
   ) {
     super(message);
   }
@@ -98,7 +113,11 @@ export async function* streamText(options: GenerateOptions): AsyncGenerator<stri
   }
 
   if (!produced) {
-    throw new GeminiError("모델이 빈 응답을 반환했습니다. 잠시 후 다시 시도해 주세요.");
+    throw new GeminiError(
+      "모델이 빈 응답을 반환했습니다. 잠시 후 다시 시도해 주세요.",
+      502,
+      "empty",
+    );
   }
 }
 
@@ -123,23 +142,33 @@ export function toGeminiError(error: unknown, context: string): GeminiError {
         ? "오늘 사용 가능한 무료 사용량을 모두 소진했습니다. 내일 다시 시도해 주세요."
         : "요청이 몰리고 있습니다. 1분 후 다시 시도해 주세요.",
       429,
+      isDailyQuota ? "quota_day" : "quota_minute",
     );
   }
   // Google 은 잘못된 키에 대해 401 이 아니라 400 INVALID_ARGUMENT/API_KEY_INVALID 를 준다.
   if (status === 401 || status === 403 || raw.includes("API_KEY_INVALID")) {
-    return new GeminiError("API 키 인증에 실패했습니다. 서버 설정을 확인해 주세요.", 500);
+    return new GeminiError(
+      "API 키 인증에 실패했습니다. 서버 설정을 확인해 주세요.",
+      500,
+      "auth",
+    );
   }
   if (raw.includes("SAFETY") || raw.includes("blocked")) {
     return new GeminiError(
       "생성이 안전 정책으로 차단되었습니다. 입력을 바꿔 다시 시도해 주세요.",
       422,
+      "safety",
     );
   }
-  return new GeminiError("사주 풀이 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+  return new GeminiError(
+    "사주 풀이 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+    502,
+    "unknown",
+  );
 }
 
 /** 로그에 API 키가 섞여 들어가는 것을 막는다. */
-function toSafeLogMessage(error: unknown): string {
+export function toSafeLogMessage(error: unknown): string {
   const raw = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   const key = process.env.GEMINI_API_KEY;
   return key ? raw.replaceAll(key, "[REDACTED]") : raw;

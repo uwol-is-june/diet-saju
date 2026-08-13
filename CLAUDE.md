@@ -109,6 +109,27 @@ Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 
 Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸면 컴포넌트의 `text-base` 같은
 클래스가 조용히 무시된다.
 
+## 관측 (TASK-13)
+
+`lib/observability.ts` 가 요청마다 구조화된 JSON 한 줄을 stdout 에 남긴다 (Vercel Runtime Logs).
+
+- **상태 코드로 집계하지 말 것.** Gemini 실패는 200 본문 안의 `error` 이벤트로 나가므로
+  상태 코드만 세면 실패율이 0 으로 보인다. `SajuOutcome` 으로 센다 —
+  `ok` / `rate_limited` / `invalid_input` / `chart_failed` / `config_error` / **`reading_failed`**.
+  마지막 것이 그 200-속-실패다.
+- 실패 종류는 `GeminiFailureKind`(`quota_day`·`quota_minute`·`auth`·`safety`·`empty`·`unknown`)이며
+  **사용자 문구와 같은 분류에서 나온다**(`lib/gemini.ts` 의 `toGeminiError`). 두 곳에서 따로
+  판별하면 어긋난다 — 일일 소진에 "1분 후 다시" 라고 하면 거짓말이 된다.
+- **개인정보를 싣지 않는다.** `METRIC_FIELDS` 허용 목록에 있는 키만 직렬화되고, 타입을 우회해
+  넣어도 버려진다. 성별은 값이 아니라 **지정 여부**만 남긴다. 필드를 늘릴 때는 "이것이 개인을
+  식별할 수 있나" 를 먼저 답하고, `app/privacy/page.tsx` **6항의 목록도 같은 커밋에서 고친다.**
+- 계측이 요청을 깨뜨리지 않는다 — `emit` 은 어떤 예외도 밖으로 내보내지 않는다.
+- `<Analytics />`(`app/layout.tsx`)는 페이지 조회수만 본다. 쿠키를 쓰지 않는다.
+
+**Vercel Web Analytics 의 custom events 는 Hobby 플랜에서 쓸 수 없다** (요금표의 Hobby 칸이 `-`,
+Reporting Window 도 1개월). 그래서 실패율·쿼터 소진을 대시보드 패널로 올리지 못하고 Runtime
+Logs 로만 본다. 외부 수집기를 붙일 때 `observability.ts` 의 `emit` 만 갈아끼우면 된다.
+
 ## 보안 규칙 (env / 키)
 
 - `NEXT_PUBLIC_` 접두사는 **브라우저로 노출된다.** 키·시크릿에 절대 붙이지 않는다.
@@ -246,6 +267,8 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
 - IP 는 레이트 리밋 목적으로 **메모리에 최대 1분**만 둔다 (`lib/rate-limit.ts`)
 - 입력이 **Google 로 전송**되며 무료 등급이라 제품 개선에 쓰일 수 있다
 - 추적 쿠키를 쓰지 않는다 (첫 방문 안내 닫힘 여부만 localStorage)
+- **6항에 방문 통계와 운영 지표의 수집 항목을 전부 나열해 뒀다.** `lib/observability.ts` 의
+  `METRIC_FIELDS` 를 늘리면 그 목록도 같은 커밋에서 고친다
 
 **TASK-08(결과 캐싱)은 "저장하지 않는다"를 무효화한다.** 캐싱을 넣으면 보관 기간·항목을
 반드시 다시 쓸 것. 결과 영구 링크(TASK-10)도 같다.
@@ -320,7 +343,7 @@ TASK-06 보다 앞에 있다).
 ### 그 밖의 규칙
 
 - **완료된 태스크는 TASK.md 에서 삭제한다.** 보드에는 남은 일만 둔다.
-  번호는 재사용하지 않는다 (다음 신규는 TASK-20).
+  번호는 재사용하지 않는다 (다음 신규는 TASK-21).
 - 새 UI 문자열은 한국어로 쓴다.
 - 커밋 메시지는 한국어 요약 + 관련 태스크 번호. 예: `결과 공유 OG 이미지 추가 (TASK-10)`
 - 작업을 마치면 `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` 를

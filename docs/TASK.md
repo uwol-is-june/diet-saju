@@ -28,23 +28,51 @@ CLI 계정(`seojunincar-8503`)과 실제 배포 프로젝트의 계정이 달라
 
 → 완료 기준: 프로덕션이 lite 로 돌고 첫 글자가 3초 이내다. 일일 한도 500건.
 
+### [TASK-20] 관측 대시보드 선택 · **(H)** · ⬜ 대기
+
+계측은 이미 붙어 있다(TASK-13). 남은 것은 **그 지표를 어디에 쌓을지**이며 계정·플랜 문제라
+코드로 처리할 수 없다. 지금은 Vercel Runtime Logs 에서만 보이고 보관 기간이 짧다.
+
+- [ ] Vercel > diet-saju > **Analytics 탭에서 Web Analytics 활성화**
+      (활성화하지 않으면 `<Analytics />` 스크립트가 수집을 시작하지 않는다)
+- [ ] 아래 중 하나 결정
+      - **Sentry 무료 등급** (계정 생성 → `SENTRY_DSN` 환경변수). 에러 보관·알림이 되고 무료다.
+        붙일 때 **반드시 스크러빙 설정**: 요청 본문 전송 끔, `birthDate`·`birthTime`·`name`·
+        IP 를 보내지 않음. 개인정보 처리방침이 "로그에도 기록하지 않는다" 고 약속한다
+      - **Vercel Pro** — custom events 가 열려 `observability.ts` 의 지표를 대시보드 패널로
+        올릴 수 있다. 유료다 (수익화 여부와 함께 판단)
+      - **당장 안 함** — Runtime Logs 로 버틴다. 그 경우 TASK-13 완료 기준을 낮춰 적을 것
+- [ ] 무엇을 골랐든 제3자가 추가되면 `app/privacy/page.tsx` 4항(제3자 전송)에 추가
+
+→ 완료 기준: 쿼터 소진·생성 실패를 하루 뒤에도 되짚어 볼 수 있다.
+
 ---
 
 # 개발 순서
 
-## 1. [TASK-13] 관측과 에러 추적 · **(S)** · ⬜ 대기
+## 1. [TASK-13] 관측과 에러 추적 · **(S)** · 🟡 진행중
 
 **이 순서인 이유**: 다음 태스크(결과 공유)로 사람이 들어오기 시작하면 실패를 볼 눈이
 있어야 한다. 공유를 열고 나서 붙이면 초기 문제를 놓친다.
 
-- [ ] Vercel Analytics 연결
-- [ ] 서버 에러 집계(Sentry 등) — **생년월일·API 키 스크러빙 설정 필수**
-      (개인정보 처리방침이 "로그에도 기록하지 않는다" 고 약속하고 있다)
-- [ ] Gemini 실패율 / 429 발생률 / 첫 글자까지 걸린 시간 지표화
-- [ ] **상태 코드만 세지 말 것** — Gemini 실패는 200 안의 `error` 이벤트로 나간다.
-      이걸 빼면 실패율이 0 으로 보인다
+- [x] Vercel Analytics 연결 — `app/layout.tsx` 의 `<Analytics />`.
+      수집 항목을 `app/privacy/page.tsx` 6항에 나열했다
+- [x] 계측 계층 — `lib/observability.ts`. 요청마다 구조화 JSON 한 줄 (Vercel Runtime Logs)
+- [x] Gemini 실패율 / 429 발생률 / 첫 글자까지 걸린 시간 지표화 —
+      `outcome` + `failure` + `ttfbMs` + `durationMs` + `chars`
+- [x] **상태 코드만 세지 않는다** — 200 안의 `error` 이벤트를 `reading_failed` 로 센다.
+      실제 실패를 유도해 로그로 확인했다
+- [x] 개인정보 스크러빙 — `METRIC_FIELDS` 허용 목록 + 테스트. 성별은 지정 여부만 남긴다.
+      API 키 마스킹은 `toSafeLogMessage()` 테스트로 고정
+- [ ] **외부 수집기 연결** — 아래가 막고 있다. 붙이는 지점은 `observability.ts` 의 `emit` 하나다
+
+**막힌 이유**: **Vercel Web Analytics 의 custom events 는 Hobby 플랜에서 쓸 수 없다**
+(요금표의 Hobby 칸이 `-`). 그래서 실패율·쿼터 소진을 대시보드 **패널**로 올리지 못한다.
+지금은 Runtime Logs 에서 `event:"saju_request"` 로 필터해 보는 수준이고, Hobby 의 로그
+보관 기간이 짧아 어제 일을 되짚기 어렵다. 선택은 사용자 몫이라 **[TASK-20]** 으로 뺐다.
 
 → 완료 기준: 쿼터 소진·생성 실패가 대시보드에서 보인다.
+   (지금은 **Runtime Logs 에서만** 보인다 — 보관 기간이 있는 대시보드는 TASK-20 이후)
 
 ## 2. [TASK-10] 결과 공유 · **(S)** · ⬜ 대기
 

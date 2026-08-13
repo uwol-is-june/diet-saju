@@ -1,0 +1,103 @@
+<!doctype html>
+<!--
+  파비콘·앱 아이콘의 원본 — TASK-26.
+
+  결과물 세 개가 커밋되어 있고 Next 가 자동으로 메타 태그를 붙인다.
+
+  | 파일 | 크기 | 쓰임 |
+  | --- | --- | --- |
+  | `app/icon.png`       | 512×512 | 브라우저 탭·검색 결과 (`<link rel="icon">`) |
+  | `app/apple-icon.png` | 180×180 | iOS 홈 화면 (`<link rel="apple-touch-icon">`) |
+  | `app/favicon.ico`    | 48×48   | `/favicon.ico` 를 직접 찾는 브라우저·크롤러 |
+
+  ## 고치는 방법
+
+  이 파일을 수정한 뒤 `scripts/render-icons.mjs` 를 돌린다 (헤드리스 크로미움으로
+  렌더해 세 파일을 다시 만든다). 렌더 크기는 스크립트가 정한다.
+
+  ## 왜 두 변형인가
+
+  `data-variant="apple"` 는 **모서리를 둥글리지 않고 배경을 꽉 채운다.** iOS 가 홈 화면에서
+  자기 방식대로 모서리를 깎기 때문에, 우리가 미리 둥글리면 모서리가 두 번 깎여 흰 틈이 남는다.
+  브라우저 탭용(`icon`)은 반대로 우리가 둥글려야 사각형으로 보이지 않는다.
+
+  ## 색
+
+  아래 팔레트는 `app/globals.css` 에서 **복사한 값**이다. 단일 소스는 그쪽이고,
+  두 값이 어긋나면 `lib/design/tokens.test.ts` 가 실패한다. 임의로 바꾸지 말 것.
+
+  바탕을 `green-700` 으로 쓰는 이유: 밝은 `green-500` 위 흰 글자는 1.82:1 이라 작은 크기에서
+  뭉개진다. 채운 버튼과 같은 판단이다 (`docs/design-tokens.md` 의 "채운 버튼의 사각지대").
+-->
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --raw-green-700: #1c7d4a;
+        --raw-green-500: #50d88f;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mark {
+        width: 100%;
+        height: 100%;
+        /* 512 기준 22% — 어느 크기로 렌더해도 같은 비율이 되도록 vw 로 쓴다 */
+        border-radius: 22%;
+        background: var(--raw-green-700);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+      body[data-variant="apple"] .mark {
+        border-radius: 0;
+      }
+      /* 아래쪽 밝은 띠 — og 카드 왼쪽의 green500 바와 같은 역할(브랜드 악센트)이다.
+         16px 로 줄어도 색 덩어리로 남아 초록 정사각형과 구별된다. */
+      .mark::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 12%;
+        background: var(--raw-green-500);
+      }
+      .glyph {
+        font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui,
+          "Segoe UI", "Malgun Gothic", "맑은 고딕", sans-serif;
+        font-weight: 700;
+        /* 컨테이너 폭 기준. 더 키우면 글자가 타일 가장자리에 닿아 답답해 보이고,
+           iOS 홈 화면에서 모서리가 깎일 때 획이 잘릴 수 있다. */
+        font-size: 46cqw;
+        line-height: 1;
+        color: #ffffff;
+        /* 아래 띠만큼 위로 올려 시각적 가운데를 맞춘다 */
+        margin-bottom: 8%;
+        -webkit-font-smoothing: antialiased;
+      }
+      .mark {
+        container-type: size;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mark"><span class="glyph">사</span></div>
+  </body>
+</html>

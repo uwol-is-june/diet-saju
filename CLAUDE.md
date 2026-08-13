@@ -169,6 +169,18 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
   1200×630 으로 렌더해 교체한다. 팔레트 값은 globals.css 에서 복사한 것이며 어긋나면
   `lib/design/tokens.test.ts` 가 실패한다.
 - `metadataBase` 없이는 og:image 가 상대 경로로 나가고 카카오톡 크롤러가 못 읽는다. 지우지 말 것.
+- **파비콘·앱 아이콘도 같은 방식이다** (TASK-26). 원본은 `docs/icon.html` 이고
+  `node scripts/render-icons.mjs` 로 `app/icon.png`(512) · `app/apple-icon.png`(180) ·
+  `app/favicon.ico`(48) 를 만든다. 결과물은 커밋하므로 배포에 그 스크립트가 필요 없다.
+  - **playwright 는 의존성이 아니다.** 아이콘을 다시 그릴 때만 쓰므로 브라우저 바이너리를
+    상시로 두지 않는다. 스크립트가 `PLAYWRIGHT_CORE_PATH`·`CHROMIUM_PATH` 를 받는다.
+  - `apple-icon` 은 **모서리를 둥글리지 않는다** — iOS 가 스스로 깎으므로 미리 깎으면
+    두 번 깎여 흰 틈이 남는다. 브라우저 탭용 `icon` 은 반대로 우리가 둥글려야 한다.
+  - `.ico` 는 인코더 없이 만든다. Vista 이후 ICO 는 **PNG 를 그대로 품을 수 있어서**
+    22바이트 헤더만 붙이면 된다 (`pngToIco`).
+  - **`/apple-touch-icon.png` 는 404 로 둔다.** Next 규약상 파일은 `/apple-icon.png` 로
+    나가고 `<link rel="apple-touch-icon">` 이 그쪽을 가리킨다 — iOS 가 읽는 것은 그 태그다.
+    같은 이미지를 `public/` 에 복사해 두면 두 벌을 맞춰야 하므로 하지 않았다.
 
 ### 결과 영구 링크(`/r/[id]`)는 도입하지 않았다
 

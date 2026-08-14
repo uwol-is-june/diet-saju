@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackLink } from "@/components/BackLink";
 
 export const metadata: Metadata = {
   title: "면책 고지 | 다이어트 사주",
@@ -8,7 +9,9 @@ export const metadata: Metadata = {
 export default function DisclaimerPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-12">
-      <h1 className="mb-2 text-2xl font-bold">면책 고지</h1>
+      {/* 문서가 길어 푸터까지 스크롤해야 나가는 길이 나온다 (TASK-42) */}
+      <BackLink />
+      <h1 className="mb-2 mt-1 text-2xl font-bold">면책 고지</h1>
       <p className="mb-8 text-sm text-ink-muted">시행일: 2026년 8월 13일</p>
 
       <div className="reading">

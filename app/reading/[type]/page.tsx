@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
 import { SajuForm } from "@/components/SajuForm";
 import {
@@ -101,12 +101,7 @@ export default async function ReadingPage({
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <header className="mb-8">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center text-sm text-ink-muted transition hover:text-brand-ink"
-        >
-          ← 다른 풀이 고르기
-        </Link>
+        <BackLink label="다른 풀이 고르기" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">
           {READING_TYPE_LABEL[readingType]}
         </h1>

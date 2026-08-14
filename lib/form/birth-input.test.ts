@@ -336,6 +336,48 @@ describe("출생지 드롭다운", () => {
 });
 
 /**
+ * 홈으로 돌아가는 동선 (TASK-42). 홈으로 가는 길이 푸터 링크 하나뿐이었고, 긴 고지
+ * 페이지에서는 끝까지 스크롤해야 나왔다.
+ */
+describe("홈으로 돌아가는 동선", () => {
+  it("긴 고지 페이지 상단에 홈 링크가 있다", () => {
+    for (const page of ["app/privacy/page.tsx", "app/disclaimer/page.tsx"]) {
+      expect(readCode(page), page).toContain("<BackLink />");
+    }
+  });
+
+  it("링크 문구와 모양이 한 곳에서만 정의된다", () => {
+    // 두 페이지에 각각 적으면 문구와 모양이 갈라진다.
+    const component = readCode("components/BackLink.tsx");
+    expect(component).toContain('href="/"');
+    for (const page of ["app/privacy/page.tsx", "app/disclaimer/page.tsx"]) {
+      expect(readCode(page), page).not.toContain('href="/"');
+    }
+  });
+
+  it("푸터 링크 이름이 목적지를 말한다", () => {
+    // `사주 풀이` 는 어디로 가는지도, 지금 거기 있는지도 알려주지 않았다.
+    const footer = readCode("components/SiteFooter.tsx");
+    expect(footer).toContain("처음으로");
+    expect(footer).not.toMatch(/>\s*사주 풀이\s*</);
+  });
+
+  it("고지 페이지와 푸터가 서버 컴포넌트로 남는다", () => {
+    // 현재 페이지를 알려면 usePathname() 이 필요하고, 그러면 `/` 에도 클라이언트 JS 가
+    // 들어가 `/` 를 통째로 정적으로 두는 성질이 깨진다.
+    for (const file of [
+      "components/BackLink.tsx",
+      "components/SiteFooter.tsx",
+      "app/privacy/page.tsx",
+      "app/disclaimer/page.tsx",
+    ]) {
+      expect(readCode(file), file).not.toContain("use client");
+      expect(readCode(file), file).not.toContain("usePathname");
+    }
+  });
+});
+
+/**
  * 유형은 **라우트 하나**가 정한다 (TASK-30). 폼 안에도 선택 컨트롤을 두면 두 곳에서
  * 고를 수 있게 되고 반드시 어긋난다.
  */

@@ -1,0 +1,361 @@
+/*
+ * 카드뉴스 디자인 — docs/card_ref/*.png 를 CSS 로 옮긴 것.
+ * 여기가 "형식"의 단일 소스다. 내용은 cards.json 이 채운다.
+ *
+ * 캔버스는 1080×1350 (인스타 4:5). 치수는 전부 이 좌표계의 px 다.
+ *
+ * ── 글자 크기의 기준 ────────────────────────────────────────────
+ * 이 카드는 **인스타그램 피드에서 폭 400px 안팎으로 축소되어** 읽힌다.
+ * 1080px 기준의 34px 는 화면에서 12px 남짓이라 본문으로 못 쓴다.
+ * 그래서 본문을 44px 로 잡았다 — 화면에서 16px 정도가 되는 값이다.
+ * 크기를 줄이려면 먼저 문장을 줄일 것. 줄이는 쪽이 언제나 낫다.
+ */
+
+/* %FONTS% 는 render.mjs 가 fonts 폴더의 절대 경로로 바꾼다.
+ * HTML 이 임시 폴더에 쓰이므로 상대 경로로 두면 폰트를 못 찾는다. */
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-bRg.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-cBd.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-dEb.woff2") format("woff2");
+  font-weight: 800;
+  font-display: block;
+}
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-eHv.woff2") format("woff2");
+  font-weight: 900;
+  font-display: block;
+}
+
+:root {
+  --w: 1080px;
+  --h: 1350px;
+
+  /* 레퍼런스에서 추출한 팔레트 */
+  --green: #1a8a4c; /* 섹션 제목 */
+  --ink: #2b2b2b; /* 굵은 강조·제목 뒷부분 */
+  --body: #55555a; /* 본문 */
+  --bg: #f5f5f5; /* 카드 바탕 */
+  --red: #ff2a21; /* 주의 카드 제목 */
+  --logo: #b6b6b6; /* 로고(밝은 배경) */
+
+  --pad: 68px; /* 좌우 안전 여백 */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+}
+
+body {
+  /* 나눔스퀘어 네오로 고정한다. 폴백은 글자가 깨지지 않게 하기 위한 것일 뿐,
+   * 폰트 파일이 없으면 자간·크기가 달라지므로 fonts/ 를 지우지 말 것. */
+  font-family: "NanumSquareNeo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+
+  /* 한국어는 어절 단위로 끊는다. 기본값으로 두면 "못합니다."가 "못합" / "니다."
+   * 로 갈라져 고아 음절이 남는다 — 카드뉴스처럼 줄이 짧을수록 자주 생긴다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.card {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── 로고 (우상단 고정) ───────────────────────────────
+ * 레퍼런스(ref2.png)에서 그대로 잘라낸 이미지다 — 다시 그리지 않는다.
+ * 위치·크기도 원본과 같다 (extract-logo.mjs 의 LOGO_BOX).            */
+
+/* z-index 를 주지 않는다 — 스태킹 컨텍스트가 생기면 아래 mix-blend-mode 가
+ * 이 상자 안에서만 합성되어(배경이 비어 있으므로) 흰 바탕이 그대로 남는다.
+ * 로고는 DOM 에서 사진·스크림보다 뒤에 오므로 그냥 위에 그려진다. */
+.logo {
+  position: absolute;
+  top: 46px;
+  right: 52px;
+  width: 124px;
+  height: 40px;
+}
+.logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* 잘라낸 이미지엔 흰 바탕이 붙어 있다. multiply 로 흰색만 사라진다. */
+  mix-blend-mode: multiply;
+}
+/* 사진 위에서는 밝은 로고여야 한다. 뒤집으면 바탕이 검정이 되고,
+ * screen 이 검정을 지운다. 로고 두 벌을 만들지 않으려는 것이다. */
+.is-cover .logo img {
+  filter: invert(1) brightness(2.6);
+  mix-blend-mode: screen;
+}
+
+/* ── 사진 슬롯 ────────────────────────────────────────
+ * cards.json 의 photo 가 있으면 그 파일, 없으면 톤 그라데이션.
+ * 실사진으로 바꿔도 레이아웃은 그대로다.                     */
+
+.photo {
+  background-color: #e6e6e6;
+  background-size: cover;
+  background-position: center;
+}
+.photo.is-placeholder {
+  background-image:
+    radial-gradient(
+      circle at 30% 28%,
+      rgba(255, 255, 255, 0.55),
+      transparent 55%
+    ),
+    linear-gradient(150deg, var(--tone-a, #cfe3d3), var(--tone-b, #9dbfa6));
+}
+.photo.is-placeholder::after {
+  content: attr(data-hint);
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 22px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── 공통 타이포 ─────────────────────────────────────── */
+
+.title {
+  font-size: 68px;
+  font-weight: 800;
+  line-height: 1.28;
+  letter-spacing: -0.045em;
+  color: var(--green);
+}
+.title .tail {
+  color: var(--ink);
+} /* 제목 안 {중괄호} 부분 */
+
+.body {
+  font-size: 44px;
+  font-weight: 400;
+  line-height: 1.66;
+  letter-spacing: -0.035em;
+  color: var(--body);
+}
+.body b {
+  font-weight: 800;
+  color: var(--ink);
+}
+.body p + p {
+  margin-top: 44px;
+}
+
+/* ── 레이아웃 1 · 커버 (ref1) ─────────────────────────── */
+
+.card.is-cover {
+  background: #1d1d1d;
+}
+.is-cover .photo {
+  position: absolute;
+  inset: 0;
+}
+/* 사진이 어떤 밝기로 오든 제목이 읽혀야 한다. 밝은 피사체가 하단에 걸리는
+ * 경우가 흔해서(흰 그릇·접시) 제목이 시작되는 지점부터 충분히 어둡게 깐다. */
+.is-cover .scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0) 26%,
+    rgba(0, 0, 0, 0.18) 46%,
+    rgba(0, 0, 0, 0.7) 78%,
+    rgba(0, 0, 0, 0.82) 100%
+  );
+}
+.is-cover .copy {
+  position: absolute;
+  left: 76px;
+  right: 76px;
+  bottom: 140px;
+}
+/* 표지는 크게 쓰는 만큼 자간을 조여도 글자가 뭉친다. 큰 글씨일수록 자간을
+ * 덜 조이고 행간은 더 벌리는 쪽이 읽기 좋다 — 본문과 같은 값을 쓰면 안 된다. */
+.is-cover .cover-title {
+  font-size: 94px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+.is-cover .cover-sub {
+  margin-top: 34px;
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.94);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* ── 레이아웃 2 · 상단 텍스트 + 하단 사진 (ref2) ───────── */
+
+.card.is-stack {
+  background: #fff;
+}
+.is-stack .copy {
+  position: absolute;
+  top: 148px;
+  left: var(--pad);
+  right: var(--pad);
+}
+.is-stack .body {
+  margin-top: 56px;
+}
+/* 절 단위로 줄을 바꾸면 글이 길어진다. 사진이 글을 밀어 올리지 않도록
+ * 레퍼런스(686px)보다 낮게 잡았다. */
+.is-stack .photo {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 596px;
+}
+
+/* ── 레이아웃 3 · 좌 사진 + 우 텍스트 (ref3) ───────────── */
+
+/* 글자가 커진 만큼 사진을 줄여 글 칸을 넓혔다. 좁은 칸에 큰 글자를 넣으면
+ * 한 줄에 두세 어절밖에 안 들어가 읽는 리듬이 끊긴다. */
+.is-split .photo {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 372px;
+}
+.is-split .copy {
+  position: absolute;
+  top: 152px;
+  left: 424px;
+  right: 52px;
+}
+.is-split .title {
+  font-size: 62px;
+}
+.is-split .body {
+  margin-top: 48px;
+  font-size: 41px;
+  line-height: 1.7;
+}
+
+/* ── 레이아웃 4 · 텍스트 전면 ──────────────────────────── */
+
+.is-plain .copy {
+  position: absolute;
+  top: 156px;
+  left: var(--pad);
+  right: var(--pad);
+}
+.is-plain .body {
+  margin-top: 56px;
+}
+
+/* ── 레이아웃 5 · 주의사항 (ref4) ─────────────────────── */
+
+.is-notice .copy {
+  position: absolute;
+  top: 142px;
+  left: var(--pad);
+  right: var(--pad);
+}
+.is-notice .title {
+  color: var(--red);
+  font-size: 70px;
+}
+.is-notice .lede {
+  margin-top: 24px;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+.is-notice ul {
+  margin-top: 66px;
+  list-style: none;
+}
+.is-notice li + li {
+  margin-top: 52px;
+}
+.is-notice .warn {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-items: start;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.32;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+.is-notice .warn svg {
+  width: 40px;
+  height: 40px;
+  margin-top: 8px;
+}
+.is-notice .detail {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  margin-top: 8px;
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.42;
+  letter-spacing: -0.04em;
+  color: var(--body);
+}
+.is-notice .detail .arrow {
+  font-weight: 700;
+  color: var(--body);
+}
+
+/* ref4 우하단의 빨간 느낌표 — 이미지가 아니라 도형이다 */
+.is-notice .bang {
+  position: absolute;
+  right: 92px;
+  bottom: 84px;
+}
+.is-notice .bang i {
+  display: block;
+  background: var(--red);
+  box-shadow: inset -10px 0 22px rgba(0, 0, 0, 0.18);
+}
+.is-notice .bang .stem {
+  width: 62px;
+  height: 168px;
+  border-radius: 30px 30px 16px 16px;
+  clip-path: polygon(6% 0, 94% 0, 78% 100%, 22% 100%);
+}
+.is-notice .bang .dot {
+  width: 62px;
+  height: 52px;
+  margin-top: 20px;
+  border-radius: 50%;
+}

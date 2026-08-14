@@ -229,6 +229,17 @@ interface Guide {
   exercise: string;
 }
 
+/**
+ * 오행 과다·부족 → 관리 축. `buildConstitutionBlock` 이 이 문구를 그대로 프롬프트에 싣고
+ * `movement`·`eating` 절 지침이 "관리 축 항목을 함께 엮으라" 고 하므로, **여기 적힌 말이
+ * 본문으로 새어 나갈 수 있다.** 그래서 실행 방법 표(`MOVEMENT_PLAN`·`MEAL_PLAN`)와 같은
+ * 선을 지킨다 (TASK-59):
+ *
+ * - **수치를 쓰지 않는다 — 한글로 쓴 것까지.** `20분 걷기` 도 `한 시간 뒤에` 도 안 된다.
+ *   `constitution.test.ts` 가 아라비아 숫자와 "수사 + 측정 단위" 를 양쪽 다 훑는다.
+ * - **효능 표현을 쓰지 않는다.** `소화를 돕는` 은 `lib/prompt.ts` 가 모델에게 금지한
+ *   어법이다 — 근거 데이터가 그걸 쓰면 모델에게 시킨 말과 준 말이 어긋난다.
+ */
 export const FOCUS_GUIDE: Record<Ohaeng, Record<"과다" | "부족", Guide>> = {
   목: {
     과다: {
@@ -258,12 +269,12 @@ export const FOCUS_GUIDE: Record<Ohaeng, Record<"과다" | "부족", Guide>> = {
     과다: {
       tendency: "먹는 즐거움이 커서 한 번에 양이 늘기 쉽다",
       diet: "그릇을 작게 쓰고 천천히 씹기",
-      exercise: "식사 뒤 20분 걷기처럼 소화를 돕는 움직임",
+      exercise: "식사 뒤에 앉은 자리를 뜨고 가볍게 걷기",
     },
     부족: {
       tendency: "식사 시간이 흐트러지고 속이 부담을 느끼기 쉽다",
       diet: "정해진 시간에 소량씩, 국이나 죽처럼 부담이 적은 것부터",
-      exercise: "공복 고강도는 피하고 식사 한 시간 뒤에 가볍게",
+      exercise: "공복 고강도는 피하고 속이 편안해진 뒤에 가볍게",
     },
   },
   금: {

@@ -487,15 +487,51 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
    * (B) 일부 개방 (TASK-40) 이후로 이 검사가 두 갈래다.
    *
    * **방법은 열렸지만 수치는 그대로 막힌다.** "3kg", "1,200칼로리", "2주", "3세트" 가
-   * 섞이면 순서·습관이 아니라 처방으로 읽힌다. 실행 방법 표까지 포함해 훑는다.
+   * 섞이면 순서·습관이 아니라 처방으로 읽힌다.
+   *
+   * **`userFacing` 전체를 훑는다** (TASK-59). 예전에는 실행 방법 표 셋만 봐서
+   * `FOCUS_GUIDE` 의 `식사 뒤 20분 걷기` 가 통과했다 — 그 표도 프롬프트의 "관리 축" 으로
+   * 실려 나가는데 목록이 두 벌이라 한쪽만 늘어난 것이다. 같은 목록을 쓰면 표를
+   * `userFacing` 에 더하는 순간 숫자 검사도 함께 걸린다.
    */
-  it("실행에 관한 문구에 숫자가 섞이지 않는다", () => {
-    const numbered = [
-      ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
-      ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.kind, plan.how, plan.caution]),
-      ...Object.values(MEAL_PLAN).flatMap((plan) => [plan.sequence, plan.timing]),
+  it("사용자에게 나가는 문구에 아라비아 숫자가 없다", () => {
+    expect(userFacing.filter((text) => /\d/.test(text))).toEqual([]);
+  });
+
+  /**
+   * **한글로 쓴 수치도 같은 처방이다** (TASK-59). `식사 한 시간 뒤에` 는 `/\d/` 에 걸리지
+   * 않지만 읽는 쪽에서는 `60분 뒤에` 와 다르지 않다.
+   *
+   * 수사만으로 막으면 오탐이 쏟아진다 — `한 가지씩 곁들이기` · `한 번에 강도를 올리면` ·
+   * `한 끼에 몰아` 는 전부 정상 문구다. 그래서 **수사 + 측정 단위**가 붙은 것만 잡는다.
+   * `가지`·`번`·`끼` 는 단위 목록에 넣지 않는다 (세는 말이지 재는 말이 아니다).
+   */
+  it("사용자에게 나가는 문구에 한글로 쓴 수치가 없다", () => {
+    const NUMERAL = "한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|몇";
+    const MEASURE = "시간|분|초|주|달|개월|해|킬로|킬로그램|그램|칼로리|잔|컵|세트|회";
+    const written = new RegExp(`(?:^|[^가-힣])(?:${NUMERAL})\\s*(?:${MEASURE})(?![가-힣])`);
+    expect(userFacing.filter((text) => written.test(text))).toEqual([]);
+  });
+
+  /**
+   * **모델에게 금지한 어법을 근거 데이터가 쓰면 안 된다** (TASK-59).
+   * `lib/prompt.ts` 의 `eating` 지침이 `"○○에 좋다", "○○를 돕는"` 을 효능 표현으로
+   * 콕 집어 금지하는데, `FOCUS_GUIDE` 가 `소화를 돕는 움직임` 을 쓰고 있었다.
+   *
+   * **`돕는` 을 그냥 금지어 목록에 넣을 수 없다.** `METABOLISM_NOTE` 의
+   * `일간을 돕는 힘` 은 명리 용어이고 `analysis.ts` 의 신강신약 문구도 같은 말을 쓴다 —
+   * `견과`/`비견과 겁재` 오탐과 같은 함정이라, **명리 주어가 앞에 붙은 것만 빼고** 본다.
+   */
+  it("어느 문구도 효능 표현을 쓰지 않는다", () => {
+    const EFFICACY: readonly [string, RegExp][] = [
+      ["○○를 돕는", /(?<!일간을 )돕는/],
+      ["○○에 좋다", /에 좋[다은게]/],
     ];
-    expect(numbered.filter((text) => /\d/.test(text))).toEqual([]);
+    for (const [label, pattern] of EFFICACY) {
+      expect(userFacing.filter((text) => pattern.test(text)), `${label} 는 효능 표현이다`).toEqual(
+        [],
+      );
+    }
   });
 
   /**

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackLink } from "@/components/BackLink";
 
 export const metadata: Metadata = {
   title: "면책 고지 | 다이어트 사주",
@@ -8,7 +9,9 @@ export const metadata: Metadata = {
 export default function DisclaimerPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-12">
-      <h1 className="mb-2 text-2xl font-bold">면책 고지</h1>
+      {/* 문서가 길어 푸터까지 스크롤해야 나가는 길이 나온다 (TASK-42) */}
+      <BackLink />
+      <h1 className="mb-2 mt-1 text-2xl font-bold">면책 고지</h1>
       <p className="mb-8 text-sm text-ink-muted">시행일: 2026년 8월 13일</p>
 
       <div className="reading">
@@ -44,7 +47,7 @@ export default function DisclaimerPage() {
 
         <h2>체질 판정은 명리학 오행 해석입니다</h2>
         <p>
-          체질·다이어트 풀이의 체질 판정(한열 경향, 오행의 과다·부족, 살이 붙는 패턴, 잘 맞는
+          종합 체질 풀이의 체질 판정(한열 경향, 오행의 과다·부족, 살이 붙는 패턴, 잘 맞는
           다이어트 방법)은 사주 원국의 오행 균형·왕상휴수사·신강신약·십신 분포에서{" "}
           <strong>프로그램이 규칙표로 정합니다.</strong> 같은 사주를 넣으면 언제나 같은 판정이
           나오며, AI 가 그때그때 지어내지 않습니다. 서술만 AI 가 씁니다.
@@ -56,11 +59,23 @@ export default function DisclaimerPage() {
           운동의 효능을 뜻하지 않습니다.
         </p>
         <p>
-          <strong>&apos;잘 맞는 다이어트 방법&apos;은 감량 처방이 아닙니다.</strong> 무엇을 먼저
-          하고 무엇을 나중에 할지의 <strong>순서</strong>만 말하며, 특정 식단이나 단식 방법,
-          칼로리·목표 체중·감량 기간 같은 수치는 제시하지 않습니다. 이 순서는 대사 기조와 살이
-          붙는 패턴을 짝지은 <strong>이 서비스의 분류</strong>이지, 영양학이나 운동생리학의
-          근거에서 나온 것이 아닙니다. 체중 감량을 계획한다면 전문가와 상의하세요.
+          <strong>&apos;나에게 맞는 다이어트 방법&apos;은 감량 처방이 아닙니다.</strong> 무엇을
+          먼저 고정할지의 <strong>순서</strong>, 어떤 <strong>종류</strong>로 움직일지(유산소·
+          근력·이완 계열), 어떤 <strong>순서와 시각</strong>으로 먹을지, 어떤 조리 방식과 음식
+          온도가 맞을지까지 말합니다.
+        </p>
+        <p>
+          다만 <strong>수치는 제시하지 않습니다.</strong> 칼로리·목표 체중·체지방률·감량 기간
+          (&ldquo;몇 주에 몇 kg&rdquo;)·운동 횟수나 세트·시간·섭취량을 어떤 형태로도 말하지
+          않습니다. 단식(간헐적 단식을 포함합니다)과 특정 상표 식단, 영양제·보조식품도 다루지
+          않습니다. 저희가 아는 것은 생년월일시뿐이고, 그 값으로는 얼마나·며칠 만에를 정할 근거가
+          없기 때문입니다.
+        </p>
+        <p>
+          이 방법들은 대사 기조와 살이 붙는 패턴을 짝지은 <strong>이 서비스의 분류</strong>이지,
+          영양학이나 운동생리학의 근거에서 나온 것이 아닙니다. 같은 사주면 언제나 같은 방법이
+          나오도록 프로그램이 정하며, AI 가 그때그때 고르지 않습니다. 체중 감량을 계획한다면
+          전문가와 상의하세요.
         </p>
         <p>
           식습관 설명에 나오는 <strong>재료 이야기도 마찬가지입니다.</strong> 오행에 맛과 색을
@@ -71,15 +86,18 @@ export default function DisclaimerPage() {
           해당한다면 이 내용을 근거로 식사를 바꾸지 마시고 의료 전문가와 상의하세요.
         </p>
 
-        <h2>올해 운세도 판정은 프로그램이 합니다</h2>
+        <h2>올해의 몸 흐름도 판정은 프로그램이 합니다</h2>
         <p>
-          올해 운세의 판정(들어오는 기운이 원국에 <strong>보완·가중·중립</strong> 중 어떻게
-          작용하는지, 올해의 주제가 무엇인지)도 세운 오행과 원국의 오행 과부족에서{" "}
-          <strong>프로그램이 규칙표로 정합니다.</strong> 같은 사주·같은 해라면 언제나 같은 판정이
-          나옵니다.
+          올해 들어오는 기운이 원국에 <strong>보완·가중·중립</strong> 중 어떻게 작용하는지도
+          세운 오행과 원국의 오행 과부족에서 <strong>프로그램이 규칙표로 정합니다.</strong> 같은
+          사주·같은 해라면 언제나 같은 판정이 나옵니다.
         </p>
         <p>
-          다만 <strong>일어날 일을 예측하지 않습니다.</strong> 재물·건강·시험·연애의 성패를
+          이 판정은 <strong>몸 관리의 결로만 씁니다.</strong> 재물·연애·시험 같은 생활 영역의
+          운세는 제공하지 않습니다.
+        </p>
+        <p>
+          그리고 <strong>일어날 일을 예측하지 않습니다.</strong> 살이 빠지거나 찌는 것을
           단정하지 않으며, <strong>월별 운세는 계산하지 않습니다</strong> — 몇 월에 무슨 일이
           있다는 식의 내용은 제공하지 않습니다. 서술은 경향과 대처까지이며, 이 역시 오락·참고용
           입니다.

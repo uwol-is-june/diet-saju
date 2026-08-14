@@ -20,14 +20,49 @@ import type { YearlyAnalysis } from "./yearly";
  * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
  * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
  */
-export const READING_TYPES = ["general", "diet", "yearly"] as const;
+export const READING_TYPES = ["general", "diet", "diet-method"] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
+/**
+ * **`diet` 의 id 는 바꾸지 않는다** (TASK-39). 라벨만 `종합 체질 풀이` 로 바뀌었다.
+ * 세그먼트가 곧 URL 이라 id 를 바꾸면 이미 공유된 `/reading/diet` 링크와 공유 카드가 죽는다.
+ */
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
-  diet: "체질·다이어트 풀이",
-  yearly: "올해 운세",
+  diet: "종합 체질 풀이",
+  "diet-method": "나에게 맞는 다이어트 방법",
 };
+
+/**
+ * 노출 구분 (TASK-41). **유형을 지우는 게 아니라 "보이는 곳" 만 나눈다.**
+ *
+ * `general` 은 나중에 없앨 유형이지만 그때까지 다른 사주 서비스와 대조해 문제를 잡는 데
+ * 쓴다. `READING_TYPES` 에서 빼면 `Record<ReadingType, …>` 가 general 몫을 전부 지우라고
+ * 하고, 그러면 되살릴 때 프롬프트·섹션 계약을 다시 써야 한다. 지금 필요한 건 노출 제어뿐이다.
+ *
+ * **`Record` 로 둔다.** 배열로 두면 새 유형이 조용히 빠진 채 나가지만, `Record` 면
+ * 유형을 늘릴 때 여기가 컴파일 오류로 잡힌다.
+ *
+ * `internal` 은 **숨김이지 보호가 아니다** — `/admin` 에 인증이 없으므로 URL 을 아는
+ * 사람은 누구나 들어온다. 지금 목적(본인 비교용)에는 충분하고 비밀도 아니다.
+ */
+export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal"> = {
+  general: "internal",
+  diet: "public",
+  "diet-method": "public",
+};
+
+/**
+ * 사용자에게 목록으로 보여줄 유형. **`READING_TYPE_VISIBILITY` 에서 파생시킨다** —
+ * 손으로 유지하는 두 번째 목록을 만들지 않기 위해서다.
+ */
+export const PUBLIC_READING_TYPES = READING_TYPES.filter(
+  (type) => READING_TYPE_VISIBILITY[type] === "public",
+);
+
+export const INTERNAL_READING_TYPES = READING_TYPES.filter(
+  (type) => READING_TYPE_VISIBILITY[type] === "internal",
+);
 
 /**
  * 유형 선택 카드의 한 줄 설명 (TASK-30).
@@ -35,13 +70,14 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
  * **`Record<ReadingType, string>` 를 유지한다.** 삼항이나 인덱스 시그니처로 두면
  * 새 유형이 조용히 빈 설명을 달고 나간다.
  *
- * 문구는 각 유형의 표현 규칙을 그대로 따른다 — `diet` 는 처방·수치를 쓰지 않고
- * `yearly` 는 사건을 예고하지 않는다. `schema.test.ts` 가 금지 어휘로 훑는다.
+ * 문구는 각 유형의 표현 규칙을 그대로 따른다 — `diet` 는 처방·수치를 쓰지 않는다.
+ * `schema.test.ts` 가 금지 어휘로 훑는다.
  */
 export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   general: "타고난 기질과 사람을 대하는 방식, 지금 지나는 흐름까지 한 번에 봅니다.",
-  diet: "오행 균형에서 읽는 몸의 결과, 무엇을 먼저 고정할지의 순서를 짚습니다.",
-  yearly: "올해 들어오는 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지 봅니다.",
+  diet: "오행 균형과 한열에서 몸의 결을 읽고, 올해의 몸 흐름까지 함께 봅니다.",
+  "diet-method":
+    "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
 };
 
 /**
@@ -61,14 +97,14 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
       "생년월일시로 사주 원국을 계산하고, 일간·십신·오행 균형에서 타고난 기질과 사람을 대하는 방식, 지금 지나는 대운의 흐름을 풀어드립니다.",
   },
   diet: {
-    title: "체질·다이어트 풀이 | 다이어트 사주",
+    title: "종합 체질 풀이 | 다이어트 사주",
     description:
-      "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결을 읽어 식습관과 움직임을 무엇부터 고정할지 순서로 짚어드립니다.",
+      "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결과 살이 붙는 패턴을 읽어 올해의 몸 흐름까지 풀어드립니다.",
   },
-  yearly: {
-    title: "올해 운세 | 다이어트 사주",
+  "diet-method": {
+    title: "나에게 맞는 다이어트 방법 | 다이어트 사주",
     description:
-      "생년월일시로 사주 원국을 계산하고, 올해 세운의 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지를 경향으로 풀어드립니다.",
+      "생년월일시로 사주 원국을 계산하고, 대사 기조와 살이 붙는 패턴에서 무엇을 먼저 고정할지·어떤 종류로 움직이고 어떤 순서로 먹을지를 짚어드립니다.",
   },
 };
 
@@ -99,7 +135,14 @@ export const sajuInputSchema = z.object({
   /** 음력 입력일 때 윤달 여부. 양력이면 무시된다. */
   isLeapMonth: z.boolean().default(false),
   gender: z.enum(["male", "female", "unspecified"]).default("unspecified"),
-  readingType: z.enum(READING_TYPES).default("general"),
+  /**
+   * 유형 없이 온 요청의 기본값. **공개 유형이어야 한다** (TASK-41).
+   *
+   * 예전 기본값은 `general` 이었는데 그 유형이 `internal` 이 되면서, 유형을 생략한 요청이
+   * 화면에서는 고를 수 없는 유형으로 가게 됐다. 폼은 항상 세그먼트에서 유형을 주므로
+   * 실동작 문제는 없었지만, **기본값은 사용자가 실제로 요청할 수 있는 것**이어야 한다.
+   */
+  readingType: z.enum(READING_TYPES).default("diet"),
 
   /**
    * 시각 보정 방식.
@@ -178,8 +221,11 @@ export interface SajuChart {
    */
   constitution: ConstitutionAnalysis;
   /**
-   * 올해 운세 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-15).
-   * 리딩 유형과 무관하게 항상 계산한다. 지금은 `yearly` 프롬프트만 근거로 쓴다.
+   * 올해 세운 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-15).
+   *
+   * **작용(보완·가중·중립)은 원래 몸 쪽 값이다** — `constitution.deficient`/`excess` 에서
+   * 계산되기 때문이다. 그래서 `yearly` 유형이 사라진 뒤에도 남아 `diet` 의
+   * "올해의 몸 흐름" 이 근거로 쓴다 (TASK-39). 리딩 유형과 무관하게 항상 계산한다.
    */
   yearly: YearlyAnalysis;
   /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */

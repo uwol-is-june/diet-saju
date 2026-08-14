@@ -12,33 +12,28 @@ import { READING_SECTION_IDS, SECTION_SPECS, parseReadingSections } from "./sect
  * 온 내용도 버리지 않는다.
  */
 
-const DIET_FULL = `## 한눈에 보기
-요약 문장입니다.
+/**
+ * 검사용 풀이는 **계약에서 만든다.** 제목을 손으로 적어 두면 계약이 바뀔 때마다
+ * 테스트가 계약이 아니라 옛 목록을 지키게 된다 (실제로 TASK-40 에서 그렇게 깨졌다).
+ *
+ * 두 번째 섹션에는 `###` 소제목을 넣어 "소제목은 섹션 경계가 아니다" 를 함께 본다.
+ */
+const FIXTURE_TYPE = "diet-method" as const;
+const FIXTURE_SPECS = SECTION_SPECS[FIXTURE_TYPE];
 
-## 오행으로 본 체질
-체질 설명입니다.
+/** `###` 소제목을 품는 섹션 — 첫 섹션이 아니어야 경계 검사가 의미 있다 */
+const NESTED_ID = FIXTURE_SPECS[1]!.id;
 
-### 소제목은 섹션 경계가 아니다
-이어지는 내용.
+const DIET_FULL = FIXTURE_SPECS.map((spec, index) => {
+  const body =
+    index === 1
+      ? "본문입니다.\n\n### 소제목은 섹션 경계가 아니다\n이어지는 내용."
+      : `${spec.title} 본문입니다.`;
+  return `## ${spec.title}\n${body}`;
+}).join("\n\n");
 
-## 살이 붙는 패턴
-패턴 설명입니다.
-
-## 잘 맞는 다이어트 방법
-접근 순서 설명입니다.
-
-## 잘 맞는 식습관
-- 항목 하나
-- 항목 둘
-
-## 잘 맞는 움직임
-움직임 설명입니다.
-
-## 올해의 몸 흐름
-흐름 설명입니다.
-
-## 이번 달 실천 3가지
-실천 설명입니다.`;
+/** 마지막 섹션 제목 — 잘린 제목 매칭 검사에 쓴다 */
+const LAST_SPEC = FIXTURE_SPECS[FIXTURE_SPECS.length - 1]!;
 
 describe("섹션 계약", () => {
   it("모든 유형의 섹션 id 가 선언 목록 안에 있다", () => {
@@ -74,11 +69,11 @@ describe("섹션 계약", () => {
 });
 
 describe("완성된 풀이 파싱", () => {
-  const parsed = parseReadingSections(DIET_FULL, "diet", false);
+  const parsed = parseReadingSections(DIET_FULL, FIXTURE_TYPE,false);
 
   it("계약된 섹션을 순서대로 전부 잡는다", () => {
     expect(parsed.sections.map((s) => s.id)).toEqual(
-      SECTION_SPECS.diet.map((spec) => spec.id),
+      FIXTURE_SPECS.map((spec) => spec.id),
     );
     expect(parsed.recognized).toBe(true);
   });
@@ -88,7 +83,7 @@ describe("완성된 풀이 파싱", () => {
   });
 
   it("### 소제목은 섹션을 가르지 않는다", () => {
-    const body = parsed.sections.find((s) => s.id === "constitution")!.body;
+    const body = parsed.sections.find((s) => s.id === NESTED_ID)!.body;
     expect(body).toContain("### 소제목은 섹션 경계가 아니다");
     expect(body).toContain("이어지는 내용.");
   });
@@ -111,17 +106,17 @@ describe("스트리밍 도중 파싱", () => {
   it("한 글자씩 늘려도 어느 지점에서도 예외가 없고 섹션이 줄지 않는다", () => {
     let previousCount = 0;
     for (let length = 1; length <= DIET_FULL.length; length += 1) {
-      const parsed = parseReadingSections(DIET_FULL.slice(0, length), "diet", true);
+      const parsed = parseReadingSections(DIET_FULL.slice(0, length), FIXTURE_TYPE,true);
       // 섹션 수는 단조 증가한다. 줄어들면 화면에서 카드가 사라진다.
       expect(parsed.sections.length).toBeGreaterThanOrEqual(previousCount);
       previousCount = parsed.sections.length;
     }
-    expect(previousCount).toBe(SECTION_SPECS.diet.length);
+    expect(previousCount).toBe(FIXTURE_SPECS.length);
   });
 
   it("마지막 섹션만 미완이고 나머지는 완결이다", () => {
-    const partial = DIET_FULL.slice(0, DIET_FULL.indexOf("## 잘 맞는 움직임") + 30);
-    const parsed = parseReadingSections(partial, "diet", true);
+    const partial = DIET_FULL.slice(0, DIET_FULL.indexOf(`## ${LAST_SPEC.title}`) + 12);
+    const parsed = parseReadingSections(partial, FIXTURE_TYPE,true);
     const last = parsed.sections[parsed.sections.length - 1]!;
     expect(last.complete).toBe(false);
     expect(parsed.sections.slice(0, -1).every((s) => s.complete)).toBe(true);
@@ -129,17 +124,17 @@ describe("스트리밍 도중 파싱", () => {
 
   it("잘린 제목도 계약과 맞춰 잡는다 (카드 깜빡임 방지)", () => {
     // "## 한눈에" 까지만 도착한 순간
-    const parsed = parseReadingSections("## 한눈에", "diet", true);
+    const parsed = parseReadingSections("## 한눈에", FIXTURE_TYPE,true);
     expect(parsed.sections[0]!.id).toBe("summary");
     expect(parsed.sections[0]!.title).toBe("한눈에 보기");
   });
 
   it("제목이 도착하는 모든 중간 지점에서 id 가 잡힌다", () => {
-    const heading = "## 이번 달 실천 3가지";
+    const heading = `## ${LAST_SPEC.title}`;
     for (let length = 4; length <= heading.length; length += 1) {
-      const parsed = parseReadingSections(heading.slice(0, length), "diet", true);
+      const parsed = parseReadingSections(heading.slice(0, length), FIXTURE_TYPE, true);
       expect(parsed.sections[0]!.id, `"${heading.slice(0, length)}" 에서 실패`).toBe(
-        "monthly-actions",
+        LAST_SPEC.id,
       );
     }
   });
@@ -148,24 +143,30 @@ describe("스트리밍 도중 파싱", () => {
     // `### 소제목` 이 오는 중이면 `##` 까지는 섹션 제목과 구별할 수 없다.
     // 이걸 막지 않으면 빈 카드가 생겼다 사라진다.
     for (const hashes of ["#", "##", "###", "## ", "### "]) {
-      const parsed = parseReadingSections(`## 한눈에 보기\n요약.\n\n${hashes}`, "diet", true);
+      const parsed = parseReadingSections(`## 한눈에 보기\n요약.\n\n${hashes}`, FIXTURE_TYPE,true);
       expect(parsed.sections.length, `"${hashes}" 에서 실패`).toBe(1);
       expect(parsed.sections[0]!.body).toBe("요약.");
     }
   });
 
   it("제목 글자가 오는 순간 단계가 확정된다", () => {
-    const sub = parseReadingSections("## 한눈에 보기\n요약.\n\n### 소제목", "diet", true);
+    const sub = parseReadingSections("## 한눈에 보기\n요약.\n\n### 소제목", FIXTURE_TYPE,true);
     expect(sub.sections.length).toBe(1);
     expect(sub.sections[0]!.body).toContain("### 소제목");
 
-    const next = parseReadingSections("## 한눈에 보기\n요약.\n\n## 오", "diet", true);
+    // 두 번째 섹션 제목의 첫 글자만 도착한 순간 — 계약에서 뽑아 쓴다.
+    const firstChar = FIXTURE_SPECS[1]!.title.slice(0, 1);
+    const next = parseReadingSections(
+      `## 한눈에 보기\n요약.\n\n## ${firstChar}`,
+      FIXTURE_TYPE,
+      true,
+    );
     expect(next.sections.length).toBe(2);
-    expect(next.sections[1]!.id).toBe("constitution");
+    expect(next.sections[1]!.id).toBe(NESTED_ID);
   });
 
   it("제목만 있고 본문이 아직 없으면 빈 본문이다", () => {
-    const parsed = parseReadingSections("## 한눈에 보기\n", "diet", true);
+    const parsed = parseReadingSections("## 한눈에 보기\n", FIXTURE_TYPE,true);
     expect(parsed.sections[0]!.body).toBe("");
     expect(parsed.sections[0]!.complete).toBe(false);
   });
@@ -185,20 +186,20 @@ describe("모델이 계약을 어겼을 때 — 출력을 잃지 않는다", () 
   });
 
   it("제목이 하나도 없으면 recognized=false 로 원문 폴백을 알린다", () => {
-    const parsed = parseReadingSections("제목 없이 그냥 쓴 풀이입니다.", "diet", false);
+    const parsed = parseReadingSections("제목 없이 그냥 쓴 풀이입니다.", FIXTURE_TYPE,false);
     expect(parsed.recognized).toBe(false);
     expect(parsed.sections).toEqual([]);
     expect(parsed.preamble).toBe("제목 없이 그냥 쓴 풀이입니다.");
   });
 
   it("계약에 없는 제목만 있으면 recognized=false 다", () => {
-    const parsed = parseReadingSections("## 엉뚱한 제목\n내용.", "diet", false);
+    const parsed = parseReadingSections("## 엉뚱한 제목\n내용.", FIXTURE_TYPE,false);
     expect(parsed.recognized).toBe(false);
     expect(parsed.sections[0]!.body).toBe("내용.");
   });
 
   it("첫 제목 앞에 온 내용도 버리지 않는다", () => {
-    const parsed = parseReadingSections("서론입니다.\n\n## 한눈에 보기\n요약.", "diet", false);
+    const parsed = parseReadingSections("서론입니다.\n\n## 한눈에 보기\n요약.", FIXTURE_TYPE,false);
     expect(parsed.preamble).toBe("서론입니다.");
     expect(parsed.sections[0]!.id).toBe("summary");
   });
@@ -211,7 +212,7 @@ describe("모델이 계약을 어겼을 때 — 출력을 잃지 않는다", () 
   });
 
   it("빈 문자열은 빈 결과다", () => {
-    const parsed = parseReadingSections("", "diet", true);
+    const parsed = parseReadingSections("", FIXTURE_TYPE,true);
     expect(parsed.sections).toEqual([]);
     expect(parsed.preamble).toBe("");
     expect(parsed.recognized).toBe(false);

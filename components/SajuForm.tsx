@@ -218,16 +218,18 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             </Field>
 
             <Field label="성별" htmlFor={fieldId("gender")}>
-              <select
-                id={fieldId("gender")}
-                value={input.gender}
-                onChange={(e) => set("gender")(e.target.value as BirthInput["gender"])}
-                className={inputClass}
-              >
-                <option value="unspecified">선택 안 함</option>
-                <option value="male">남성</option>
-                <option value="female">여성</option>
-              </select>
+              <SelectShell>
+                <select
+                  id={fieldId("gender")}
+                  value={input.gender}
+                  onChange={(e) => set("gender")(e.target.value as BirthInput["gender"])}
+                  className={inputClass}
+                >
+                  <option value="unspecified">선택 안 함</option>
+                  <option value="male">남성</option>
+                  <option value="female">여성</option>
+                </select>
+              </SelectShell>
             </Field>
 
             <Field label="생년월일" htmlFor={fieldId("birth-date")}>
@@ -244,15 +246,17 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             </Field>
 
             <Field label="양력 / 음력" htmlFor={fieldId("calendar")}>
-              <select
-                id={fieldId("calendar")}
-                value={input.calendar}
-                onChange={(e) => set("calendar")(e.target.value as BirthInput["calendar"])}
-                className={inputClass}
-              >
-                <option value="solar">양력</option>
-                <option value="lunar">음력</option>
-              </select>
+              <SelectShell>
+                <select
+                  id={fieldId("calendar")}
+                  value={input.calendar}
+                  onChange={(e) => set("calendar")(e.target.value as BirthInput["calendar"])}
+                  className={inputClass}
+                >
+                  <option value="solar">양력</option>
+                  <option value="lunar">음력</option>
+                </select>
+              </SelectShell>
             </Field>
 
             {/* 윤달 체크박스는 **전체 폭 행**으로 내린다 (TASK-22).
@@ -286,36 +290,40 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               <legend className={labelClass}>태어난 시각</legend>
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
                 <div className="grid grid-cols-2 gap-2">
-                  <select
-                    id={fieldId("birth-hour")}
-                    aria-label="태어난 시"
-                    value={input.birthHour}
-                    disabled={input.timeUnknown}
-                    onChange={(e) => set("birthHour")(e.target.value)}
-                    className={selectTimeClass(input.birthHour)}
-                  >
-                    <option value="">시 선택</option>
-                    {HOUR_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    id={fieldId("birth-minute")}
-                    aria-label="태어난 분"
-                    value={input.birthMinute}
-                    disabled={input.timeUnknown}
-                    onChange={(e) => set("birthMinute")(e.target.value)}
-                    className={selectTimeClass(input.birthMinute)}
-                  >
-                    <option value="">분 선택</option>
-                    {MINUTE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectShell>
+                    <select
+                      id={fieldId("birth-hour")}
+                      aria-label="태어난 시"
+                      value={input.birthHour}
+                      disabled={input.timeUnknown}
+                      onChange={(e) => set("birthHour")(e.target.value)}
+                      className={selectTimeClass(input.birthHour)}
+                    >
+                      <option value="">시 선택</option>
+                      {HOUR_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectShell>
+                  <SelectShell>
+                    <select
+                      id={fieldId("birth-minute")}
+                      aria-label="태어난 분"
+                      value={input.birthMinute}
+                      disabled={input.timeUnknown}
+                      onChange={(e) => set("birthMinute")(e.target.value)}
+                      className={selectTimeClass(input.birthMinute)}
+                    >
+                      <option value="">분 선택</option>
+                      {MINUTE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectShell>
                 </div>
                 <label className={checkboxLabelClass}>
                   <input
@@ -346,35 +354,49 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             <fieldset className="min-w-0 sm:col-span-2" disabled={!placeApplies}>
               <legend className={labelClass}>태어난 지역 (선택)</legend>
               <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                <select
-                  id={fieldId("birthplace-sido")}
-                  aria-label="태어난 시/도"
-                  value={input.birthplaceSido}
-                  onChange={(e) => chooseSido(e.target.value)}
-                  className={selectTimeClass(input.birthplaceSido)}
-                >
-                  <option value="">시/도 선택</option>
-                  {BIRTHPLACE_SIDO.map((sido) => (
-                    <option key={sido} value={sido}>
-                      {sido}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  id={fieldId("birthplace-name")}
-                  aria-label="태어난 시/군"
-                  value={input.birthplaceName}
-                  disabled={placesInChosenSido.length === 0}
-                  onChange={(e) => set("birthplaceName")(e.target.value)}
-                  className={selectTimeClass(input.birthplaceName)}
-                >
-                  <option value="">시/군 선택</option>
-                  {placesInChosenSido.map((place) => (
-                    <option key={place.name} value={place.name}>
-                      {place.name}
-                    </option>
-                  ))}
-                </select>
+                <SelectShell>
+                  <select
+                    id={fieldId("birthplace-sido")}
+                    aria-label="태어난 시/도"
+                    value={input.birthplaceSido}
+                    onChange={(e) => chooseSido(e.target.value)}
+                    className={selectTimeClass(input.birthplaceSido)}
+                  >
+                    <option value="">시/도 선택</option>
+                    {BIRTHPLACE_SIDO.map((sido) => (
+                      <option key={sido} value={sido}>
+                        {sido}
+                      </option>
+                    ))}
+                  </select>
+                </SelectShell>
+                {/*
+                  고를 것이 둘 이상일 때만 낸다 (TASK-38). 시/도를 고르기 전이거나
+                  시/군이 하나뿐인 시/도(서울·광주·대전·세종)에서는 `chooseSido` 가 이미
+                  값을 채우므로, 누를 이유가 없는 컨트롤이 자리만 차지한다.
+                  **하나뿐인 시/도 목록을 하드코딩하지 않는다** — 표는 자동 생성이라
+                  다음 갱신에서 개수가 바뀔 수 있다. 파생값으로 판정한다.
+                  남은 한 칸은 왼쪽에 그대로 둔다 — 전체 폭으로 늘리면 바로 위 시·분
+                  드롭다운과 밑선이 어긋난다.
+                */}
+                {placesInChosenSido.length > 1 && (
+                  <SelectShell>
+                    <select
+                      id={fieldId("birthplace-name")}
+                      aria-label="태어난 시/군"
+                      value={input.birthplaceName}
+                      onChange={(e) => set("birthplaceName")(e.target.value)}
+                      className={selectTimeClass(input.birthplaceName)}
+                    >
+                      <option value="">시/군 선택</option>
+                      {placesInChosenSido.map((place) => (
+                        <option key={place.name} value={place.name}>
+                          {place.name}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectShell>
+                )}
               </div>
               <p className="mt-1.5 text-xs text-ink-muted">
                 {!placeApplies
@@ -407,19 +429,21 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             </summary>
             <div className="mt-4 space-y-4">
               <Field label="출생시각 보정" htmlFor={fieldId("solar-time")}>
-                <select
-                  id={fieldId("solar-time")}
-                  value={input.solarTimeMode}
-                  onChange={(e) =>
-                    set("solarTimeMode")(e.target.value as BirthInput["solarTimeMode"])
-                  }
-                  aria-describedby={fieldId("solar-time-hint")}
-                  className={inputClass}
-                >
-                  <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
-                  <option value="true">진태양시 (경도 + 균시차)</option>
-                  <option value="standard">보정 없음 (시계시 그대로)</option>
-                </select>
+                <SelectShell>
+                  <select
+                    id={fieldId("solar-time")}
+                    value={input.solarTimeMode}
+                    onChange={(e) =>
+                      set("solarTimeMode")(e.target.value as BirthInput["solarTimeMode"])
+                    }
+                    aria-describedby={fieldId("solar-time-hint")}
+                    className={inputClass}
+                  >
+                    <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
+                    <option value="true">진태양시 (경도 + 균시차)</option>
+                    <option value="standard">보정 없음 (시계시 그대로)</option>
+                  </select>
+                </SelectShell>
                 <p id={fieldId("solar-time-hint")} className="mt-1.5 text-xs text-ink-muted">
                   한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분
                   빠릅니다. 서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
@@ -427,16 +451,18 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               </Field>
 
               <Field label="자시(子時) 기준" htmlFor={fieldId("day-boundary")}>
-                <select
-                  id={fieldId("day-boundary")}
-                  value={input.dayBoundary}
-                  onChange={(e) => set("dayBoundary")(e.target.value as BirthInput["dayBoundary"])}
-                  aria-describedby={fieldId("day-boundary-hint")}
-                  className={inputClass}
-                >
-                  <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
-                  <option value="jasi">자시파 (23시부터 다음날)</option>
-                </select>
+                <SelectShell>
+                  <select
+                    id={fieldId("day-boundary")}
+                    value={input.dayBoundary}
+                    onChange={(e) => set("dayBoundary")(e.target.value as BirthInput["dayBoundary"])}
+                    aria-describedby={fieldId("day-boundary-hint")}
+                    className={inputClass}
+                  >
+                    <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
+                    <option value="jasi">자시파 (23시부터 다음날)</option>
+                  </select>
+                </SelectShell>
                 <p id={fieldId("day-boundary-hint")} className="mt-1.5 text-xs text-ink-muted">
                   23:00~23:59(오후 11시대) 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파
                   차이입니다. 그 시간대가 아니면 결과가 같습니다.
@@ -536,6 +562,21 @@ const selectTimeClass = (value: string) =>
   `${inputBaseClass} ${value ? "text-ink" : "text-ink-placeholder"}` +
   " disabled:bg-surface-inset disabled:text-ink-muted";
 
+
+/**
+ * 드롭다운 화살표를 직접 그리기 위한 껍데기 (TASK-38).
+ *
+ * **`select` 에는 `::after` 를 붙일 수 없어서** 감싸는 요소가 필요하다. 모양과 색은
+ * `globals.css` 의 `.select-shell` 이 정한다 — 색을 이 파일에 적으면
+ * `lib/design/tokens.test.ts` 의 raw 색상 검사에 걸린다.
+ *
+ * **폼의 모든 `select` 가 이걸 쓴다.** 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아
+ * 폼 안에 화살표가 두 종류가 된다 (실제로 넷만 감쌌을 때 그렇게 됐다).
+ * `lib/form/birth-input.test.ts` 가 `<select` 개수와 껍데기 개수를 대조한다.
+ */
+function SelectShell({ children }: { children: React.ReactNode }) {
+  return <span className="select-shell">{children}</span>;
+}
 
 const labelClass = "mb-1.5 block text-sm font-medium text-ink-soft";
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
 import { SajuForm } from "@/components/SajuForm";
 import {
@@ -8,14 +8,19 @@ import {
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   READING_TYPE_META,
+  READING_TYPE_VISIBILITY,
   type ReadingType,
 } from "@/lib/saju/schema";
 
 /**
  * 입력 + 결과 화면 (TASK-30).
  *
- * **세그먼트 값은 기존 `ReadingType` id 를 그대로 쓴다** (`general`·`diet`·`yearly`).
+ * **세그먼트 값은 기존 `ReadingType` id 를 그대로 쓴다** (`general`·`diet`).
  * 한글 슬러그를 따로 만들면 API 계약(`schema.ts`)과 URL 이 두 벌이 된다.
+ * 같은 이유로 `diet` 는 라벨이 `종합 체질 풀이` 로 바뀐 뒤에도 id 를 유지한다 (TASK-39).
+ *
+ * 없어진 유형(`yearly`)은 여기서 404 가 되지 않는다 — `next.config.ts` 의 리다이렉트가
+ * 먼저 잡아 `/` 로 보낸다. 한때 유효했던 URL 이라 밖에 링크가 남아 있을 수 있다.
  *
  * 단계를 클라이언트 상태가 아니라 라우트로 나눈 덕에 ⓐ 뒤로가기가 그대로 동작하고
  * ⓑ `/reading/diet` 를 바로 공유·북마크할 수 있으며 ⓒ 유형별 메타데이터를 붙일 자리가 생긴다.
@@ -59,6 +64,15 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: url },
+    /**
+     * 내부 유형은 검색에 노출하지 않는다 (TASK-41). 메인 목록에서 링크가 사라져도
+     * 이미 색인됐을 수 있고, 검색에서 들어오면 내린 의미가 없다.
+     * 프리렌더는 계속 한다 — 빼면 `/reading/general` 자체가 죽는다.
+     */
+    robots:
+      READING_TYPE_VISIBILITY[readingType] === "internal"
+        ? { index: false, follow: false }
+        : undefined,
     openGraph: {
       type: "website",
       siteName: "다이어트 사주",
@@ -87,12 +101,7 @@ export default async function ReadingPage({
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <header className="mb-8">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center text-sm text-ink-muted transition hover:text-brand-ink"
-        >
-          ← 다른 풀이 고르기
-        </Link>
+        <BackLink label="다른 풀이 고르기" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">
           {READING_TYPE_LABEL[readingType]}
         </h1>

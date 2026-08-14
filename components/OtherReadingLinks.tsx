@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  READING_TYPES,
+  PUBLIC_READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   type ReadingType,
@@ -14,10 +14,16 @@ import {
  * 접혀 있고, 제출 한 번이면 그 유형의 풀이가 나온다. URL 과 보이는 결과가 항상 일치하는
  * 쪽을 택한 것이다.
  *
- * 현재 유형은 빼고 나머지만 낸다. `READING_TYPES` 를 순회하므로 유형이 늘면 자동이다.
+ * 현재 유형은 빼고 나머지만 낸다. `PUBLIC_READING_TYPES` 를 순회하므로 유형이 늘면 자동이고,
+ * 내부 유형(TASK-41)은 여기 나오지 않는다.
+ *
+ * **남는 유형이 없으면 아무것도 내지 않는다.** 공개 유형이 하나뿐이면 제목과 안내만 남은
+ * 빈 상자가 되는데, 그건 "다른 것도 있다" 고 말해 놓고 아무것도 주지 않는 화면이다.
+ * 유형이 늘면 저절로 다시 나타난다.
  */
 export function OtherReadingLinks({ current }: { current: ReadingType }) {
-  const others = READING_TYPES.filter((type) => type !== current);
+  const others = PUBLIC_READING_TYPES.filter((type) => type !== current);
+  if (others.length === 0) return null;
 
   return (
     <section className="rounded-2xl border border-line bg-surface-muted p-5 sm:p-6">

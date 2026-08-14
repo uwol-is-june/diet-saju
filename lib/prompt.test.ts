@@ -147,42 +147,92 @@ describe("표현 규칙", () => {
     expect(dietPrompt).toContain("전문가와 상의하도록 권하는 한 문장");
   });
 
-  it("감량 방법을 처방하지 말라고 두 곳에서 막는다 (TASK-24)", () => {
-    // 방법을 제시하는 절이 생겼으므로 유형 규칙과 섹션 지침 양쪽에 선을 둔다.
-    // 한쪽만 있으면 그 절만 읽는 모델이 선을 못 본다.
-    expect(dietPrompt).toContain("감량 방법을 처방하지 않는다");
-    const guide = dietPrompt.slice(dietPrompt.indexOf("## 잘 맞는 다이어트 방법"));
-    const sectionInstruction = guide.slice(0, guide.indexOf("## 잘 맞는 식습관"));
-    expect(sectionInstruction).toContain("칼로리");
-    expect(sectionInstruction).toContain("목표 체중");
-  });
-
-  it("식단 이름·단식·기간을 금지 목록으로 적어 둔다", () => {
-    for (const word of ["단식", "칼로리", "목표 체중", "간헐적 단식"]) {
-      expect(dietPrompt, `${word} 금지 문구 없음`).toContain(word);
-    }
-  });
-
-  it("식품에 효능·섭취량·상표를 붙이지 말라고 막는다 (TASK-27)", () => {
-    // 여기가 의학·영양 조언에 가장 가까이 가는 지점이다. 두 곳에서 막는다.
-    expect(dietPrompt).toContain("영양제·보조식품·건강기능식품·상표명");
-    expect(dietPrompt).toContain("섭취량");
-    const guide = dietPrompt.slice(dietPrompt.indexOf("## 잘 맞는 식습관"));
-    const sectionInstruction = guide.slice(0, guide.indexOf("## 잘 맞는 움직임"));
-    expect(sectionInstruction).toContain("효능을 붙이지 말 것");
-    expect(sectionInstruction).toContain("목록 밖의 식품 이름");
-  });
-
-  it("개인 변수를 모른다는 전제를 밝힌다", () => {
-    // 알레르기·지병·복약·임신 여부를 입력받지 않으므로 다량 섭취·제한을 권할 근거가 없다.
-    expect(dietPrompt).toContain("알레르기·지병·복약·임신 여부를 우리는 모릅니다");
-    expect(dietPrompt).toContain("많이 먹으라거나\n  끊으라고 하지 않습니다");
-  });
-
   it("재료(오행)와 조리(한열)를 다른 층으로 다루라고 지시한다", () => {
     // 섞으면 모델이 "이 재료는 몸을 따뜻하게 한다" 같은 새 판정을 만들어 낸다.
     expect(dietPrompt).toContain("재료(오행)와 조리");
     expect(dietPrompt).toContain("다른 층");
+  });
+});
+
+/**
+ * 실행 방법 유형의 경계 (TASK-40).
+ *
+ * (B) 일부 개방으로 **방법은 넓히고 수치는 계속 막는다.** 그래서 검사도 두 갈래다 —
+ * 막는 것이 실제로 막혀 있는지, **여는 것이 실제로 열려 있는지**. 후자를 검사하지 않으면
+ * 나중에 규칙을 조이면서 조용히 다시 닫아 버려도 아무도 모른다.
+ */
+describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
+  const prompt = PROMPTS["diet-method"];
+
+  /** 섹션 지침 한 조각만 잘라낸다 — "두 곳에서 막는지" 를 보려면 절 단위로 봐야 한다. */
+  const sectionGuide = (title: string) => {
+    const specs = SECTION_SPECS["diet-method"];
+    const index = specs.findIndex((spec) => spec.title === title);
+    const start = prompt.indexOf(`## ${title}`);
+    const next = specs[index + 1];
+    const end = next ? prompt.indexOf(`## ${next.title}`) : prompt.length;
+    return prompt.slice(start, end);
+  };
+
+  it("수치를 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
+    // 한쪽만 있으면 그 절만 읽는 모델이 선을 못 본다.
+    expect(prompt).toContain("수치를 쓰지 않는다");
+    expect(sectionGuide("어떤 종류로 움직일까")).toContain("수치를 쓰지 말 것");
+    expect(sectionGuide("어떤 순서로 먹을까")).toContain("섭취량");
+  });
+
+  it("단식·상표 식단·영양제를 금지 목록으로 적어 둔다", () => {
+    for (const word of ["단식", "간헐적 단식", "칼로리", "목표 체중", "영양제"]) {
+      expect(prompt, `${word} 금지 문구 없음`).toContain(word);
+    }
+  });
+
+  it("식품에 효능·상표를 붙이지 말라고 막는다", () => {
+    expect(prompt).toContain("영양제·보조식품·건강기능식품·상표명");
+    expect(sectionGuide("어떤 순서로 먹을까")).toContain("효능을 붙이지 말 것");
+    expect(sectionGuide("어떤 순서로 먹을까")).toContain("목록 밖의 식품 이름");
+  });
+
+  it("개인 변수를 모른다는 전제를 밝힌다", () => {
+    expect(prompt).toContain("알레르기·지병·복약·임신 여부를");
+    expect(prompt).toContain("많이 먹으라거나 끊으라고 하지 않습니다");
+  });
+
+  it("전문가 상담 권고를 요구한다", () => {
+    expect(prompt).toContain("전문가와 상의하도록 권하는 한 문장");
+  });
+
+  /** ── 여기부터는 "열려 있는지" 를 본다 ── */
+
+  it("코드가 정한 움직임 종류와 식사 순서가 프롬프트에 실린다", () => {
+    const { constitution } = chart;
+    expect(prompt).toContain(constitution.movementKind);
+    expect(prompt).toContain(constitution.movementHow);
+    expect(prompt).toContain(constitution.mealSequence);
+    expect(prompt).toContain(constitution.mealTiming);
+  });
+
+  it("종류를 그대로 쓰라고 지시한다 — LLM 이 다시 고르지 않는다", () => {
+    expect(sectionGuide("어떤 종류로 움직일까")).toContain("판정된 움직임 종류를 그대로 쓰고");
+    expect(prompt).toContain("다른 방법을 새로 고르지 말고");
+    expect(prompt).toContain("판정에 없는 종목·식단을 새로 들지 마세요");
+  });
+
+  it("시간대·온도는 한열 층에만 맡긴다", () => {
+    // 층을 섞으면 같은 사주에 다른 실행 조건이 나온다.
+    const movement = sectionGuide("어떤 종류로 움직일까");
+    expect(movement).toContain("아래 \"실행\" 절이 맡는다");
+    expect(sectionGuide("언제 어떻게 실행할까")).toContain('"한열" 항목만 근거로');
+  });
+
+  it("한의학 용어(성미)를 두 곳에서 막는다", () => {
+    expect(prompt).toContain("성미(온성·냉성) 같은 한의학 용어를 쓰지 않습니다");
+    expect(sectionGuide("언제 어떻게 실행할까")).toContain("성미(온성·냉성)");
+  });
+
+  it("세운 판정은 이 유형에 실리지 않는다", () => {
+    // 올해 흐름은 `diet` 몫이다. 두 유형이 같은 판정을 각자 서술하면 서로 어긋난다.
+    expect(prompt).not.toContain("올해 세운 판정");
   });
 });
 
@@ -214,47 +264,60 @@ describe("섹션 계약 (TASK-06)", () => {
   });
 });
 
-describe("올해 운세 판정 블록 (TASK-15)", () => {
-  const prompt = PROMPTS.yearly;
-
-  it("yearly 유형에만 실린다", () => {
-    expect(prompt).toContain("## 올해 운세 판정 (계산 완료 · 수정 금지)");
-    expect(generalPrompt).not.toContain("올해 운세 판정");
-    expect(dietPrompt).not.toContain("올해 운세 판정");
+/**
+ * 올해 세운 판정은 **`diet` 로 옮겨졌다** (TASK-39). `yearly` 유형은 없어졌지만
+ * 판정 자체는 `constitution` 의 오행 과부족에서 나오므로 몸 쪽 값이고,
+ * 그래서 "올해의 몸 흐름" 섹션이 근거로 쓴다.
+ */
+describe("올해 세운 판정 블록 (TASK-15 · TASK-39)", () => {
+  it("diet 유형에만 실린다", () => {
+    expect(dietPrompt).toContain("## 올해 세운 판정 (계산 완료 · 수정 금지)");
+    expect(generalPrompt).not.toContain("올해 세운 판정");
   });
 
-  it("유형별 판정 블록이 서로 섞이지 않는다", () => {
-    // 체질 판정은 diet 만, 올해 운세 판정은 yearly 만 받아야 한다.
-    expect(prompt).not.toContain("체질 판정");
+  it("체질 판정과 함께 실린다", () => {
+    // 작용 판정이 체질의 과부족에서 나오므로 근거가 같은 프롬프트 안에 있어야 한다.
     expect(dietPrompt).toContain("체질 판정");
+    expect(generalPrompt).not.toContain("체질 판정");
   });
 
-  it("코드가 정한 판정이 그대로 들어간다", () => {
+  it("코드가 정한 작용 판정이 그대로 들어간다", () => {
     const { yearly } = chart;
-    expect(prompt).toContain(`${yearly.year}년 ${yearly.ganji}`);
-    expect(prompt).toContain(yearly.effect);
-    expect(prompt).toContain(yearly.themeLabel);
-    expect(prompt).toContain(yearly.effectNote);
-    expect(prompt).toContain(yearly.themeNote);
+    expect(dietPrompt).toContain(`${yearly.year}년 ${yearly.ganji}`);
+    expect(dietPrompt).toContain(yearly.effect);
+    expect(dietPrompt).toContain(yearly.effectNote);
+  });
+
+  /**
+   * 주제 축(`경쟁과 독립`·`책임과 압박` …)은 생활 영역 어휘라 몸 이야기로 넘기지 않는다
+   * (TASK-39 결정 ①). 넘기면 근거 없는 대응표가 필요해지고 의학적 주장 경계에 닿는다.
+   */
+  it("주제(십신) 축은 넘기지 않는다", () => {
+    expect(dietPrompt).not.toContain("올해의 주제");
+    expect(dietPrompt).not.toContain(chart.yearly.themeLabel);
+    expect(dietPrompt).not.toContain(chart.yearly.themeNote);
+  });
+
+  it("몸 관리 밖으로 넓히지 말라고 지시한다", () => {
+    expect(dietPrompt).toContain("생활 영역 운세로 넓히지 말 것");
   });
 
   it("다시 판정하지 말라고 지시한다", () => {
-    expect(prompt).toContain("다시 판정하지 말고");
+    expect(dietPrompt).toContain("다시 판정하지 말고");
   });
 
-  it("월별 운세를 쓰지 말라고 못 박는다", () => {
+  it("월별 운세를 쓰지 말라고 두 곳에서 못 박는다", () => {
     // 월운은 계산하지 않는다. 지시가 없으면 모델이 지어낸다.
-    expect(prompt).toContain("월별 운세는 계산하지 않았다");
-    expect(prompt).toContain("시기를 특정하지 않는다");
+    expect(dietPrompt).toContain("월별 운세는 계산하지 않았다"); // 판정 블록
+    expect(dietPrompt).toContain("시기를 특정하지 않는다"); // 유형 규칙
   });
 
-  it("사건 예고와 단정을 금지한다", () => {
-    expect(prompt).toContain("사건을 예고하지 않는다");
-    expect(prompt).toContain("성패를 단정하지 않습니다");
+  it("사건 예고를 금지한다", () => {
+    expect(dietPrompt).toContain("사건을 예고하지 않는다");
   });
 
   it("관례에서 나온 판정을 고전 규칙처럼 말하지 말라고 지시한다", () => {
-    expect(prompt).toContain("이 서비스가 정한 관례");
+    expect(dietPrompt).toContain("이 서비스가 정한 관례");
   });
 });
 

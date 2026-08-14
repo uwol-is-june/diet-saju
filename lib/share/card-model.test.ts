@@ -167,7 +167,7 @@ describe("오행 배지", () => {
 describe("유형별 판정 칩", () => {
   it("diet 는 한열과 살이 붙는 패턴을 쓴다", () => {
     const model = buildShareCardModel(chart, "diet");
-    expect(model.typeLabel).toBe("체질·다이어트 풀이");
+    expect(model.typeLabel).toBe("종합 체질 풀이");
     expect(model.chips).toEqual([
       `한열 ${chart.constitution.thermal}`,
       chart.constitution.gainPattern,
@@ -183,16 +183,16 @@ describe("유형별 판정 칩", () => {
     ]);
   });
 
-  it("yearly 는 올해 간지와 주제를 쓴다", () => {
-    const model = buildShareCardModel(chart, "yearly");
-    expect(model.typeLabel).toBe("올해 운세");
-    expect(model.chips).toEqual([
-      `${chart.yearly.year}년 ${chart.yearly.ganji}`,
-      chart.yearly.themeLabel,
-    ]);
-    // 기준 연도는 출생 연도가 아니므로 카드에 실어도 된다.
-    expect(model.chips[0]).toContain(String(chart.yearly.year));
-    expect(model.notes.at(-1)).toContain(chart.yearly.effect);
+  /**
+   * 유형이 늘거나 줄면 여기가 비는 것을 막는다. `CHIPS` 가 `Record` 라 컴파일도 막지만,
+   * 칩이 **두 개 고정**이라는 규약은 타입이 잡아 주지 않는다.
+   */
+  it("모든 유형이 칩 두 개를 채운다", () => {
+    for (const type of READING_TYPES) {
+      const model = buildShareCardModel(chart, type);
+      expect(model.chips, `${type} 칩`).toHaveLength(2);
+      expect(model.chips.every((chip) => chip.length > 0), `${type} 빈 칩`).toBe(true);
+    }
   });
 });
 

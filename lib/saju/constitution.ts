@@ -124,6 +124,89 @@ const APPROACH_TABLE: Record<MetabolismTendency, Record<GainSite, DietApproach>>
   축적형: { 움직임: "회복 우선", "먹는 것": "리듬 고정 우선" },
 };
 
+// ── 6. 실행 방법 — 움직임의 종류와 식사 순서 (TASK-40) ─────────────────────
+/**
+ * (B) 일부 개방으로 넓힌 축이다. **방법은 구체적으로, 수치는 계속 막는다.**
+ *
+ * ## 층을 섞지 않는다
+ *
+ * | 층 | 정하는 것 | 근거 축 |
+ * | --- | --- | --- |
+ * | 무엇을 먼저 고정하는가 | `dietApproach` | 대사 기조 × 걸리는 지점 |
+ * | **어떤 종류로 움직이는가** | `movementKind` | ← `dietApproach` (여기) |
+ * | **어떤 순서로 먹는가** | `mealSequence` | ← `gainPattern` (여기) |
+ * | 언제·어떤 온도로 실행하는가 | `thermal` | 한열 (`THERMAL_GUIDE`) |
+ *
+ * **시간대와 온도를 이 표에 넣지 않았다.** 그건 한열이 정하는 다른 층이고, 여기 섞으면
+ * 칸이 20가지가 되어 각 칸의 근거를 설명할 수 없게 된다 — `APPROACH_TABLE` 이 한열을
+ * 빼 둔 것과 같은 이유다.
+ *
+ * ## 새 동점이 생기지 않는다
+ *
+ * 두 표 모두 **이미 결정론적인 축에서 1:1 로 파생**된다 (`dietApproach` 는 2×2,
+ * `gainPattern` 은 십신 우세 그룹이며 그쪽 동점은 고전 십신 순서로 이미 고정돼 있다).
+ * 그래서 같은 사주면 항상 같은 방법이 나온다. **축을 더 넣을 때는 동점 처리를 반드시
+ * 함께 고정할 것.**
+ */
+export type MovementKind = "유산소 중심" | "근력 중심" | "이완 중심" | "저강도 지속";
+
+export const MOVEMENT_PLAN: Record<
+  DietApproach,
+  { kind: MovementKind; how: string; caution: string }
+> = {
+  "활동량 우선": {
+    kind: "유산소 중심",
+    how: "걷기나 자전거처럼 오래 이어지는 움직임을 먼저 늘린다. 한 번의 길이보다 하는 횟수를 먼저 올린다.",
+    caution: "숨이 조금 차되 말은 이어지는 정도까지만. 그 위로 올리면 며칠 만에 멈춘다.",
+  },
+  "식사량 조절 우선": {
+    kind: "근력 중심",
+    how: "움직임은 지금 하던 만큼 유지하되 버티는 힘을 쓰는 쪽을 남겨 둔다. 맨몸으로 앉았다 일어서기, 계단 오르기처럼 가진 무게를 쓰는 것이면 된다.",
+    caution: "먹는 양을 손대는 동안 움직임까지 함께 늘리면 둘 다 오래가지 않는다.",
+  },
+  "회복 우선": {
+    kind: "이완 중심",
+    how: "스트레칭과 천천히 걷기처럼 회복을 방해하지 않는 것부터 넣는다. 잠과 쉬는 시간이 먼저 확보된 뒤에 활동량을 올린다.",
+    caution: "지탱하는 힘이 얇을 때 강도를 올리면 회복이 밀려 오히려 멈춘다.",
+  },
+  "리듬 고정 우선": {
+    kind: "저강도 지속",
+    how: "매일 같은 시각에 반복할 수 있을 만큼 낮은 강도로 둔다. 무엇을 하느냐보다 같은 시각에 하느냐가 먼저다.",
+    caution: "강도를 올리면 시각이 다시 흐트러진다. 리듬이 잡힌 뒤에 손대는 것이 순서다.",
+  },
+};
+
+/**
+ * 살이 붙는 패턴 → 식사 순서. `GAIN_PATTERN_NOTE` 가 이미 가리키던 방향을 실행 문장으로
+ * 옮긴 것이라 새 판정이 아니다.
+ *
+ * **식품 이름을 여기 적지 않는다.** 무엇을 먹을지는 `ELEMENT_FOOD`(오행)와
+ * `THERMAL_GUIDE`(조리·온도)가 정하고, 이 표는 **순서와 시각의 규칙**만 정한다.
+ * 두 층을 섞으면 목록 밖 식품이 이 표를 통해 새어 나간다.
+ */
+export const MEAL_PLAN: Record<GainPattern, { sequence: string; timing: string }> = {
+  근육형: {
+    sequence: "한 끼에 몰아 채우지 않고 끼니 사이 간격을 고르게 둔다.",
+    timing: "운동한 날일수록 끼니를 건너뛰지 않는다. 거른 자리는 다음 끼니에 몰린다.",
+  },
+  식욕형: {
+    sequence: "그릇을 먼저 정해 두고 덜어 먹는다. 무엇을 먼저 집고 무엇을 나중에 집을지 순서를 미리 정해 둔다.",
+    timing: "참는 쪽으로 버티지 말고, 먹는 자리와 시각을 정해 두는 쪽으로 간다.",
+  },
+  불규칙형: {
+    sequence: "메뉴를 고르기 전에 먹는 시각부터 정한다.",
+    timing: "바깥 일정이 흔들려도 첫 끼 시각만은 고정한다. 나머지는 거기에 맞춰 따라온다.",
+  },
+  스트레스형: {
+    sequence: "긴장이 쌓인 날일수록 늦은 시간에 몰아 먹는 흐름을 먼저 끊는다.",
+    timing: "저녁을 뒤로 미루지 말고 이른 쪽으로 당긴다. 늦어질수록 양이 늘어난다.",
+  },
+  정체형: {
+    sequence: "앉은 자리에서 이어 먹지 않고 끼니를 분명히 끊어 둔다.",
+    timing: "먹고 난 뒤 잠깐이라도 일어나 움직인 다음 다시 앉는다.",
+  },
+};
+
 // ── 문구 테이블 ────────────────────────────────────────────────────────────
 /**
  * 여기 문자열은 프롬프트가 아니라 **판정에 딸린 근거 데이터**다.
@@ -385,6 +468,16 @@ export interface ConstitutionAnalysis {
   dietApproachOrder: string;
   dietApproachCaution: string;
 
+  /**
+   * 실행 방법 (TASK-40). 접근 순서·패턴에서 1:1 로 파생되므로 새 동점이 없다.
+   * **시간대와 온도는 여기 없다** — 그건 한열(`thermal*`)이 정하는 다른 층이다.
+   */
+  movementKind: MovementKind;
+  movementHow: string;
+  movementCaution: string;
+  mealSequence: string;
+  mealTiming: string;
+
   /** 과다·부족 오행마다의 관리 축. 과다 먼저, 그다음 부족 (오행 순서 유지) */
   focus: ConstitutionFocus[];
 }
@@ -470,6 +563,12 @@ export function analyzeConstitution(input: ConstitutionInput): ConstitutionAnaly
     dietApproach,
     dietApproachOrder: DIET_APPROACH_NOTE[dietApproach].order,
     dietApproachCaution: DIET_APPROACH_NOTE[dietApproach].caution,
+
+    movementKind: MOVEMENT_PLAN[dietApproach].kind,
+    movementHow: MOVEMENT_PLAN[dietApproach].how,
+    movementCaution: MOVEMENT_PLAN[dietApproach].caution,
+    mealSequence: MEAL_PLAN[gainPattern].sequence,
+    mealTiming: MEAL_PLAN[gainPattern].timing,
 
     focus,
   };

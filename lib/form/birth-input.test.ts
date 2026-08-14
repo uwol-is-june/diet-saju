@@ -153,6 +153,23 @@ describe("출생지 표", () => {
     }
   });
 
+  /**
+   * 시/군 드롭다운은 고를 것이 둘 이상일 때만 나온다 (TASK-38). 그 조건이 뜻을 가지려면
+   * **선택지가 하나인 시/도가 표에 실제로 있어야** 한다 — 없으면 조건이 죽은 코드다.
+   * 목록을 하드코딩하지 않고 표에서 세는 이유는 표가 자동 생성이라 다음 갱신에서 개수가
+   * 바뀔 수 있기 때문이다 (제주는 지금 2개다).
+   */
+  it("선택지가 하나인 시/도와 둘 이상인 시/도가 모두 있다", () => {
+    const counts = BIRTHPLACE_SIDO.map((sido) => placesInSido(sido).length);
+    expect(counts.filter((n) => n === 1).length).toBeGreaterThan(0);
+    expect(counts.filter((n) => n > 1).length).toBeGreaterThan(0);
+  });
+
+  it("시/도를 고르지 않으면 시/군 후보가 없다", () => {
+    // 이 값이 0 이라 초기 화면에 드롭다운이 하나만 보인다.
+    expect(placesInSido("")).toHaveLength(0);
+  });
+
   it("시/도 + 시/군 조합이 유일하다", () => {
     // 이름만으로는 유일하지 않다 — 고성군이 강원·경남에 하나씩 있다.
     const keys = BIRTHPLACES.map((place) => `${place.sido}|${place.name}`);
@@ -275,6 +292,88 @@ describe("입력값은 메모리에만 둔다", () => {
     // `app/reading/layout.tsx` 로 내리면 `/` 를 거쳐 갈 때 언마운트되어 값이 날아간다.
     expect(readCode("app/layout.tsx")).toContain("BirthInputProvider");
     expect(() => readCode("app/reading/layout.tsx")).toThrow();
+  });
+});
+
+/**
+ * 드롭다운 정리 (TASK-38). 화면을 눈으로 봐야 아는 것이 많은 영역이라, **소스에서
+ * 지킬 수 있는 것만** 고정한다 — 조건이 파생값에서 나오는지, 색이 컴포넌트에 새지 않는지.
+ */
+describe("출생지 드롭다운", () => {
+  it("시/군 드롭다운을 파생값으로 조건부 렌더한다", () => {
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).toContain("placesInChosenSido.length > 1 &&");
+  });
+
+  it("하나뿐인 시/도 이름을 코드에 박아 두지 않는다", () => {
+    // 표는 자동 생성이라 다음 갱신에서 개수가 바뀔 수 있다. 파생값으로 판정해야 한다.
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).not.toMatch(/["'](?:서울|광주|대전|세종)["']\s*[,)\]]/);
+  });
+
+  it("화살표 색을 컴포넌트에 적지 않는다", () => {
+    // `lib/design/tokens.test.ts` 가 raw 색상을 막는다. 색은 globals.css 의 토큰이 정한다.
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).toContain("select-shell");
+    expect(form).not.toContain("clip-path");
+
+    const css = readCode("app/globals.css");
+    expect(css).toContain(".select-shell");
+    // 삼각형을 data URI 로 그리면 팔레트에 없는 색이 하나 생긴다.
+    expect(css).toContain("clip-path: polygon(0 0, 100% 0, 50% 100%)");
+    expect(css).toContain("background-color: var(--color-ink-muted)");
+  });
+
+  it("모든 select 가 같은 껍데기를 쓴다", () => {
+    // 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아 폼에 화살표가 두 종류가 된다.
+    // **개수를 대조하므로** 나중에 select 를 추가하면서 껍데기를 빠뜨리면 여기서 걸린다.
+    const form = readCode("components/SajuForm.tsx");
+    const selects = form.match(/<select\b/g) ?? [];
+    const shells = form.match(/<SelectShell>/g) ?? [];
+    expect(selects.length).toBeGreaterThan(0);
+    expect(shells).toHaveLength(selects.length);
+  });
+});
+
+/**
+ * 홈으로 돌아가는 동선 (TASK-42). 홈으로 가는 길이 푸터 링크 하나뿐이었고, 긴 고지
+ * 페이지에서는 끝까지 스크롤해야 나왔다.
+ */
+describe("홈으로 돌아가는 동선", () => {
+  it("긴 고지 페이지 상단에 홈 링크가 있다", () => {
+    for (const page of ["app/privacy/page.tsx", "app/disclaimer/page.tsx"]) {
+      expect(readCode(page), page).toContain("<BackLink />");
+    }
+  });
+
+  it("링크 문구와 모양이 한 곳에서만 정의된다", () => {
+    // 두 페이지에 각각 적으면 문구와 모양이 갈라진다.
+    const component = readCode("components/BackLink.tsx");
+    expect(component).toContain('href="/"');
+    for (const page of ["app/privacy/page.tsx", "app/disclaimer/page.tsx"]) {
+      expect(readCode(page), page).not.toContain('href="/"');
+    }
+  });
+
+  it("푸터 링크 이름이 목적지를 말한다", () => {
+    // `사주 풀이` 는 어디로 가는지도, 지금 거기 있는지도 알려주지 않았다.
+    const footer = readCode("components/SiteFooter.tsx");
+    expect(footer).toContain("처음으로");
+    expect(footer).not.toMatch(/>\s*사주 풀이\s*</);
+  });
+
+  it("고지 페이지와 푸터가 서버 컴포넌트로 남는다", () => {
+    // 현재 페이지를 알려면 usePathname() 이 필요하고, 그러면 `/` 에도 클라이언트 JS 가
+    // 들어가 `/` 를 통째로 정적으로 두는 성질이 깨진다.
+    for (const file of [
+      "components/BackLink.tsx",
+      "components/SiteFooter.tsx",
+      "app/privacy/page.tsx",
+      "app/disclaimer/page.tsx",
+    ]) {
+      expect(readCode(file), file).not.toContain("use client");
+      expect(readCode(file), file).not.toContain("usePathname");
+    }
   });
 });
 

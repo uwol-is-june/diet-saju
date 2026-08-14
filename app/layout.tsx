@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
@@ -48,6 +49,8 @@ export default function RootLayout({
       <body>
         {children}
         <SiteFooter />
+        {/* 모든 페이지에서 동작한다 — 면책 고지·개인정보 처리방침도 길다 (TASK-29). */}
+        <ScrollToTop />
       </body>
     </html>
   );

@@ -23,6 +23,7 @@ const CHART_SOURCES = [
   "components/charts/ThermalScale.tsx",
   "components/charts/DaeunTimeline.tsx",
   "components/ReadingSections.tsx",
+  "components/ScrollToTop.tsx",
 ].map((path) => ({
   path,
   code: readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"),

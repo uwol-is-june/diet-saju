@@ -24,12 +24,18 @@ export function ResultView({
   reading,
   readingType,
   streaming = false,
+  birthplace = null,
 }: {
   chart: SajuChart;
   reading: string;
   /** **요청할 때** 고른 유형. 폼의 현재 값이 아니다 — 섹션 계약이 유형별로 다르다. */
   readingType: ReadingType;
   streaming?: boolean;
+  /**
+   * 표시용 출생지 이름 (TASK-37). **`chart` 에 들어 있지 않다** — 계산에 필요한 것은
+   * 경도뿐이라 지역 이름은 서버로 보내지 않고, 폼이 들고 있는 값을 그대로 받는다.
+   */
+  birthplace?: string | null;
 }) {
   const pillars: { label: string; pillar: Pillar | null }[] = [
     { label: "연주", pillar: chart.year },
@@ -95,7 +101,7 @@ export function ResultView({
           </p>
         )}
 
-        <CorrectionNote correction={chart.timeCorrection} />
+        <CorrectionNote correction={chart.timeCorrection} birthplace={birthplace} />
       </section>
 
       <section className={CARD}>
@@ -224,7 +230,13 @@ function DaeunTable({
 }
 
 /** 어떤 보정을 적용해 이 원국이 나왔는지 근거를 밝힌다. */
-function CorrectionNote({ correction }: { correction: TimeCorrectionInfo }) {
+function CorrectionNote({
+  correction,
+  birthplace,
+}: {
+  correction: TimeCorrectionInfo;
+  birthplace: string | null;
+}) {
   // 시각 미상이면 보정 자체를 하지 않으므로 알릴 것이 없다.
   if (correction.appliedTime === null) return null;
 
@@ -232,8 +244,10 @@ function CorrectionNote({ correction }: { correction: TimeCorrectionInfo }) {
 
   if (correction.appliedTime && correction.correctionMinutes !== 0) {
     const sign = correction.correctionMinutes < 0 ? "−" : "+";
+    // 보정량의 근거가 출생지이므로 함께 적는다. 안 고르면 서울 기준임을 밝힌다.
+    const basis = birthplace ? `${birthplace} 기준` : "서울 기준(지역 미선택)";
     notes.push(
-      `출생시각 ${sign}${Math.abs(correction.correctionMinutes)}분 보정 → ${correction.appliedTime} 기준`,
+      `${basis} 출생시각 ${sign}${Math.abs(correction.correctionMinutes)}분 보정 → ${correction.appliedTime}`,
     );
   }
   if (correction.dstMinutes > 0) {

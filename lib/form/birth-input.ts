@@ -8,6 +8,7 @@
  * 값을 들고 있는 곳(프로바이더)과 값의 모양을 정하는 곳(여기)을 나눈 이유는
  * 요약 문구를 순수 함수로 검증하기 위해서다.
  */
+import { BIRTHPLACES, type Birthplace } from "./birthplaces";
 import { composeBirthTime } from "./birth-time";
 
 export interface BirthInput {
@@ -20,6 +21,13 @@ export interface BirthInput {
   calendar: "solar" | "lunar";
   isLeapMonth: boolean;
   gender: "male" | "female" | "unspecified";
+  /**
+   * 출생지 (TASK-37). **시/도와 시/군 두 값으로 든다** — 이름만으로는 유일하지 않다
+   * (`고성군` 이 강원과 경남에 하나씩 있다). 둘 다 빈 문자열이면 미선택이고,
+   * 그때는 서울 기본값으로 계산된다(지금까지와 같은 결과).
+   */
+  birthplaceSido: string;
+  birthplaceName: string;
   solarTimeMode: "standard" | "longitude" | "true";
   dayBoundary: "yajasi" | "jasi";
 }
@@ -37,6 +45,8 @@ export const EMPTY_BIRTH_INPUT: BirthInput = {
   calendar: "solar",
   isLeapMonth: false,
   gender: "unspecified",
+  birthplaceSido: "",
+  birthplaceName: "",
   solarTimeMode: "longitude",
   dayBoundary: "yajasi",
 };
@@ -69,11 +79,57 @@ export function canSubmit(input: BirthInput): boolean {
   return input.birthDate !== "" && !hasIncompleteTime(input);
 }
 
+// ── 출생지 (TASK-37) ────────────────────────────────────────────────────────
+/** 한 시/도에 속한 시/군 목록. 표는 이미 시/도 순 → 이름 순으로 정렬돼 있다. */
+export function placesInSido(sido: string): Birthplace[] {
+  return BIRTHPLACES.filter((place) => place.sido === sido);
+}
+
+/** 고른 출생지. 미선택이거나 표에 없는 조합이면 `null` 이다. */
+export function findBirthplace(input: BirthInput): Birthplace | null {
+  if (!input.birthplaceSido || !input.birthplaceName) return null;
+  return (
+    BIRTHPLACES.find(
+      (place) => place.sido === input.birthplaceSido && place.name === input.birthplaceName,
+    ) ?? null
+  );
+}
+
 /**
- * 접힌 폼에 보여줄 한 줄 — 예: `1999-12-09 · 22:12 · 여성`.
+ * 출생지 경도가 **실제로 결과를 바꾸는 상태인가.**
+ *
+ * 시각을 모르면 `pillars.ts` 가 보정을 강제로 끄고(`solarTimeMode = timeUnknown ?
+ * "standard" : …`), 보정 없음을 고른 경우도 경도를 쓰지 않는다. 두 경우에 경도를 보내면
+ * 서버가 조용히 버리므로, **쓰이지 않을 값은 아예 보내지 않는다.**
+ * 폼도 같은 조건으로 선택을 막는다 — 고를 수 있게 두면 반영되는 줄 안다.
+ */
+export function birthplaceApplies(input: BirthInput): boolean {
+  return !input.timeUnknown && input.solarTimeMode !== "standard";
+}
+
+/** 요청에 실어 보낼 경도. 미선택이거나 쓰이지 않는 상태면 `undefined` (서울 기본값). */
+export function birthplaceLongitude(input: BirthInput): number | undefined {
+  if (!birthplaceApplies(input)) return undefined;
+  return findBirthplace(input)?.longitude;
+}
+
+/**
+ * 화면에 보여줄 출생지 이름 — `부산` · `강원 고성군`.
+ * 시/군 이름이 시/도와 같으면(광역시) 한 번만 쓰고, 다르면 시/도를 앞에 붙여
+ * `고성군` 같은 동명이 어디인지 알 수 있게 한다.
+ */
+export function describeBirthplace(input: BirthInput): string | null {
+  const place = findBirthplace(input);
+  if (!place) return null;
+  return place.name === place.sido ? place.name : `${place.sido} ${place.name}`;
+}
+
+/**
+ * 접힌 폼에 보여줄 한 줄 — 예: `1999-12-09 · 22:12 · 여성 · 부산`.
  *
  * **이름은 넣지 않는다.** 화면에 남아 있을 필요가 없는 값이고, 옆에 사람이 있을 때
  * 생년월일 옆에 이름이 붙어 있으면 그 자체로 신원이 된다.
+ * **출생지는 넣는다** — 이름과 달리 계산에 실제로 쓰여서, 잘못 골랐으면 확인이 필요하다.
  * 음력이면 그 사실을 앞에 붙인다 — 양력으로 착각하면 원국이 통째로 달라진다.
  */
 export function describeBirthInput(input: BirthInput): string {
@@ -82,8 +138,10 @@ export function describeBirthInput(input: BirthInput): string {
     : (composeBirthTime(input.birthHour, input.birthMinute) || "시각 미상");
 
   const calendar = input.calendar === "lunar" ? (input.isLeapMonth ? "음력 윤달" : "음력") : null;
+  // 쓰이지 않는 상태면 요약에도 적지 않는다 — 반영된 줄 알게 된다.
+  const place = birthplaceApplies(input) ? describeBirthplace(input) : null;
 
-  return [calendar, input.birthDate, time, GENDER_LABEL[input.gender]]
+  return [calendar, input.birthDate, time, GENDER_LABEL[input.gender], place]
     .filter(Boolean)
     .join(" · ");
 }

@@ -465,6 +465,72 @@ describe("파생 근거", () => {
   });
 });
 
+// ── 출생지 경도가 원국 계산까지 이어지는지 (TASK-37) ─────────────────────────
+describe("출생지 경도", () => {
+  /** `lib/form/birthplaces.ts` 의 값. 여기서 다시 적어 계산 쪽만 검사한다. */
+  const BUSAN = 129.01;
+
+  it("고르지 않으면 서울 기준으로 계산한다 (기존 동작 유지)", () => {
+    const chart = calculateSajuChart(
+      makeInput({ birthDate: "1990-05-17", birthTime: "14:30", gender: "female" }),
+      FIXED_NOW,
+    );
+    expect(chart.timeCorrection.correctionMinutes).toBe(-32);
+  });
+
+  it("고르면 그 지역의 보정량이 적용된다", () => {
+    const chart = calculateSajuChart(
+      makeInput({
+        birthDate: "1990-05-17",
+        birthTime: "14:30",
+        gender: "female",
+        longitude: BUSAN,
+      }),
+      FIXED_NOW,
+    );
+    expect(chart.timeCorrection.correctionMinutes).toBe(-24);
+  });
+
+  it("시지 경계에서 시주가 실제로 갈린다", () => {
+    // 서울은 01:32 에 자시가 끝나고 부산은 01:24 다. 그 사이에 태어나면 결과가 다르다.
+    const at = (longitude?: number) =>
+      calculateSajuChart(
+        makeInput({ birthDate: "1990-05-17", birthTime: "01:28", gender: "female", longitude }),
+        FIXED_NOW,
+      ).hour!.ji;
+
+    expect(at()).toBe("자"); // 서울 기준 01:28 − 32분 = 00:56 → 자시
+    expect(at(BUSAN)).toBe("축"); // 부산 기준 01:28 − 24분 = 01:04 → 축시
+  });
+
+  it("년주·월주는 경도와 무관하다", () => {
+    // 절기 판정은 절대 시각으로 하므로 출생지가 바꿀 수 없다.
+    for (const birthDate of ["1990-02-04", "1999-12-09", "2005-08-07"]) {
+      for (const birthTime of ["00:01", "05:33", "23:59"]) {
+        const seoul = calculateSajuChart(
+          makeInput({ birthDate, birthTime, gender: "female" }),
+          FIXED_NOW,
+        );
+        const busan = calculateSajuChart(
+          makeInput({ birthDate, birthTime, gender: "female", longitude: BUSAN }),
+          FIXED_NOW,
+        );
+        expect(busan.year.ganji, `${birthDate} ${birthTime}`).toBe(seoul.year.ganji);
+        expect(busan.month.ganji, `${birthDate} ${birthTime}`).toBe(seoul.month.ganji);
+      }
+    }
+  });
+
+  it("시각 미상이면 경도를 줘도 보정하지 않는다", () => {
+    const chart = calculateSajuChart(
+      makeInput({ birthDate: "1990-05-17", gender: "female", longitude: BUSAN }),
+      FIXED_NOW,
+    );
+    expect(chart.timeCorrection.correctionMinutes).toBe(0);
+    expect(chart.timeCorrection.mode).toBe("standard");
+  });
+});
+
 // ── 지장간 통근이 실제 원국 계산까지 이어지는지 (TASK-32) ────────────────────
 describe("지장간 통근 — 실측 사례", () => {
   const chart = calculateSajuChart(

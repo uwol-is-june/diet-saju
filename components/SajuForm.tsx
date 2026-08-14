@@ -2,12 +2,17 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import {
+  birthplaceApplies,
+  birthplaceLongitude,
   canSubmit,
   describeBirthInput,
+  describeBirthplace,
   hasIncompleteTime,
+  placesInSido,
   type BirthInput,
 } from "@/lib/form/birth-input";
 import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth-time";
+import { BIRTHPLACE_SIDO } from "@/lib/form/birthplaces";
 import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
 import { useBirthInput } from "./BirthInputProvider";
 import { OtherReadingLinks } from "./OtherReadingLinks";
@@ -59,6 +64,21 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
   const timeIncomplete = hasIncompleteTime(input);
   const birthTime = composeBirthTime(input.birthHour, input.birthMinute);
   const submittable = canSubmit(input);
+  const placeApplies = birthplaceApplies(input);
+  const placesInChosenSido = placesInSido(input.birthplaceSido);
+
+  /**
+   * 시/도를 바꾸면 시/군을 비운다 — 그러지 않으면 `강원 + 기장군` 같은 조합이 남고
+   * 표에 없는 조합이라 경도가 조용히 서울 기본값으로 돌아간다.
+   * 시/군이 하나뿐인 광역시는 바로 채워 준다 (선택지가 하나인 드롭다운을 누르게 하지 않는다).
+   */
+  function chooseSido(sido: string) {
+    const places = placesInSido(sido);
+    update({
+      birthplaceSido: sido,
+      birthplaceName: places.length === 1 ? places[0]!.name : "",
+    });
+  }
 
   /**
    * 원국은 폼 아래에 그려지는데, 폼이 길어 모바일에서는 화면 밖이다.
@@ -110,6 +130,8 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
           readingType,
           solarTimeMode: input.solarTimeMode,
           dayBoundary: input.dayBoundary,
+          // 쓰이지 않을 값은 보내지 않는다 (시각 미상·보정 없음이면 서버가 버린다).
+          longitude: birthplaceLongitude(input),
         }),
       });
 
@@ -316,6 +338,50 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                 </p>
               )}
             </fieldset>
+
+            {/* 출생지 (TASK-37). 시각 fieldset 과 같은 이유로 전체 폭 2열이다 —
+                시/도와 시/군 드롭다운 폭이 바로 위 시·분과 맞는다.
+                경도 보정이 쓰이지 않는 상태(시각 미상·보정 없음)에서는 잠근다.
+                고를 수 있게 두면 반영되는 줄 안다. */}
+            <fieldset className="min-w-0 sm:col-span-2" disabled={!placeApplies}>
+              <legend className={labelClass}>태어난 지역 (선택)</legend>
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                <select
+                  id={fieldId("birthplace-sido")}
+                  aria-label="태어난 시/도"
+                  value={input.birthplaceSido}
+                  onChange={(e) => chooseSido(e.target.value)}
+                  className={selectTimeClass(input.birthplaceSido)}
+                >
+                  <option value="">시/도 선택</option>
+                  {BIRTHPLACE_SIDO.map((sido) => (
+                    <option key={sido} value={sido}>
+                      {sido}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  id={fieldId("birthplace-name")}
+                  aria-label="태어난 시/군"
+                  value={input.birthplaceName}
+                  disabled={placesInChosenSido.length === 0}
+                  onChange={(e) => set("birthplaceName")(e.target.value)}
+                  className={selectTimeClass(input.birthplaceName)}
+                >
+                  <option value="">시/군 선택</option>
+                  {placesInChosenSido.map((place) => (
+                    <option key={place.name} value={place.name}>
+                      {place.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-1.5 text-xs text-ink-muted">
+                {!placeApplies
+                  ? "출생시각을 모르거나 시각 보정을 끄면 지역이 결과에 반영되지 않습니다."
+                  : "고르지 않으면 서울 기준으로 계산합니다. 서울에서 멀수록 시주(時柱)가 달라질 수 있습니다 (부산 약 8분 차이)."}
+              </p>
+            </fieldset>
           </div>
         ) : (
           /* 접힌 상태 — 요약 한 줄 + "수정". 여기서 바로 제출할 수 있다. */
@@ -427,6 +493,9 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               reading={reading}
               readingType={readingType}
               streaming={streaming}
+              /* 지역 **이름**은 서버로 보내지 않는다 — 계산에 필요한 것은 경도뿐이다.
+                 화면 표시는 폼이 들고 있는 값으로 한다. */
+              birthplace={placeApplies ? describeBirthplace(input) : null}
             />
             {/* 생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하면 지금 글을 끊는다. */}
             {!streaming && <OtherReadingLinks current={readingType} />}

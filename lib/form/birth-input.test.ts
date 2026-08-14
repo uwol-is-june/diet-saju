@@ -2,11 +2,17 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_BIRTH_INPUT,
+  birthplaceApplies,
+  birthplaceLongitude,
   canSubmit,
   describeBirthInput,
+  describeBirthplace,
+  findBirthplace,
   hasIncompleteTime,
+  placesInSido,
   type BirthInput,
 } from "./birth-input";
+import { BIRTHPLACES, BIRTHPLACE_SIDO } from "./birthplaces";
 
 function make(patch: Partial<BirthInput> = {}): BirthInput {
   return { ...EMPTY_BIRTH_INPUT, ...patch };
@@ -104,6 +110,139 @@ describe("접힌 폼의 요약 한 줄", () => {
     // 옆에 사람이 있을 때 생년월일 옆의 이름은 그 자체로 신원이 된다.
     const summary = describeBirthInput(make({ birthDate: "1999-12-09", name: "홍길동" }));
     expect(summary).not.toContain("홍길동");
+  });
+
+  it("출생지는 넣는다 — 계산에 쓰이므로 확인이 필요하다", () => {
+    const summary = describeBirthInput(
+      make({
+        birthDate: "1999-12-09",
+        birthHour: "22",
+        birthMinute: "12",
+        gender: "female",
+        birthplaceSido: "부산",
+        birthplaceName: "부산",
+      }),
+    );
+    expect(summary).toBe("1999-12-09 · 22:12 · 여성 · 부산");
+  });
+
+  it("반영되지 않는 상태면 요약에도 적지 않는다", () => {
+    // 시각 미상이면 보정이 꺼진다. 적어 두면 반영된 줄 안다.
+    const summary = describeBirthInput(
+      make({ birthDate: "1999-12-09", timeUnknown: true, birthplaceSido: "부산", birthplaceName: "부산" }),
+    );
+    expect(summary).not.toContain("부산");
+  });
+});
+
+/**
+ * 출생지 경도 (TASK-37). 표 자체(`birthplaces.ts`)는 자동 생성이고 출처가 통계청
+ * 행정구역 경계이므로, 여기서는 **표의 불변식과 조회 규칙**을 본다.
+ */
+describe("출생지 표", () => {
+  it("시/도가 17개이고 표의 시/도가 그 안에 있다", () => {
+    expect(BIRTHPLACE_SIDO).toHaveLength(17);
+    const known = new Set<string>(BIRTHPLACE_SIDO);
+    expect(BIRTHPLACES.filter((place) => !known.has(place.sido))).toEqual([]);
+  });
+
+  it("모든 시/도에 항목이 하나 이상 있다", () => {
+    // 하나라도 비면 그 시/도를 골랐을 때 시/군 목록이 빈 채로 잠긴다.
+    for (const sido of BIRTHPLACE_SIDO) {
+      expect(placesInSido(sido).length, sido).toBeGreaterThan(0);
+    }
+  });
+
+  it("시/도 + 시/군 조합이 유일하다", () => {
+    // 이름만으로는 유일하지 않다 — 고성군이 강원·경남에 하나씩 있다.
+    const keys = BIRTHPLACES.map((place) => `${place.sido}|${place.name}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(BIRTHPLACES.filter((place) => place.name === "고성군")).toHaveLength(2);
+  });
+
+  it("경도가 스키마 범위(124~132) 안이다", () => {
+    // 벗어나면 서버 검증에 걸려 고를 수 없는 항목이 된다.
+    for (const place of BIRTHPLACES) {
+      expect(place.longitude, `${place.sido} ${place.name}`).toBeGreaterThanOrEqual(124);
+      expect(place.longitude, `${place.sido} ${place.name}`).toBeLessThanOrEqual(132);
+    }
+  });
+
+  it("문헌값과 어긋나지 않는다 (대표 지점)", () => {
+    // 경계 자료에서 계산한 중심점이므로 잘 알려진 좌표와 0.2도 안에 있어야 한다.
+    const expected: [string, string, number][] = [
+      ["서울", "서울", 126.98],
+      ["부산", "부산", 129.03],
+      ["대구", "대구", 128.6],
+      ["강원", "강릉시", 128.9],
+      ["경북", "울릉군", 130.9],
+      ["제주", "제주시", 126.53],
+    ];
+    for (const [sido, name, literature] of expected) {
+      const place = BIRTHPLACES.find((p) => p.sido === sido && p.name === name);
+      expect(place, `${sido} ${name} 없음`).toBeDefined();
+      expect(Math.abs(place!.longitude - literature), `${sido} ${name}`).toBeLessThan(0.2);
+    }
+  });
+
+  it("광역시는 구를 합치고 군은 따로 둔다", () => {
+    // 인천을 군까지 합치면 옹진군(백령도)이 중심을 5분어치 서쪽으로 끈다.
+    const incheon = placesInSido("인천").map((p) => p.name);
+    expect(incheon).toEqual(expect.arrayContaining(["인천", "강화군", "옹진군"]));
+    expect(incheon.filter((name) => name.endsWith("구"))).toEqual([]);
+    expect(placesInSido("서울")).toHaveLength(1);
+  });
+
+  it("도 지역 통합시의 구는 모시로 합쳐져 있다", () => {
+    const gyeonggi = placesInSido("경기").map((p) => p.name);
+    expect(gyeonggi).toContain("수원시");
+    // `구` 로 **끝나는** 것만 본다 — `구리시` 는 시(市)다 (실제로 오탐이 났다).
+    expect(gyeonggi.filter((name) => name.endsWith("구"))).toEqual([]);
+  });
+});
+
+describe("출생지 조회와 적용 조건", () => {
+  const busan = make({
+    birthDate: "1999-12-09",
+    birthHour: "22",
+    birthMinute: "12",
+    birthplaceSido: "부산",
+    birthplaceName: "부산",
+  });
+
+  it("고른 조합을 찾는다", () => {
+    expect(findBirthplace(busan)?.name).toBe("부산");
+    expect(describeBirthplace(busan)).toBe("부산");
+  });
+
+  it("시/도가 다르면 못 찾는다 — 조용히 서울로 돌아가지 않게", () => {
+    expect(findBirthplace({ ...busan, birthplaceSido: "강원" })).toBeNull();
+  });
+
+  it("시/군 이름이 시/도와 다르면 앞에 시/도를 붙인다", () => {
+    const input = make({ birthplaceSido: "강원", birthplaceName: "고성군" });
+    expect(describeBirthplace(input)).toBe("강원 고성군");
+  });
+
+  it("미선택이면 경도를 보내지 않는다 (서울 기본값 유지)", () => {
+    expect(birthplaceLongitude(make({ birthDate: "1999-12-09" }))).toBeUndefined();
+  });
+
+  it("고르면 그 경도를 보낸다", () => {
+    expect(birthplaceLongitude(busan)).toBe(
+      BIRTHPLACES.find((p) => p.sido === "부산" && p.name === "부산")!.longitude,
+    );
+  });
+
+  it("시각 미상이면 쓰이지 않으므로 보내지 않는다", () => {
+    // pillars.ts 가 시각을 모를 때 보정을 강제로 끈다.
+    expect(birthplaceApplies({ ...busan, timeUnknown: true })).toBe(false);
+    expect(birthplaceLongitude({ ...busan, timeUnknown: true })).toBeUndefined();
+  });
+
+  it("보정 없음을 고르면 쓰이지 않으므로 보내지 않는다", () => {
+    expect(birthplaceApplies({ ...busan, solarTimeMode: "standard" })).toBe(false);
+    expect(birthplaceLongitude({ ...busan, solarTimeMode: "standard" })).toBeUndefined();
   });
 });
 

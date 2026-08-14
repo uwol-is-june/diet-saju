@@ -86,6 +86,9 @@ describe("개인정보가 새지 않는다", () => {
     ip: "203.0.113.7",
     prompt: "생년월일 1990-05-17 ...",
     reading: "고객님은 ...",
+    // 출생지는 개인을 좁히는 값이라 애초에 로그에 남길 이유가 없다 (TASK-37).
+    longitude: 129.01,
+    birthplace: "부산",
   } as unknown as SajuRequestMetrics;
 
   it.each([
@@ -96,6 +99,8 @@ describe("개인정보가 새지 않는다", () => {
     "ip",
     "prompt",
     "reading",
+    "longitude",
+    "birthplace",
   ])("허용 목록에 없는 %s 는 버려진다", (field) => {
     recordSajuRequest(leaky);
     expect(parseOnly()).not.toHaveProperty(field);
@@ -103,7 +108,7 @@ describe("개인정보가 새지 않는다", () => {
 
   it("값 자체가 로그 문자열에 남지 않는다", () => {
     recordSajuRequest(leaky);
-    for (const value of ["1990-05-17", "14:30", "홍길동", "203.0.113.7"]) {
+    for (const value of ["1990-05-17", "14:30", "홍길동", "203.0.113.7", "129.01", "부산"]) {
       expect(logged[0], `${value} 가 로그에 남았다`).not.toContain(value);
     }
   });

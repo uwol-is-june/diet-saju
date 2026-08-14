@@ -57,6 +57,7 @@ lib/
   form/
     birth-input.ts      입력값 모양·요약 (클라이언트 안전)
     birth-time.ts       시·분 드롭다운 선택지
+    birthplaces.ts      출생지 경도표 (자동 생성 · scripts/build-birthplaces.mjs)
   saju/
     schema.ts           입력 스키마(zod) + 도메인 타입
     pillars.ts          만세력 계산 → 원국

@@ -111,8 +111,6 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
 const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
   general: (chart) => [`${chart.ohaeng.strongest} 기운이 강함`, chart.strength.verdict],
   diet: (chart) => [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern],
-  // 올해 연도는 개인정보가 아니다 (출생 연도가 아니라 기준 연도다).
-  yearly: (chart) => [`${chart.yearly.year}년 ${chart.yearly.ganji}`, chart.yearly.themeLabel],
 };
 
 /**
@@ -127,7 +125,6 @@ const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
   general: (chart) => `${chart.ohaeng.season} 기세 기준 · ${chart.ohaeng.strongest} 왕(旺)`,
   diet: (chart) =>
     `방식 ${chart.constitution.dietApproach} · 대사 기조 ${chart.constitution.metabolism}`,
-  yearly: (chart) => `올해 작용 ${chart.yearly.effect} · 세운 십신 ${chart.yearly.sipsin}`,
 };
 
 /** 성별 미지정이면 대운이 없다 (순행·역행을 정할 수 없다) → 줄을 넣지 않는다. */

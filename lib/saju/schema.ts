@@ -20,13 +20,16 @@ import type { YearlyAnalysis } from "./yearly";
  * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
  * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
  */
-export const READING_TYPES = ["general", "diet", "yearly"] as const;
+export const READING_TYPES = ["general", "diet"] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
+/**
+ * **`diet` 의 id 는 바꾸지 않는다** (TASK-39). 라벨만 `종합 체질 풀이` 로 바뀌었다.
+ * 세그먼트가 곧 URL 이라 id 를 바꾸면 이미 공유된 `/reading/diet` 링크와 공유 카드가 죽는다.
+ */
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
-  diet: "체질·다이어트 풀이",
-  yearly: "올해 운세",
+  diet: "종합 체질 풀이",
 };
 
 /**
@@ -35,13 +38,12 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
  * **`Record<ReadingType, string>` 를 유지한다.** 삼항이나 인덱스 시그니처로 두면
  * 새 유형이 조용히 빈 설명을 달고 나간다.
  *
- * 문구는 각 유형의 표현 규칙을 그대로 따른다 — `diet` 는 처방·수치를 쓰지 않고
- * `yearly` 는 사건을 예고하지 않는다. `schema.test.ts` 가 금지 어휘로 훑는다.
+ * 문구는 각 유형의 표현 규칙을 그대로 따른다 — `diet` 는 처방·수치를 쓰지 않는다.
+ * `schema.test.ts` 가 금지 어휘로 훑는다.
  */
 export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   general: "타고난 기질과 사람을 대하는 방식, 지금 지나는 흐름까지 한 번에 봅니다.",
-  diet: "오행 균형에서 읽는 몸의 결과, 무엇을 먼저 고정할지의 순서를 짚습니다.",
-  yearly: "올해 들어오는 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지 봅니다.",
+  diet: "오행 균형과 한열에서 몸의 결을 읽고, 올해의 몸 흐름까지 함께 봅니다.",
 };
 
 /**
@@ -61,14 +63,9 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
       "생년월일시로 사주 원국을 계산하고, 일간·십신·오행 균형에서 타고난 기질과 사람을 대하는 방식, 지금 지나는 대운의 흐름을 풀어드립니다.",
   },
   diet: {
-    title: "체질·다이어트 풀이 | 다이어트 사주",
+    title: "종합 체질 풀이 | 다이어트 사주",
     description:
-      "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결을 읽어 식습관과 움직임을 무엇부터 고정할지 순서로 짚어드립니다.",
-  },
-  yearly: {
-    title: "올해 운세 | 다이어트 사주",
-    description:
-      "생년월일시로 사주 원국을 계산하고, 올해 세운의 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지를 경향으로 풀어드립니다.",
+      "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결과 살이 붙는 패턴을 읽어 올해의 몸 흐름까지 풀어드립니다.",
   },
 };
 
@@ -178,8 +175,11 @@ export interface SajuChart {
    */
   constitution: ConstitutionAnalysis;
   /**
-   * 올해 운세 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-15).
-   * 리딩 유형과 무관하게 항상 계산한다. 지금은 `yearly` 프롬프트만 근거로 쓴다.
+   * 올해 세운 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-15).
+   *
+   * **작용(보완·가중·중립)은 원래 몸 쪽 값이다** — `constitution.deficient`/`excess` 에서
+   * 계산되기 때문이다. 그래서 `yearly` 유형이 사라진 뒤에도 남아 `diet` 의
+   * "올해의 몸 흐름" 이 근거로 쓴다 (TASK-39). 리딩 유형과 무관하게 항상 계산한다.
    */
   yearly: YearlyAnalysis;
   /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */

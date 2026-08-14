@@ -214,47 +214,60 @@ describe("섹션 계약 (TASK-06)", () => {
   });
 });
 
-describe("올해 운세 판정 블록 (TASK-15)", () => {
-  const prompt = PROMPTS.yearly;
-
-  it("yearly 유형에만 실린다", () => {
-    expect(prompt).toContain("## 올해 운세 판정 (계산 완료 · 수정 금지)");
-    expect(generalPrompt).not.toContain("올해 운세 판정");
-    expect(dietPrompt).not.toContain("올해 운세 판정");
+/**
+ * 올해 세운 판정은 **`diet` 로 옮겨졌다** (TASK-39). `yearly` 유형은 없어졌지만
+ * 판정 자체는 `constitution` 의 오행 과부족에서 나오므로 몸 쪽 값이고,
+ * 그래서 "올해의 몸 흐름" 섹션이 근거로 쓴다.
+ */
+describe("올해 세운 판정 블록 (TASK-15 · TASK-39)", () => {
+  it("diet 유형에만 실린다", () => {
+    expect(dietPrompt).toContain("## 올해 세운 판정 (계산 완료 · 수정 금지)");
+    expect(generalPrompt).not.toContain("올해 세운 판정");
   });
 
-  it("유형별 판정 블록이 서로 섞이지 않는다", () => {
-    // 체질 판정은 diet 만, 올해 운세 판정은 yearly 만 받아야 한다.
-    expect(prompt).not.toContain("체질 판정");
+  it("체질 판정과 함께 실린다", () => {
+    // 작용 판정이 체질의 과부족에서 나오므로 근거가 같은 프롬프트 안에 있어야 한다.
     expect(dietPrompt).toContain("체질 판정");
+    expect(generalPrompt).not.toContain("체질 판정");
   });
 
-  it("코드가 정한 판정이 그대로 들어간다", () => {
+  it("코드가 정한 작용 판정이 그대로 들어간다", () => {
     const { yearly } = chart;
-    expect(prompt).toContain(`${yearly.year}년 ${yearly.ganji}`);
-    expect(prompt).toContain(yearly.effect);
-    expect(prompt).toContain(yearly.themeLabel);
-    expect(prompt).toContain(yearly.effectNote);
-    expect(prompt).toContain(yearly.themeNote);
+    expect(dietPrompt).toContain(`${yearly.year}년 ${yearly.ganji}`);
+    expect(dietPrompt).toContain(yearly.effect);
+    expect(dietPrompt).toContain(yearly.effectNote);
+  });
+
+  /**
+   * 주제 축(`경쟁과 독립`·`책임과 압박` …)은 생활 영역 어휘라 몸 이야기로 넘기지 않는다
+   * (TASK-39 결정 ①). 넘기면 근거 없는 대응표가 필요해지고 의학적 주장 경계에 닿는다.
+   */
+  it("주제(십신) 축은 넘기지 않는다", () => {
+    expect(dietPrompt).not.toContain("올해의 주제");
+    expect(dietPrompt).not.toContain(chart.yearly.themeLabel);
+    expect(dietPrompt).not.toContain(chart.yearly.themeNote);
+  });
+
+  it("몸 관리 밖으로 넓히지 말라고 지시한다", () => {
+    expect(dietPrompt).toContain("생활 영역 운세로 넓히지 말 것");
   });
 
   it("다시 판정하지 말라고 지시한다", () => {
-    expect(prompt).toContain("다시 판정하지 말고");
+    expect(dietPrompt).toContain("다시 판정하지 말고");
   });
 
-  it("월별 운세를 쓰지 말라고 못 박는다", () => {
+  it("월별 운세를 쓰지 말라고 두 곳에서 못 박는다", () => {
     // 월운은 계산하지 않는다. 지시가 없으면 모델이 지어낸다.
-    expect(prompt).toContain("월별 운세는 계산하지 않았다");
-    expect(prompt).toContain("시기를 특정하지 않는다");
+    expect(dietPrompt).toContain("월별 운세는 계산하지 않았다"); // 판정 블록
+    expect(dietPrompt).toContain("시기를 특정하지 않는다"); // 유형 규칙
   });
 
-  it("사건 예고와 단정을 금지한다", () => {
-    expect(prompt).toContain("사건을 예고하지 않는다");
-    expect(prompt).toContain("성패를 단정하지 않습니다");
+  it("사건 예고를 금지한다", () => {
+    expect(dietPrompt).toContain("사건을 예고하지 않는다");
   });
 
   it("관례에서 나온 판정을 고전 규칙처럼 말하지 말라고 지시한다", () => {
-    expect(prompt).toContain("이 서비스가 정한 관례");
+    expect(dietPrompt).toContain("이 서비스가 정한 관례");
   });
 });
 

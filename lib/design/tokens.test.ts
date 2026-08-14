@@ -290,6 +290,7 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
   const sources = [
     "app/page.tsx",
     "app/layout.tsx",
+    "app/admin/page.tsx",
     "app/reading/[type]/page.tsx",
     "components/SajuForm.tsx",
     "components/ResultView.tsx",

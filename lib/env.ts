@@ -81,6 +81,66 @@ export function getRuntimeConfig(): RuntimeConfig {
   return cachedConfig;
 }
 
+// ── 카운터 저장소 (있으면 켜지고 없으면 꺼진다) ────────────────────────────
+/**
+ * 유형별 조회수·좋아요 카운터가 쓰는 Upstash Redis 자격증명 (TASK-51).
+ *
+ * **위 둘 중 어느 갈래도 아닌 세 번째다.**
+ *  - `getSecrets` 처럼 던지면 안 된다 — 저장소가 없다고 페이지가 죽으면 계측이 요청을
+ *    깨뜨리는 것이다. `lib/observability.ts` 의 `emit` 이 어떤 예외도 밖으로 내보내지
+ *    않는 것과 같은 원칙이다.
+ *  - `getRuntimeConfig` 처럼 기본값을 줄 수도 없다 — 시크릿에 기본값이란 없다.
+ *
+ * 그래서 **없으면 `null`** 이고, 부르는 쪽이 "카운터 없음" 상태로 다룬다. 값이 들어오는
+ * 순간 저절로 켜진다.
+ *
+ * 토큰은 시크릿이다. **이 파일 밖에서 `process.env` 로 직접 읽지 말 것** (CLAUDE.md 보안 규칙).
+ */
+export type CounterStoreConfig = { readonly url: string; readonly token: string };
+
+const counterStoreSchema = z.object({
+  UPSTASH_REDIS_REST_URL: z.string().startsWith("https://"),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(20),
+});
+
+/** `null` 도 캐시해야 하므로 "아직 안 봄" 을 `undefined` 로 구분한다. */
+let cachedCounterStore: CounterStoreConfig | null | undefined;
+
+export function getCounterStore(): CounterStoreConfig | null {
+  if (cachedCounterStore !== undefined) return cachedCounterStore;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  // 둘 다 없으면 "안 쓰기로 한 것" 이다 — 정상 상태라 로그를 남기지 않는다.
+  if (!url && !token) {
+    cachedCounterStore = null;
+    return null;
+  }
+
+  const parsed = counterStoreSchema.safeParse({
+    UPSTASH_REDIS_REST_URL: url,
+    UPSTASH_REDIS_REST_TOKEN: token,
+  });
+
+  // 한쪽만 있거나 형식이 틀린 것은 설정 실수다. 필드명만 남기고 값은 절대 남기지 않는다.
+  if (!parsed.success) {
+    console.error(
+      "[env] 카운터 저장소 설정이 올바르지 않아 카운터를 끕니다:",
+      Object.keys(parsed.error.flatten().fieldErrors).join(", "),
+    );
+    cachedCounterStore = null;
+    return null;
+  }
+
+  cachedCounterStore = {
+    // 끝 슬래시가 있으면 `${url}/pipeline` 이 `//pipeline` 이 된다.
+    url: parsed.data.UPSTASH_REDIS_REST_URL.replace(/\/+$/, ""),
+    token: parsed.data.UPSTASH_REDIS_REST_TOKEN,
+  };
+  return cachedCounterStore;
+}
+
 /** 디버깅용. 앞 4자리만 남기고 마스킹한다. 전체 키는 어디에도 출력하지 않는다. */
 export function maskedApiKey(): string {
   const key = process.env.GEMINI_API_KEY;

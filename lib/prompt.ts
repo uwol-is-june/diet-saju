@@ -290,10 +290,16 @@ export function buildUserPrompt(input: SajuInput, chart: SajuChart): string {
   const strength = chart.strength;
   const strengthBlock = [
     `- 판정: ${strength.verdict}`,
-    `- 득령(월지가 일간을 돕는가): ${strength.deukryeong ? "예" : "아니오"}`,
-    `- 득지(일지가 일간을 돕는가): ${strength.deukji ? "예" : "아니오"}`,
-    `- 득세(년주·시주 세력이 우세한가): ${strength.deukse ? "예" : "아니오"}`,
+    `- 득령(월지가 일간을 돕는가 · 월령의 본기 기준): ${strength.deukryeong ? "예" : "아니오"}`,
+    `- 득지(일지에 뿌리가 있는가 · 지장간 포함): ${strength.deukji ? "예" : "아니오"}`,
+    `- 득세(년주·시주 세력이 우세한가 · 지장간 포함): ${strength.deukse ? "예" : "아니오"}`,
     `- 일간을 돕는 글자 ${strength.supportingChars}자 / 전체 ${strength.totalChars}자`,
+    strength.rooted.length > 0
+      ? `- 통근(지장간 속에 일간을 돕는 천간이 든 자리): ${strength.rooted.join(", ")}`
+      : "- 통근한 자리 없음 (어느 지지에도 일간을 돕는 천간이 숨어 있지 않다)",
+    `- 통근과 지지십신은 **다른 층**이다. 위 사주팔자에 적은 지지십신은 본기(정기)만 쓴
+  표시값이라, 통근한 자리가 재성·관성으로 보일 수 있다. 둘이 어긋난다고 지적하지 말고
+  판정은 위 값을 그대로 쓸 것. 득령만 월령의 본기로 보고, 득지·득세는 지장간까지 본다.`,
   ].join("\n");
 
   const daeunBlock = chart.daeun

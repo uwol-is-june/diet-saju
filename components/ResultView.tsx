@@ -84,6 +84,17 @@ export function ResultView({
           </span>
         </p>
 
+        {/*
+          득지·득세는 지장간까지 보므로, 위 표의 지지 십신(본기 기준)만으로는
+          왜 ○ 인지 설명되지 않는 자리가 생긴다. 근거를 한 줄로 함께 보여준다.
+        */}
+        {chart.strength.rooted.length > 0 && (
+          <p className="mt-1 text-xs text-ink-muted">
+            뿌리(통근) — {chart.strength.rooted.join(" · ")}. 지지 속에 숨은 천간까지 보아 득지·득세를
+            정합니다.
+          </p>
+        )}
+
         <CorrectionNote correction={chart.timeCorrection} />
       </section>
 

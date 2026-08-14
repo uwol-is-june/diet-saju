@@ -9,7 +9,14 @@ import {
   daeunStartAge,
   sexagenaryOfYear,
 } from "./analysis";
-import { ganjiToKorean, sexagenaryIndex, type GanjiIndex } from "./ganji";
+import {
+  ganjiToKorean,
+  isSupportingSipsin,
+  jiSipsin,
+  sexagenaryIndex,
+  sipsinOf,
+  type GanjiIndex,
+} from "./ganji";
 
 /**
  * 이 파일은 고전 규칙과 우리 관례를 나눠 검증한다.
@@ -24,6 +31,28 @@ const CHART_1990 = {
   day: { gan: 8, ji: 6 } satisfies GanjiIndex, // 임오
   hour: { gan: 3, ji: 7 } satisfies GanjiIndex, // 정미
 };
+
+// 1999-12-09 22:12 사주: 기묘 병자 을미 정해 (TASK-32 의 실측 사례)
+const CHART_1999 = {
+  year: { gan: 5, ji: 3 } satisfies GanjiIndex, // 기묘
+  month: { gan: 2, ji: 0 } satisfies GanjiIndex, // 병자
+  day: { gan: 1, ji: 7 } satisfies GanjiIndex, // 을미
+  hour: { gan: 3, ji: 11 } satisfies GanjiIndex, // 정해
+};
+
+/**
+ * 지장간 전체 표 — 여기·중기·정기. `ganji.ts` 를 import 하지 않고 **여기서 다시 적는다.**
+ * 소스를 불러다 쓰면 자기참조가 되어 검증이 아니다.
+ */
+const JANGGAN: readonly (readonly number[])[] = [
+  [8, 9], [9, 7, 5], [4, 2, 0], [0, 1], [1, 9, 4], [4, 6, 2],
+  [2, 5, 3], [3, 1, 5], [4, 8, 6], [6, 7], [7, 3, 4], [4, 0, 8],
+];
+
+/** 통근 — 지장간 중 하나라도 일간을 돕는가 (테스트 안의 독립 구현) */
+function rootedIn(ilgan: number, ji: number): boolean {
+  return JANGGAN[ji]!.some((gan) => isSupportingSipsin(sipsinOf(ilgan, gan)));
+}
 
 describe("오행 분석", () => {
   const pillars = [CHART_1990.year, CHART_1990.month, CHART_1990.day, CHART_1990.hour];
@@ -76,7 +105,8 @@ describe("오행 분석", () => {
 
 describe("신강 / 신약", () => {
   it("1990 사주는 신약이다", () => {
-    // 일간 임(수). 월지 사(화→재성), 일지 오(화→재성) 이므로 득령·득지 모두 실패
+    // 일간 임(수). 월지 사(화→재성)라 득령 실패,
+    // 일지 오의 지장간(병·기·정)에도 임을 돕는 글자가 없어 득지 실패
     const result = analyzeStrength({ ilgan: 8, ...CHART_1990 });
     expect(result.deukryeong).toBe(false);
     expect(result.deukji).toBe(false);
@@ -118,6 +148,87 @@ describe("신강 / 신약", () => {
   it("시주가 없으면 판정 글자 수가 5", () => {
     const result = analyzeStrength({ ilgan: 8, ...CHART_1990, hour: null });
     expect(result.totalChars).toBe(5);
+  });
+});
+
+describe("신강 / 신약 — 지장간 통근 (TASK-32)", () => {
+  it("1999 사주(기묘 병자 을미 정해)는 약간 신강이다", () => {
+    // 일지 미(未)의 본기는 기(己)라 을(乙) 일간에게 편재로 보이지만,
+    // 중기가 을목이라 통근이 선다. 본기만 보면 득지가 떨어져 "약간 신약" 이 나왔다.
+    const result = analyzeStrength({ ilgan: 1, ...CHART_1999 });
+    expect(result.deukryeong).toBe(true); // 월지 자의 본기 계(癸) → 편인
+    expect(result.deukji).toBe(true); // 일지 미의 중기 을(乙) → 비견
+    expect(result.deukse).toBe(false);
+    expect(result.verdict).toBe("약간 신강");
+  });
+
+  it("일지 십신 표시는 본기 기준 그대로다", () => {
+    // 통근은 판정에만 쓴다. 화면의 지지 십신까지 바뀌면 근거 표시가 흔들린다.
+    expect(jiSipsin(1, CHART_1999.day.ji)).toBe("편재");
+  });
+
+  it("통근한 자리를 근거로 함께 낸다", () => {
+    const result = analyzeStrength({ ilgan: 1, ...CHART_1999 });
+    expect(result.rooted).toEqual(["년지 묘", "월지 자", "일지 미", "시지 해"]);
+  });
+
+  it("시주가 없으면 통근 목록에 시지가 없다", () => {
+    const result = analyzeStrength({ ilgan: 1, ...CHART_1999, hour: null });
+    expect(result.rooted).toEqual(["년지 묘", "월지 자", "일지 미"]);
+    expect(result.rooted.every((entry) => !entry.startsWith("시지"))).toBe(true);
+  });
+
+  it("득지·득세는 통근으로, 득령은 본기로 본다 (일간 10 × 일지 12 전수)", () => {
+    // 세 기준을 전부 통근으로 열면 신강 쪽으로 쏠린다. 월령은 숨은 글자가 아니다.
+    for (let ilgan = 0; ilgan < 10; ilgan += 1) {
+      for (let ji = 0; ji < 12; ji += 1) {
+        const result = analyzeStrength({
+          ilgan,
+          year: CHART_1990.year,
+          month: { gan: CHART_1990.month.gan, ji },
+          day: { gan: CHART_1990.day.gan, ji },
+          hour: CHART_1990.hour,
+        });
+        expect(result.deukji).toBe(rootedIn(ilgan, ji));
+        expect(result.deukryeong).toBe(isSupportingSipsin(jiSipsin(ilgan, ji)));
+      }
+    }
+  });
+
+  it("통근을 반영해도 판정이 약해지지 않는다 (108건)", () => {
+    // 통근은 본기 기준의 상위집합이므로 득지·득세가 참에서 거짓으로 뒤집힐 수 없다.
+    for (let ilgan = 0; ilgan < 10; ilgan += 1) {
+      for (let monthJi = 0; monthJi < 12; monthJi += 1) {
+        const chart = {
+          ilgan,
+          year: CHART_1990.year,
+          month: { gan: CHART_1990.month.gan, ji: monthJi },
+          day: CHART_1990.day,
+          hour: CHART_1990.hour,
+        };
+        const result = analyzeStrength(chart);
+        if (isSupportingSipsin(jiSipsin(ilgan, chart.day.ji))) {
+          expect(result.deukji).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("돕는 글자 수는 지지를 통근으로 센다", () => {
+    for (let ilgan = 0; ilgan < 10; ilgan += 1) {
+      const chart = { ilgan, ...CHART_1999 };
+      const result = analyzeStrength(chart);
+      const expected = [
+        isSupportingSipsin(sipsinOf(ilgan, chart.year.gan)),
+        rootedIn(ilgan, chart.year.ji),
+        isSupportingSipsin(sipsinOf(ilgan, chart.month.gan)),
+        rootedIn(ilgan, chart.month.ji),
+        rootedIn(ilgan, chart.day.ji),
+        isSupportingSipsin(sipsinOf(ilgan, chart.hour.gan)),
+        rootedIn(ilgan, chart.hour.ji),
+      ].filter(Boolean).length;
+      expect(result.supportingChars).toBe(expected);
+    }
   });
 });
 

@@ -6,10 +6,12 @@ import {
   ganjiToKorean,
   hourGanIndex,
   hourToJiIndex,
+  isRootedIn,
   isSupportingSipsin,
   isYang,
   jiAnimal,
   jiBongi,
+  jiJanggan,
   jiOhaeng,
   jiSipsin,
   parseGanjiHanja,
@@ -153,6 +155,114 @@ describe("지장간 본기와 지지 십신", () => {
         expect(jiSipsin(ilgan, ji)).toBe(sipsinOf(ilgan, jiBongi(ji)));
       }
     }
+  });
+});
+
+/**
+ * 지장간 전체 표는 여기서 **독립으로 다시 적어** 대조한다 (TASK-32).
+ * 소스의 숫자 인덱스를 그대로 베끼면 검증이 아니라 복사가 된다.
+ */
+describe("지장간 전체 (여기·중기·정기)", () => {
+  /** 문헌 표 — 여기 → 중기 → 정기 순. 중기가 없는 지지는 두 글자다. */
+  const LITERATURE: Record<string, string[]> = {
+    자: ["임", "계"],
+    축: ["계", "신", "기"],
+    인: ["무", "병", "갑"],
+    묘: ["갑", "을"],
+    진: ["을", "계", "무"],
+    사: ["무", "경", "병"],
+    오: ["병", "기", "정"],
+    미: ["정", "을", "기"],
+    신: ["무", "임", "경"],
+    유: ["경", "신"],
+    술: ["신", "정", "무"],
+    해: ["무", "갑", "임"],
+  };
+
+  it("12지지의 지장간이 문헌 표와 일치한다", () => {
+    JI_KO.forEach((jiName, ji) => {
+      const actual = jiJanggan(ji).map((gan) => GAN_KO[gan]);
+      expect(actual).toEqual(LITERATURE[jiName]);
+    });
+  });
+
+  it("정기(마지막 글자)가 본기와 같다", () => {
+    // 표를 두 벌로 두지 않는다는 불변식. 어긋나면 십신 표시가 조용히 틀어진다.
+    for (let ji = 0; ji < 12; ji += 1) {
+      const hidden = jiJanggan(ji);
+      expect(hidden[hidden.length - 1]).toBe(jiBongi(ji));
+    }
+  });
+
+  it("사왕지(자·묘·유)는 두 글자, 나머지는 세 글자다", () => {
+    // 오(午)는 중기 기(己)를 넣는 판본을 따랐으므로 세 글자다.
+    const twoChars = [0, 3, 9]; // 자·묘·유
+    for (let ji = 0; ji < 12; ji += 1) {
+      expect(jiJanggan(ji)).toHaveLength(twoChars.includes(ji) ? 2 : 3);
+    }
+  });
+
+  it("한 지지 안에 같은 천간이 두 번 들지 않는다", () => {
+    for (let ji = 0; ji < 12; ji += 1) {
+      const hidden = jiJanggan(ji);
+      expect(new Set(hidden).size).toBe(hidden.length);
+    }
+  });
+
+  it("정기의 오행은 지지 자체의 오행과 같다 (진술축미 제외)", () => {
+    // 토(진술축미)는 잡기(雜氣)라 본기가 토이면서 지지 오행도 토다 — 같은 규칙에 든다.
+    for (let ji = 0; ji < 12; ji += 1) {
+      expect(ganOhaeng(jiBongi(ji))).toBe(jiOhaeng(ji));
+    }
+  });
+});
+
+describe("통근(通根) — 신강/신약 판정에만 쓴다", () => {
+  it("본기가 이미 돕는 지지는 반드시 통근이다 (10 × 12 전수)", () => {
+    // 판정이 약해지는 방향으로 움직이면 안 된다는 불변식.
+    for (let ilgan = 0; ilgan < 10; ilgan += 1) {
+      for (let ji = 0; ji < 12; ji += 1) {
+        if (isSupportingSipsin(jiSipsin(ilgan, ji))) {
+          expect(isRootedIn(ilgan, ji)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("지장간에 비겁·인성이 하나라도 있으면 통근이다 (10 × 12 전수)", () => {
+    for (let ilgan = 0; ilgan < 10; ilgan += 1) {
+      for (let ji = 0; ji < 12; ji += 1) {
+        const expected = jiJanggan(ji).some((gan) =>
+          isSupportingSipsin(sipsinOf(ilgan, gan)),
+        );
+        expect(isRootedIn(ilgan, ji)).toBe(expected);
+      }
+    }
+  });
+
+  it("을(乙) 일간은 미(未)에 통근한다 — 본기만 보면 놓치는 자리", () => {
+    const eul = 1;
+    const mi = 7;
+    expect(jiSipsin(eul, mi)).toBe("편재"); // 본기 기(己) 기준 표시는 그대로
+    expect(isSupportingSipsin(jiSipsin(eul, mi))).toBe(false);
+    expect(isRootedIn(eul, mi)).toBe(true); // 중기 을(乙)이 비견
+  });
+
+  it("을(乙) 일간이 통근하는 지지 목록이 지장간 표와 맞는다", () => {
+    // 을을 돕는 천간: 갑·을(비겁), 임·계(인성)
+    const eul = 1;
+    const rooted = JI_KO.filter((_, ji) => isRootedIn(eul, ji));
+    expect(rooted).toEqual(["자", "축", "인", "묘", "진", "미", "신", "해"]);
+  });
+
+  it("통근하지 않는 조합도 남아 있다 (판정이 늘 참이 되지 않는다)", () => {
+    let none = 0;
+    for (let ilgan = 0; ilgan < 10; ilgan += 1) {
+      for (let ji = 0; ji < 12; ji += 1) {
+        if (!isRootedIn(ilgan, ji)) none += 1;
+      }
+    }
+    expect(none).toBeGreaterThan(0);
   });
 });
 

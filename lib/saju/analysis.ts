@@ -15,9 +15,11 @@
  *   `docs/saju-validation.md` 에도 남겼다. 바꾸려면 여기 상수만 고치면 된다.
  */
 import {
+  JI_KO,
   fromSexagenary,
   ganOhaeng,
   ganjiToKorean,
+  isRootedIn,
   isSupportingSipsin,
   jiOhaeng,
   jiSipsin,
@@ -104,6 +106,24 @@ export function analyzeOhaeng(
  * - 득지(得地): 일지가 일간을 돕는가 — 발 딛은 자리
  * - 득세(得勢): 나머지 자리(년주·시주)에서 돕는 세력이 절반 이상인가
  *
+ * ## 득지·득세만 통근(通根)으로 본다 (TASK-32)
+ *
+ * 일지·년지·시지는 **본기가 아니라 지장간 전체**로 판단한다 (`isRootedIn`).
+ * 본기만 보면 일간이 지지 속에 숨겨 둔 뿌리를 놓쳐 신약 쪽으로 치우친다 —
+ * 실측 사례 `1999-12-09 22:12`(기묘·병자·**을미**·정해)에서 일지 미(未)의 중기가
+ * 을목인데 본기 기토만 보면 편재가 되어 득지가 떨어졌다.
+ *
+ * **득령은 본기 기준을 그대로 둔다.** 월령(月令)은 "그 달을 지배하는 기운" 이라
+ * 숨어 있는 글자가 아니다 — 여기까지 지장간으로 열면 세 기준이 전부 통근 검사가 되어
+ * 판정이 신강 쪽으로 쏠린다 (격자 표본 194,400건: 세 기준 모두 통근으로 하면 신강 계열이
+ * 32%→73%, 득지·득세만 열면 32%→59% 다. 근거는 `docs/saju-validation.md` 3-2).
+ *
+ * 기준은 `isSupportingSipsin` 그대로(비겁·인성)이므로 **판정이 약해지는 방향으로는
+ * 움직이지 않는다.** 천간은 원래 숨은 글자가 없으므로 그대로 십신으로 본다.
+ *
+ * **표시용 지지 십신(`jiSipsin`)은 본기 기준을 유지한다.** 통근은 여기 판정에만 쓴다.
+ * 그래서 "일지 편재인데 득지 ○" 처럼 보일 수 있어 `rooted` 로 근거를 함께 낸다.
+ *
  * **우리 관례**: 셋 중 몇 개를 충족하는지로 4단계로 표현한다.
  * (3=신강, 2=약간 신강, 1=약간 신약, 0=신약)
  */
@@ -117,9 +137,22 @@ export interface StrengthAnalysis {
   /** 년주·시주에서 돕는 세력이 우세한가 */
   deukse: boolean;
   verdict: StrengthVerdict;
-  /** 원국에서 일간을 돕는 글자 수 / 전체 글자 수 */
+  /**
+   * 원국에서 일간을 돕는 글자 수 / 전체 글자 수.
+   *
+   * **지지는 전부 통근 기준이다** — 이건 3기준이 아니라 세력을 세는 값이라
+   * "뿌리가 있는가" 로 보는 것이 맞다. 그래서 득령이 아니오인 월지가 여기서는
+   * 돕는 글자로 잡힐 수 있다 (당령과 통근은 다른 층이다).
+   */
   supportingChars: number;
   totalChars: number;
+  /**
+   * 일간이 통근한 자리 — 예: `["월지 자", "일지 미"]`. 자리 순서(년→월→일→시)를 지킨다.
+   *
+   * 지지 십신 표시는 본기 기준이라 통근한 자리가 재성·관성으로 보일 수 있다.
+   * 판정 근거가 어긋나 보이지 않도록 어느 자리에 뿌리가 섰는지 함께 낸다.
+   */
+  rooted: string[];
 }
 
 export interface StrengthInput {
@@ -134,17 +167,19 @@ export function analyzeStrength(input: StrengthInput): StrengthAnalysis {
   const { ilgan } = input;
 
   const supportsGan = (gan: number) => isSupportingSipsin(sipsinOf(ilgan, gan));
-  const supportsJi = (ji: number) => isSupportingSipsin(jiSipsin(ilgan, ji));
+  // 통근 — 지장간 전체로 본다. 본기만 보면 숨은 뿌리를 놓친다.
+  const rootedIn = (ji: number) => isRootedIn(ilgan, ji);
 
-  const deukryeong = supportsJi(input.month.ji);
-  const deukji = supportsJi(input.day.ji);
+  // 득령만 본기(당령) 기준이다 — 월령은 "그 달을 지배하는 기운" 이라 숨은 글자가 아니다.
+  const deukryeong = isSupportingSipsin(jiSipsin(ilgan, input.month.ji));
+  const deukji = rootedIn(input.day.ji);
 
-  // 득세: 월지·일지를 뺀 나머지 자리
+  // 득세: 월지·일지를 뺀 나머지 자리. 지지는 통근으로 센다.
   const otherChars: boolean[] = [
     supportsGan(input.year.gan),
-    supportsJi(input.year.ji),
+    rootedIn(input.year.ji),
     supportsGan(input.month.gan),
-    ...(input.hour ? [supportsGan(input.hour.gan), supportsJi(input.hour.ji)] : []),
+    ...(input.hour ? [supportsGan(input.hour.gan), rootedIn(input.hour.ji)] : []),
   ];
   const supportingOthers = otherChars.filter(Boolean).length;
   const deukse = supportingOthers * 2 >= otherChars.length;
@@ -153,15 +188,27 @@ export function analyzeStrength(input: StrengthInput): StrengthAnalysis {
   const verdict: StrengthVerdict =
     met === 3 ? "신강" : met === 2 ? "약간 신강" : met === 1 ? "약간 신약" : "신약";
 
-  // 일간 자신은 세지 않는다 (비교 기준이므로)
+  // 일간 자신은 세지 않는다 (비교 기준이므로). 지지는 위 판정과 같은 통근 기준으로 센다.
   const allChars: boolean[] = [
     supportsGan(input.year.gan),
-    supportsJi(input.year.ji),
+    rootedIn(input.year.ji),
     supportsGan(input.month.gan),
-    supportsJi(input.month.ji),
-    supportsJi(input.day.ji),
-    ...(input.hour ? [supportsGan(input.hour.gan), supportsJi(input.hour.ji)] : []),
+    rootedIn(input.month.ji),
+    rootedIn(input.day.ji),
+    ...(input.hour ? [supportsGan(input.hour.gan), rootedIn(input.hour.ji)] : []),
   ];
+
+  // 통근한 자리 — 자리 순서(년→월→일→시)를 유지한다.
+  const rooted = (
+    [
+      ["년지", input.year.ji],
+      ["월지", input.month.ji],
+      ["일지", input.day.ji],
+      ...(input.hour ? ([["시지", input.hour.ji]] as const) : []),
+    ] as const
+  )
+    .filter(([, ji]) => isRootedIn(ilgan, ji))
+    .map(([position, ji]) => `${position} ${JI_KO[ji]}`);
 
   return {
     deukryeong,
@@ -170,6 +217,7 @@ export function analyzeStrength(input: StrengthInput): StrengthAnalysis {
     verdict,
     supportingChars: allChars.filter(Boolean).length,
     totalChars: allChars.length,
+    rooted,
   };
 }
 

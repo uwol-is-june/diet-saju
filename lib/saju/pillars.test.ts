@@ -465,6 +465,42 @@ describe("파생 근거", () => {
   });
 });
 
+// ── 지장간 통근이 실제 원국 계산까지 이어지는지 (TASK-32) ────────────────────
+describe("지장간 통근 — 실측 사례", () => {
+  const chart = calculateSajuChart(
+    makeInput({ birthDate: "1999-12-09", birthTime: "22:12", gender: "female" }),
+    FIXED_NOW,
+  );
+
+  it("원국이 기묘 병자 을미 정해다", () => {
+    expect([chart.year.ganji, chart.month.ganji, chart.day.ganji, chart.hour?.ganji]).toEqual([
+      "기묘",
+      "병자",
+      "을미",
+      "정해",
+    ]);
+  });
+
+  it("일지 미(未)의 중기 을목으로 득지가 서서 약간 신강이 된다", () => {
+    expect(chart.strength.deukji).toBe(true);
+    expect(chart.strength.verdict).toBe("약간 신강");
+  });
+
+  it("일지 십신 표시는 본기 기준이라 편재 그대로다", () => {
+    // 통근은 판정에만 쓴다 — 화면의 근거 표시는 흔들리지 않아야 한다.
+    expect(chart.day.jiSipsin).toBe("편재");
+  });
+
+  it("통근한 자리를 근거로 함께 낸다", () => {
+    expect(chart.strength.rooted).toEqual(["년지 묘", "월지 자", "일지 미", "시지 해"]);
+  });
+
+  it("대사 기조가 발산형으로 이어진다", () => {
+    // strength.verdict 가 constitution 의 입력이다. 판정이 뒤집히면 접근 순서까지 반대로 간다.
+    expect(chart.constitution.metabolism).toBe("발산형");
+  });
+});
+
 // ── 경계 ────────────────────────────────────────────────────────────────────
 describe("지원 범위 경계", () => {
   it.each(["1900-01-01", "1900-02-04", "2100-12-31"])("%s 가 예외 없이 계산된다", (birthDate) => {

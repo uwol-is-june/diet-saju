@@ -29,7 +29,12 @@ npm run validate:saju # 사주 계산 테스트만 (= vitest run lib/saju)
 요청 흐름은 한 방향이다.
 
 ```
-components/SajuForm.tsx  (client)
+app/page.tsx                  유형 선택 (서버 컴포넌트 · 정적, 입력 없음)
+  └─ app/reading/[type]/page.tsx   입력 + 결과 (세그먼트 = ReadingType id)
+        │
+components/SajuForm.tsx  (client · readingType 은 prop)
+        │  ├─ components/BirthInputProvider.tsx  입력값 (app/layout.tsx 에 얹힘)
+        │  ├─ lib/form/birth-input.ts   입력값 모양·요약 (클라이언트 안전)
         │  ├─ ResultView.tsx → ReadingSections.tsx  섹션별 렌더
         │  └─ lib/reading/sections.ts   섹션 계약 + 파서 (클라이언트 안전)
         │  POST /api/saju  →  NDJSON 스트림 응답
@@ -82,6 +87,38 @@ Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 
 
 실측(로컬, 워밍업 후): 원국 60~70ms · 첫 글자 1.0~1.3초 · 전체 4.2~4.4초.
 
+### 두 단계 플로우 — 유형 먼저, 입력 나중 (TASK-30)
+
+`/` 에서 유형을 고르고 `/reading/[type]` 에서 정보를 넣는다. **`/` 에는 생년월일 입력이 없고
+`/reading/*` 에는 유형 선택 컨트롤이 없다.**
+
+- **단계는 클라이언트 상태가 아니라 라우트로 나눈다.** 스텝 상태로 하면 뒤로가기·북마크·
+  유형별 메타데이터를 셋 다 잃는다. 세그먼트는 기존 `ReadingType` id 를 그대로 쓴다 —
+  한글 슬러그를 만들면 API 계약(`schema.ts`)과 URL 이 두 벌이 된다.
+- `generateStaticParams` 로 `READING_TYPES` 를 프리렌더하고 그 밖의 값은 `notFound()`.
+  카드는 버튼 + `router.push` 가 아니라 **`next/link`** 여야 새 탭·가운데 클릭·크롤러가 산다.
+
+#### 입력값은 메모리에만 둔다 — 저장소·URL 로 옮기지 말 것
+
+`components/BirthInputProvider.tsx` 가 `app/layout.tsx` 에 얹혀 있다. Next 문서가
+"layouts preserve state, remain interactive, and do not re-render on navigation" 을 보장하므로
+(`node_modules/next/dist/docs/01-app/04-glossary.md`) `/` ↔ `/reading/*` 이동에서 값이 남는다.
+**`app/reading/layout.tsx` 로 내리면 안 된다** — `/` 를 거쳐 가면 언마운트되어 값이 날아간다.
+
+- **`sessionStorage`·`localStorage`·쿼리스트링을 쓰지 않는다.** 셋 다 생년월일이 프로세스
+  밖으로 나간다 — 앞의 둘은 디스크에, 쿼리스트링은 방문 기록과 **Vercel 액세스 로그**에.
+  그 순간 `app/privacy/page.tsx` 의 "저장하지 않습니다" 를 **같은 커밋에서 고쳐야 한다.**
+- 지금 메모리 상태는 새로고침·새 탭·탭 닫기로 사라진다 — 폼이 원래 하던 것과 같은 범주라
+  처리방침을 손대지 않아도 된다. **이 조건을 벗어나면 고쳐야 한다는 뜻이기도 하다.**
+- `lib/form/birth-input.test.ts` 가 소스에서 저장소·URL 사용을 막는다. 검사는 **주석을
+  걷어낸 코드**를 본다 — 주석이 "쓰지 않는다" 를 설명하느라 같은 낱말을 쓰기 때문이다.
+- **보존 대상은 입력값뿐이다.** 원국·풀이는 유형마다 다르므로 들고 다니지 않는다.
+- 값이 있으면 폼을 접고 요약 한 줄 + "수정" 만 보여준다. **접힌 채로 바로 제출할 수 있어야
+  한다** — 유형만 바꿔 다시 받는 것이 두 번 클릭이다. 요약에 **이름은 넣지 않는다.**
+  제출할 수 없는 값이면 접지 않는다 (왜 버튼이 꺼져 있는지 볼 수 없게 된다).
+- `FirstVisitNotice` 는 `/reading/*` 에 있다. "입력한 생년월일은 저장하지 않습니다" 는
+  **정보를 넣기 직전에** 보여야 뜻이 있다. 그래서 `/` 에는 클라이언트 컴포넌트가 없다.
+
 ### 섹션 계약 — JSON 구조화 출력을 쓰지 않는 이유 (TASK-06 결정)
 
 `responseMimeType: "application/json"` + `responseSchema` 는 **채택하지 않았다.** JSON 은
@@ -101,8 +138,10 @@ Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 
 - 계약을 어긴 출력을 **버리지 않는다.** 모르는 제목은 `id: null` 로 담고, 계약 섹션을 하나도
   못 잡으면 `recognized: false` 로 알려 원문 마크다운 폴백으로 간다. 형식 문제가 내용 손실로
   번지면 안 된다. 강제가 아니라 부탁이므로 이 폴백이 반드시 있어야 한다.
-- `ResultView` 에 넘기는 `readingType` 은 **요청 시점에 고른 값**이다(`resultType`). 폼의 현재
-  값을 쓰면 생성 중 토글을 바꾸는 순간 계약이 갈려 폴백으로 떨어진다.
+- `ResultView` 에 넘기는 `readingType` 은 **라우트 세그먼트에서 온다** (TASK-30). 생성 중에
+  바뀔 수 없으므로 폼이 요청 시점 유형을 따로 붙들 필요가 없다 — 예전의 `resultType` 상태는
+  없앴다. **폼 안에 유형 선택 컨트롤을 되살리지 말 것** — 두 곳에서 고를 수 있으면 계약이
+  갈려 폴백으로 떨어진다. 테스트가 소스에서 막는다(`lib/form/birth-input.test.ts`).
 - 아코디언은 쓰지 않는다. 접혀 있으면 스트리밍을 볼 수 없고 풀이는 통독하는 글이다.
   요약만 카드로 띄우고 나머지는 한 카드 안에서 구분선으로 나눈다.
 
@@ -394,9 +433,14 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
 새어 나갈 뻔했고, `prompt.test.ts` 도 `type === "diet" ? … : …` 때문에 새 유형을 general
 프롬프트로 검사하고 있었다. 지금은 둘 다 `Record` 와 `READING_TYPES` 순회로 바꿨다.
 
-손대야 하는 곳: 유형 라벨(`schema.ts`) · 섹션 계약(`reading/sections.ts`) · 섹션 지침과
-유형별 서두·규칙(`prompt.ts`) · 공유 카드 칩(`share/card-model.ts`). UI 버튼은 `READING_TYPES`
-를 순회하므로 자동이다.
+손대야 하는 곳: 유형 라벨·**카드 설명**(`schema.ts` 의 `READING_TYPE_LABEL` ·
+`READING_TYPE_DESCRIPTION`) · 섹션 계약(`reading/sections.ts`) · 섹션 지침과 유형별
+서두·규칙(`prompt.ts`) · 공유 카드 칩(`share/card-model.ts`). 유형 선택 카드와
+`/reading/[type]` 프리렌더는 `READING_TYPES` 를 순회하므로 자동이다.
+
+**카드 설명은 사용자에게 그대로 보이는 문구다.** 그 유형의 표현 규칙이 판정 문구와 똑같이
+적용된다 — `diet` 는 처방·수치를, `yearly` 는 예언 어휘를 쓰지 않는다.
+`lib/saju/schema.test.ts` 가 세 유형의 설명을 금지 어휘로 훑는다.
 
 ### 그 밖의 도메인 규칙
 

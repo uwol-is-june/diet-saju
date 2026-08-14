@@ -1,50 +1,48 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth-time";
 import {
-  READING_TYPE_LABEL,
-  READING_TYPES,
-  type ReadingType,
-  type SajuChart,
-  type SajuStreamEvent,
-} from "@/lib/saju/schema";
+  canSubmit,
+  describeBirthInput,
+  hasIncompleteTime,
+  type BirthInput,
+} from "@/lib/form/birth-input";
+import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth-time";
+import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
+import { useBirthInput } from "./BirthInputProvider";
 import { ResultView } from "./ResultView";
 
 /**
  * 입력 폼. 여기서는 절대 LLM 을 직접 호출하지 않는다.
  * 모든 호출은 /api/saju 를 경유하며, API 키는 서버에만 존재한다.
+ *
+ * ## 유형은 라우트가 정한다 (TASK-30)
+ *
+ * `readingType` 은 **prop 으로만** 들어온다. 폼 안에 유형 선택 컨트롤을 두지 않는다 —
+ * 두 곳에서 고를 수 있으면 반드시 어긋난다. 라우트가 유형을 정하므로 생성 중에 바뀔 수도
+ * 없고, 그래서 `resultType`(요청 시점의 유형을 따로 붙들던 상태)도 필요 없다.
+ *
+ * ## 입력값은 프로바이더에 있다
+ *
+ * 로컬 `useState` 가 아니라 `useBirthInput()` 을 읽고 쓴다. 루트 레이아웃에 얹혀 있어
+ * 유형을 옮겨도 값이 남는다. 저장소·URL 로 옮기면 안 되는 이유는 그쪽 주석에 있다.
  */
-export function SajuForm() {
-  const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  /**
-   * 시·분을 따로 들고 제출할 때만 `HH:mm` 으로 조립한다 (TASK-23).
-   * 서버 계약(`sajuInputSchema.birthTime`)은 `HH:mm` 그대로다 — 그걸 바꾸면
-   * 만세력 테스트가 전부 영향을 받는다.
-   */
-  const [birthHour, setBirthHour] = useState("");
-  const [birthMinute, setBirthMinute] = useState("");
-  const [timeUnknown, setTimeUnknown] = useState(false);
-  const [calendar, setCalendar] = useState<"solar" | "lunar">("solar");
-  const [isLeapMonth, setIsLeapMonth] = useState(false);
-  const [gender, setGender] = useState<"male" | "female" | "unspecified">("unspecified");
-  const [readingType, setReadingType] = useState<ReadingType>("general");
-  const [solarTimeMode, setSolarTimeMode] = useState<"standard" | "longitude" | "true">(
-    "longitude",
-  );
-  const [dayBoundary, setDayBoundary] = useState<"yajasi" | "jasi">("yajasi");
+export function SajuForm({ readingType }: { readingType: ReadingType }) {
+  const { input, update } = useBirthInput();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chart, setChart] = useState<SajuChart | null>(null);
   const [reading, setReading] = useState("");
-  /**
-   * 요청을 보낼 때 고른 유형. 폼의 `readingType` 을 그대로 쓰면, 생성 중에 사용자가
-   * 토글을 바꾸는 순간 섹션 계약이 갈려 화면이 폴백으로 떨어진다.
-   */
-  const [resultType, setResultType] = useState<ReadingType>("general");
   const [streaming, setStreaming] = useState(false);
+  /**
+   * 값이 이미 있으면 폼을 접고 요약 한 줄만 보여준다. 유형만 바꿔 다시 받는 것이
+   * 두 번 클릭이어야 하므로 **접힌 상태에서 바로 제출할 수 있어야 한다.**
+   * 첫 방문은 값이 없으므로 펼친 폼 그대로다.
+   *
+   * 제출할 수 없는 값이면 접지 않는다 — 접으면 왜 버튼이 꺼져 있는지 볼 수 없다.
+   */
+  const [editing, setEditing] = useState(() => !canSubmit(input));
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -53,13 +51,13 @@ export function SajuForm() {
   const id = useId();
   const fieldId = (key: string) => `${id}-${key}`;
 
-  /**
-   * 한쪽만 고른 상태를 **조용히 버리지 않는다.** 시만 골라도 통과시키면 분을 0 으로
-   * 채우는 셈이고, 경도 보정 때문에 시주 경계가 정시가 아닌 시각에 놓이므로
-   * (예: 01:31 은 자시, 01:33 은 축시) 그 0 이 시주를 바꿀 수 있다.
-   */
-  const timeIncomplete = !timeUnknown && (birthHour === "") !== (birthMinute === "");
-  const birthTime = composeBirthTime(birthHour, birthMinute);
+  function set<K extends keyof BirthInput>(key: K) {
+    return (value: BirthInput[K]) => update({ [key]: value } as Partial<BirthInput>);
+  }
+
+  const timeIncomplete = hasIncompleteTime(input);
+  const birthTime = composeBirthTime(input.birthHour, input.birthMinute);
+  const submittable = canSubmit(input);
 
   /**
    * 원국은 폼 아래에 그려지는데, 폼이 길어 모바일에서는 화면 밖이다.
@@ -88,9 +86,10 @@ export function SajuForm() {
     setError(null);
     setChart(null);
     setReading("");
-    setResultType(readingType);
     setLoading(true);
     setStreaming(false);
+    // 결과가 나오면 폼은 접어 둔다 — 다시 볼 것은 풀이이지 입력이 아니다.
+    setEditing(false);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -101,15 +100,15 @@ export function SajuForm() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          name: name.trim() || undefined,
-          birthDate,
-          birthTime: timeUnknown || !birthTime ? undefined : birthTime,
-          calendar,
-          isLeapMonth: calendar === "lunar" ? isLeapMonth : false,
-          gender,
+          name: input.name.trim() || undefined,
+          birthDate: input.birthDate,
+          birthTime: input.timeUnknown || !birthTime ? undefined : birthTime,
+          calendar: input.calendar,
+          isLeapMonth: input.calendar === "lunar" ? input.isLeapMonth : false,
+          gender: input.gender,
           readingType,
-          solarTimeMode,
-          dayBoundary,
+          solarTimeMode: input.solarTimeMode,
+          dayBoundary: input.dayBoundary,
         }),
       });
 
@@ -181,205 +180,204 @@ export function SajuForm() {
         onSubmit={handleSubmit}
         className="space-y-5 rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6"
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="이름 (선택)" htmlFor={fieldId("name")}>
-            <input
-              id={fieldId("name")}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={20}
-              placeholder="비워두면 '고객님'"
-              className={inputClass}
-            />
-          </Field>
+        {editing ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="이름 (선택)" htmlFor={fieldId("name")}>
+              <input
+                id={fieldId("name")}
+                type="text"
+                value={input.name}
+                onChange={(e) => set("name")(e.target.value)}
+                maxLength={20}
+                placeholder="비워두면 '고객님'"
+                className={inputClass}
+              />
+            </Field>
 
-          <Field label="성별" htmlFor={fieldId("gender")}>
-            <select
-              id={fieldId("gender")}
-              value={gender}
-              onChange={(e) => setGender(e.target.value as typeof gender)}
-              className={inputClass}
-            >
-              <option value="unspecified">선택 안 함</option>
-              <option value="male">남성</option>
-              <option value="female">여성</option>
-            </select>
-          </Field>
+            <Field label="성별" htmlFor={fieldId("gender")}>
+              <select
+                id={fieldId("gender")}
+                value={input.gender}
+                onChange={(e) => set("gender")(e.target.value as BirthInput["gender"])}
+                className={inputClass}
+              >
+                <option value="unspecified">선택 안 함</option>
+                <option value="male">남성</option>
+                <option value="female">여성</option>
+              </select>
+            </Field>
 
-          <Field label="생년월일" htmlFor={fieldId("birth-date")}>
-            <input
-              id={fieldId("birth-date")}
-              type="date"
-              required
-              value={birthDate}
-              min="1900-01-01"
-              max="2100-12-31"
-              onChange={(e) => setBirthDate(e.target.value)}
-              className={nativeDateClass(birthDate)}
-            />
-          </Field>
+            <Field label="생년월일" htmlFor={fieldId("birth-date")}>
+              <input
+                id={fieldId("birth-date")}
+                type="date"
+                required
+                value={input.birthDate}
+                min="1900-01-01"
+                max="2100-12-31"
+                onChange={(e) => set("birthDate")(e.target.value)}
+                className={nativeDateClass(input.birthDate)}
+              />
+            </Field>
 
-          <Field label="양력 / 음력" htmlFor={fieldId("calendar")}>
-            <select
-              id={fieldId("calendar")}
-              value={calendar}
-              onChange={(e) => setCalendar(e.target.value as typeof calendar)}
-              className={inputClass}
-            >
-              <option value="solar">양력</option>
-              <option value="lunar">음력</option>
-            </select>
-          </Field>
+            <Field label="양력 / 음력" htmlFor={fieldId("calendar")}>
+              <select
+                id={fieldId("calendar")}
+                value={input.calendar}
+                onChange={(e) => set("calendar")(e.target.value as BirthInput["calendar"])}
+                className={inputClass}
+              >
+                <option value="solar">양력</option>
+                <option value="lunar">음력</option>
+              </select>
+            </Field>
 
-          {/* 윤달 체크박스는 **전체 폭 행**으로 내린다 (TASK-22).
-              `양력/음력` 칸 안에 두면 그 행이 44px 높아지고, 짝인 `생년월일` 칸이 함께
-              늘어나 입력 밑에 52px 빈칸이 생긴다 (그리드 행은 형제 칸까지 잡아당긴다).
-              `sm:col-start-2` 로 오른쪽 열에만 두어도 왼쪽에 같은 크기의 공백이 남으므로
-              보이는 결과가 같다 — 폭을 다 쓰는 것이 유일한 해법이다. */}
-          {calendar === "lunar" && (
-            <div className="sm:col-span-2">
-              <label className={checkboxLabelClass}>
-                <input
-                  type="checkbox"
-                  checked={isLeapMonth}
-                  onChange={(e) => setIsLeapMonth(e.target.checked)}
-                  className={checkboxClass}
-                />
-                윤달입니다
-              </label>
-            </div>
-          )}
-
-          {/* 시각도 같은 이유로 전체 폭 행이다. `시각을 모릅니다` 를 짝 칸에 두면 그 칸에는
-              라벨이 없어 오른쪽 위가 뚫려 보이고, 시각 칸 안에 넣으면 위와 같은 빈칸이
-              생긴다. 안쪽 그리드가 바깥과 같은 `gap-4` 2열이라 시각 컨트롤의 폭·좌우
-              위치가 바로 위 `생년월일` 과 정확히 맞는다.
-
-              드롭다운 두 개는 각각 라벨이 필요하므로 `fieldset`/`legend` 로 묶는다
-              (`legend` 하나가 두 컨트롤을 아우르고, 개별 구분은 `aria-label` 이 한다).
-              `min-w-0` 은 fieldset 이 내용보다 좁아지지 못하는 기본 동작을 푼다. */}
-          <fieldset className="min-w-0 sm:col-span-2">
-            <legend className={labelClass}>태어난 시각</legend>
-            <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  id={fieldId("birth-hour")}
-                  aria-label="태어난 시"
-                  value={birthHour}
-                  disabled={timeUnknown}
-                  onChange={(e) => setBirthHour(e.target.value)}
-                  className={selectTimeClass(birthHour)}
-                >
-                  <option value="">시 선택</option>
-                  {HOUR_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  id={fieldId("birth-minute")}
-                  aria-label="태어난 분"
-                  value={birthMinute}
-                  disabled={timeUnknown}
-                  onChange={(e) => setBirthMinute(e.target.value)}
-                  className={selectTimeClass(birthMinute)}
-                >
-                  <option value="">분 선택</option>
-                  {MINUTE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+            {/* 윤달 체크박스는 **전체 폭 행**으로 내린다 (TASK-22).
+                `양력/음력` 칸 안에 두면 그 행이 44px 높아지고, 짝인 `생년월일` 칸이 함께
+                늘어나 입력 밑에 52px 빈칸이 생긴다 (그리드 행은 형제 칸까지 잡아당긴다).
+                `sm:col-start-2` 로 오른쪽 열에만 두어도 왼쪽에 같은 크기의 공백이 남으므로
+                보이는 결과가 같다 — 폭을 다 쓰는 것이 유일한 해법이다. */}
+            {input.calendar === "lunar" && (
+              <div className="sm:col-span-2">
+                <label className={checkboxLabelClass}>
+                  <input
+                    type="checkbox"
+                    checked={input.isLeapMonth}
+                    onChange={(e) => set("isLeapMonth")(e.target.checked)}
+                    className={checkboxClass}
+                  />
+                  윤달입니다
+                </label>
               </div>
-              <label className={checkboxLabelClass}>
-                <input
-                  type="checkbox"
-                  checked={timeUnknown}
-                  onChange={(e) => setTimeUnknown(e.target.checked)}
-                  className={checkboxClass}
-                />
-                시각을 모릅니다 (시주 제외)
-              </label>
-            </div>
-            {timeIncomplete ? (
-              <p role="alert" className="mt-1.5 text-xs text-danger-ink">
-                시와 분을 모두 골라 주세요. 시각을 모르면 옆의 체크박스를 눌러 주세요.
-              </p>
-            ) : (
-              <p className="mt-1.5 text-xs text-ink-muted">
-                분까지 고를수록 정확합니다. 경도 보정(약 −32분) 때문에 시주(時柱) 경계가
-                정시가 아닌 시각에 놓입니다.
-              </p>
             )}
-          </fieldset>
-        </div>
 
-        {/* 버튼 묶음은 label 로 감쌀 수 없다 (label 은 컨트롤 하나를 가리킨다) → fieldset/legend */}
-        <fieldset>
-          <legend className={labelClass}>풀이 유형</legend>
-          <div className="flex flex-wrap gap-2">
-            {READING_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                aria-pressed={readingType === type}
-                onClick={() => setReadingType(type)}
-                className={`min-h-11 rounded-full border px-4 py-2 text-sm transition ${
-                  readingType === type
-                    ? "border-brand bg-brand-subtle font-medium text-brand-ink"
-                    : "border-line-strong text-ink-soft hover:border-brand"
-                }`}
-              >
-                {READING_TYPE_LABEL[type]}
-              </button>
-            ))}
+            {/* 시각도 같은 이유로 전체 폭 행이다. `시각을 모릅니다` 를 짝 칸에 두면 그 칸에는
+                라벨이 없어 오른쪽 위가 뚫려 보이고, 시각 칸 안에 넣으면 위와 같은 빈칸이
+                생긴다. 안쪽 그리드가 바깥과 같은 `gap-4` 2열이라 시각 컨트롤의 폭·좌우
+                위치가 바로 위 `생년월일` 과 정확히 맞는다.
+
+                드롭다운 두 개는 각각 라벨이 필요하므로 `fieldset`/`legend` 로 묶는다
+                (`legend` 하나가 두 컨트롤을 아우르고, 개별 구분은 `aria-label` 이 한다).
+                `min-w-0` 은 fieldset 이 내용보다 좁아지지 못하는 기본 동작을 푼다. */}
+            <fieldset className="min-w-0 sm:col-span-2">
+              <legend className={labelClass}>태어난 시각</legend>
+              <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    id={fieldId("birth-hour")}
+                    aria-label="태어난 시"
+                    value={input.birthHour}
+                    disabled={input.timeUnknown}
+                    onChange={(e) => set("birthHour")(e.target.value)}
+                    className={selectTimeClass(input.birthHour)}
+                  >
+                    <option value="">시 선택</option>
+                    {HOUR_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    id={fieldId("birth-minute")}
+                    aria-label="태어난 분"
+                    value={input.birthMinute}
+                    disabled={input.timeUnknown}
+                    onChange={(e) => set("birthMinute")(e.target.value)}
+                    className={selectTimeClass(input.birthMinute)}
+                  >
+                    <option value="">분 선택</option>
+                    {MINUTE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className={checkboxLabelClass}>
+                  <input
+                    type="checkbox"
+                    checked={input.timeUnknown}
+                    onChange={(e) => set("timeUnknown")(e.target.checked)}
+                    className={checkboxClass}
+                  />
+                  시각을 모릅니다 (시주 제외)
+                </label>
+              </div>
+              {timeIncomplete ? (
+                <p role="alert" className="mt-1.5 text-xs text-danger-ink">
+                  시와 분을 모두 골라 주세요. 시각을 모르면 옆의 체크박스를 눌러 주세요.
+                </p>
+              ) : (
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  분까지 고를수록 정확합니다. 경도 보정(약 −32분) 때문에 시주(時柱) 경계가
+                  정시가 아닌 시각에 놓입니다.
+                </p>
+              )}
+            </fieldset>
           </div>
-        </fieldset>
-
-        <details className="rounded-xl border border-line-strong bg-surface-muted px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-ink-soft">
-            만세력 고급 설정
-          </summary>
-          <div className="mt-4 space-y-4">
-            <Field label="출생시각 보정" htmlFor={fieldId("solar-time")}>
-              <select
-                id={fieldId("solar-time")}
-                value={solarTimeMode}
-                onChange={(e) => setSolarTimeMode(e.target.value as typeof solarTimeMode)}
-                aria-describedby={fieldId("solar-time-hint")}
-                className={inputClass}
-              >
-                <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
-                <option value="true">진태양시 (경도 + 균시차)</option>
-                <option value="standard">보정 없음 (시계시 그대로)</option>
-              </select>
-              <p id={fieldId("solar-time-hint")} className="mt-1.5 text-xs text-ink-muted">
-                한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분 빠릅니다.
-                서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
-              </p>
-            </Field>
-
-            <Field label="자시(子時) 기준" htmlFor={fieldId("day-boundary")}>
-              <select
-                id={fieldId("day-boundary")}
-                value={dayBoundary}
-                onChange={(e) => setDayBoundary(e.target.value as typeof dayBoundary)}
-                aria-describedby={fieldId("day-boundary-hint")}
-                className={inputClass}
-              >
-                <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
-                <option value="jasi">자시파 (23시부터 다음날)</option>
-              </select>
-              <p id={fieldId("day-boundary-hint")} className="mt-1.5 text-xs text-ink-muted">
-                23:00~23:59(오후 11시대) 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파
-                차이입니다. 그 시간대가 아니면 결과가 같습니다.
-              </p>
-            </Field>
+        ) : (
+          /* 접힌 상태 — 요약 한 줄 + "수정". 여기서 바로 제출할 수 있다. */
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-soft">
+              <span className="mr-2 text-xs text-ink-muted">입력한 정보</span>
+              <strong className="font-medium">{describeBirthInput(input)}</strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="min-h-11 rounded-full border border-line-strong px-4 text-sm text-ink-soft transition hover:border-brand"
+            >
+              수정
+            </button>
           </div>
-        </details>
+        )}
+
+        {editing && (
+          <details className="rounded-xl border border-line-strong bg-surface-muted px-4 py-3">
+            <summary className="cursor-pointer text-sm font-medium text-ink-soft">
+              만세력 고급 설정
+            </summary>
+            <div className="mt-4 space-y-4">
+              <Field label="출생시각 보정" htmlFor={fieldId("solar-time")}>
+                <select
+                  id={fieldId("solar-time")}
+                  value={input.solarTimeMode}
+                  onChange={(e) =>
+                    set("solarTimeMode")(e.target.value as BirthInput["solarTimeMode"])
+                  }
+                  aria-describedby={fieldId("solar-time-hint")}
+                  className={inputClass}
+                >
+                  <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
+                  <option value="true">진태양시 (경도 + 균시차)</option>
+                  <option value="standard">보정 없음 (시계시 그대로)</option>
+                </select>
+                <p id={fieldId("solar-time-hint")} className="mt-1.5 text-xs text-ink-muted">
+                  한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분
+                  빠릅니다. 서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
+                </p>
+              </Field>
+
+              <Field label="자시(子時) 기준" htmlFor={fieldId("day-boundary")}>
+                <select
+                  id={fieldId("day-boundary")}
+                  value={input.dayBoundary}
+                  onChange={(e) => set("dayBoundary")(e.target.value as BirthInput["dayBoundary"])}
+                  aria-describedby={fieldId("day-boundary-hint")}
+                  className={inputClass}
+                >
+                  <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
+                  <option value="jasi">자시파 (23시부터 다음날)</option>
+                </select>
+                <p id={fieldId("day-boundary-hint")} className="mt-1.5 text-xs text-ink-muted">
+                  23:00~23:59(오후 11시대) 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파
+                  차이입니다. 그 시간대가 아니면 결과가 같습니다.
+                </p>
+              </Field>
+            </div>
+          </details>
+        )}
 
         {streaming ? (
           <button
@@ -392,7 +390,7 @@ export function SajuForm() {
         ) : (
           <button
             type="submit"
-            disabled={loading || !birthDate || timeIncomplete}
+            disabled={loading || !submittable}
             aria-busy={loading}
             className="w-full rounded-xl bg-brand-solid px-4 py-3.5 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
           >
@@ -425,7 +423,7 @@ export function SajuForm() {
           <ResultView
             chart={chart}
             reading={reading}
-            readingType={resultType}
+            readingType={readingType}
             streaming={streaming}
           />
         )}

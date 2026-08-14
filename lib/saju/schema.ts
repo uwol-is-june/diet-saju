@@ -29,6 +29,21 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   yearly: "올해 운세",
 };
 
+/**
+ * 유형 선택 카드의 한 줄 설명 (TASK-30).
+ *
+ * **`Record<ReadingType, string>` 를 유지한다.** 삼항이나 인덱스 시그니처로 두면
+ * 새 유형이 조용히 빈 설명을 달고 나간다.
+ *
+ * 문구는 각 유형의 표현 규칙을 그대로 따른다 — `diet` 는 처방·수치를 쓰지 않고
+ * `yearly` 는 사건을 예고하지 않는다. `schema.test.ts` 가 금지 어휘로 훑는다.
+ */
+export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
+  general: "타고난 기질과 사람을 대하는 방식, 지금 지나는 흐름까지 한 번에 봅니다.",
+  diet: "오행 균형에서 읽는 몸의 결과, 무엇을 먼저 고정할지의 순서를 짚습니다.",
+  yearly: "올해 들어오는 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지 봅니다.",
+};
+
 export const sajuInputSchema = z.object({
   /** 표시용 이름. 없으면 익명으로 처리한다. */
   name: z.string().trim().max(20, "이름은 20자 이내로 입력해 주세요").optional(),

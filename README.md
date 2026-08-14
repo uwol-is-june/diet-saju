@@ -42,9 +42,11 @@ npm run dev                    # http://localhost:3000
 
 ```
 app/
-  page.tsx              입력 화면
+  page.tsx              유형 선택 (정적)
+  reading/[type]/       입력 + 결과 (세그먼트 = 풀이 유형 id)
   api/saju/route.ts     계산 + LLM 호출 (서버 전용, Node 런타임)
 components/
+  BirthInputProvider.tsx  입력값을 메모리에만 (루트 레이아웃에 얹힘)
   SajuForm.tsx          입력 폼
   ResultView.tsx        원국 + 풀이 렌더
 lib/
@@ -52,6 +54,9 @@ lib/
   gemini.ts             Gemini 호출 + 에러 정규화
   prompt.ts             프롬프트 전량
   rate-limit.ts         IP 기준 분당 제한
+  form/
+    birth-input.ts      입력값 모양·요약 (클라이언트 안전)
+    birth-time.ts       시·분 드롭다운 선택지
   saju/
     schema.ts           입력 스키마(zod) + 도메인 타입
     pillars.ts          만세력 계산 → 원국

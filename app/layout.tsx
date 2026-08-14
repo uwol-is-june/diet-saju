@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { BirthInputProvider } from "@/components/BirthInputProvider";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
@@ -47,7 +48,13 @@ export default function RootLayout({
         서버 운영 로그만 남기며 수집 항목은 app/privacy/page.tsx 6항에 있다.
       */}
       <body>
-        {children}
+        {/*
+          입력값을 **루트 레이아웃의 메모리에** 둔다 (TASK-30). 레이아웃은 이동에서
+          다시 렌더되지 않으므로 `/` ↔ `/reading/*` 사이에 값이 남는다.
+          `app/reading/layout.tsx` 로 내리면 `/` 를 거쳐 갈 때 언마운트되어 값이 날아간다.
+          저장소·URL 로 옮기면 개인정보 처리방침을 같은 커밋에서 고쳐야 한다.
+        */}
+        <BirthInputProvider>{children}</BirthInputProvider>
         <SiteFooter />
         {/* 모든 페이지에서 동작한다 — 면책 고지·개인정보 처리방침도 길다 (TASK-29). */}
         <ScrollToTop />

@@ -20,7 +20,7 @@ import type { YearlyAnalysis } from "./yearly";
  * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
  * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
  */
-export const READING_TYPES = ["general", "diet"] as const;
+export const READING_TYPES = ["general", "diet", "diet-method"] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
 /**
@@ -30,6 +30,7 @@ export type ReadingType = (typeof READING_TYPES)[number];
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
   diet: "종합 체질 풀이",
+  "diet-method": "나에게 맞는 다이어트 방법",
 };
 
 /**
@@ -48,6 +49,7 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
 export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal"> = {
   general: "internal",
   diet: "public",
+  "diet-method": "public",
 };
 
 /**
@@ -74,6 +76,8 @@ export const INTERNAL_READING_TYPES = READING_TYPES.filter(
 export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   general: "타고난 기질과 사람을 대하는 방식, 지금 지나는 흐름까지 한 번에 봅니다.",
   diet: "오행 균형과 한열에서 몸의 결을 읽고, 올해의 몸 흐름까지 함께 봅니다.",
+  "diet-method":
+    "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
 };
 
 /**
@@ -96,6 +100,11 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
     title: "종합 체질 풀이 | 다이어트 사주",
     description:
       "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결과 살이 붙는 패턴을 읽어 올해의 몸 흐름까지 풀어드립니다.",
+  },
+  "diet-method": {
+    title: "나에게 맞는 다이어트 방법 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 대사 기조와 살이 붙는 패턴에서 무엇을 먼저 고정할지·어떤 종류로 움직이고 어떤 순서로 먹을지를 짚어드립니다.",
   },
 };
 

@@ -9,7 +9,9 @@ import {
   FOCUS_GUIDE,
   FOOD_HOW,
   GAIN_PATTERN_NOTE,
+  MEAL_PLAN,
   METABOLISM_NOTE,
+  MOVEMENT_PLAN,
   THERMAL_GUIDE,
   analyzeConstitution,
   type ConstitutionInput,
@@ -455,6 +457,9 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     ...Object.values(METABOLISM_NOTE),
     ...Object.values(GAIN_PATTERN_NOTE),
     ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
+    // 실행 방법 (TASK-40) — (B) 로 넓힌 축이라 여기가 가장 처방에 가깝다
+    ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.kind, plan.how, plan.caution]),
+    ...Object.values(MEAL_PLAN).flatMap((plan) => [plan.sequence, plan.timing]),
     // 재료 범주 (TASK-27) — 사용자에게 그대로 인용되는 식품 이름이다
     ...OHAENG_LIST.flatMap((element) => [
       ELEMENT_FOOD[element].basis,
@@ -465,7 +470,7 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
 
   it("문구 표가 비어 있지 않다", () => {
     // 위 수집이 깨져 빈 배열이 되면 아래 검사가 통과해 버린다.
-    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 8 + 20 + 2);
+    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 8 + 12 + 10 + 20 + 2);
   });
 
   it.each(BANNED)("어느 문구에도 %s 가 없다", (word) => {
@@ -478,13 +483,73 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     expect(offenders).toEqual([]);
   });
 
-  it("숫자를 목표로 제시하지 않는다", () => {
-    // "3kg", "1,200칼로리", "2주" 같은 수치가 섞이면 처방으로 읽힌다.
-    // 접근 순서 문구는 순서와 습관만 말한다.
-    for (const note of Object.values(DIET_APPROACH_NOTE)) {
-      expect(note.order).not.toMatch(/\d/);
-      expect(note.caution).not.toMatch(/\d/);
+  /**
+   * (B) 일부 개방 (TASK-40) 이후로 이 검사가 두 갈래다.
+   *
+   * **방법은 열렸지만 수치는 그대로 막힌다.** "3kg", "1,200칼로리", "2주", "3세트" 가
+   * 섞이면 순서·습관이 아니라 처방으로 읽힌다. 실행 방법 표까지 포함해 훑는다.
+   */
+  it("실행에 관한 문구에 숫자가 섞이지 않는다", () => {
+    const numbered = [
+      ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
+      ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.kind, plan.how, plan.caution]),
+      ...Object.values(MEAL_PLAN).flatMap((plan) => [plan.sequence, plan.timing]),
+    ];
+    expect(numbered.filter((text) => /\d/.test(text))).toEqual([]);
+  });
+
+  /**
+   * 막는 것만 검사하면 나중에 규칙을 조이면서 **조용히 다시 닫아 버려도 아무도 모른다.**
+   * 그래서 무엇이 통과해야 하는지도 박아 둔다.
+   */
+  it("방법은 실제로 열려 있다 — 종류와 순서가 구체적으로 적혀 있다", () => {
+    const kinds = Object.values(MOVEMENT_PLAN).map((plan) => plan.kind);
+    // 네 가지 종류가 전부 쓰인다 (접근 순서 4칸에서 1:1 로 나온다)
+    expect(new Set(kinds).size).toBe(4);
+
+    for (const plan of Object.values(MOVEMENT_PLAN)) {
+      expect(plan.how.length).toBeGreaterThan(20);
+      expect(plan.caution.length).toBeGreaterThan(10);
     }
+    for (const plan of Object.values(MEAL_PLAN)) {
+      expect(plan.sequence.length).toBeGreaterThan(10);
+      expect(plan.timing.length).toBeGreaterThan(10);
+    }
+  });
+
+  /**
+   * 실행 방법 표는 **순서와 시각의 규칙만** 정한다. 식품 이름은 `ELEMENT_FOOD` 가,
+   * 조리·온도는 `THERMAL_GUIDE` 가 정한다 — 섞으면 목록 밖 식품이 이 표로 새어 나간다.
+   */
+  it("식사 순서 표에 식품 이름이 없다", () => {
+    const foodNames = OHAENG_LIST.flatMap((element) => ELEMENT_FOOD[element].groups);
+    const mealText = Object.values(MEAL_PLAN)
+      .flatMap((plan) => [plan.sequence, plan.timing])
+      .join(" ");
+    expect(foodNames.filter((food) => mealText.includes(food))).toEqual([]);
+  });
+
+  /** 한열은 다른 층이다 — 실행 방법 표가 온도·성미를 말하기 시작하면 층이 무너진다. */
+  it("실행 방법 표가 한열의 몫을 가져가지 않는다", () => {
+    const text = [
+      ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.how, plan.caution]),
+      ...Object.values(MEAL_PLAN).flatMap((plan) => [plan.sequence, plan.timing]),
+    ].join(" ");
+    for (const word of ["온성", "냉성", "따뜻하게", "차갑게", "미지근"]) {
+      expect(text, `${word} 는 한열(THERMAL_GUIDE) 몫이다`).not.toContain(word);
+    }
+  });
+
+  /** 새 축이 새 동점을 만들지 않는지 — 같은 접근 순서면 항상 같은 종류여야 한다. */
+  it("같은 접근 순서는 항상 같은 움직임 종류를 낸다", () => {
+    const seen = new Map<string, string>();
+    for (const chart of SWEEP) {
+      const result = analyzeConstitution(inputFrom(chart));
+      const previous = seen.get(result.dietApproach);
+      if (previous) expect(result.movementKind).toBe(previous);
+      else seen.set(result.dietApproach, result.movementKind);
+    }
+    expect(seen.size).toBeGreaterThan(1);
   });
 
   it("판정 결과에 장부 이름이 실려 나가지 않는다", () => {

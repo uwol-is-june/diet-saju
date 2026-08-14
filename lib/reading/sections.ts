@@ -35,13 +35,15 @@ export const READING_SECTION_IDS = [
   "relations",
   "current-flow",
   "next-steps",
-  // diet
+  // diet — 몸이 어떤 결인가
   "constitution",
   "gain-pattern",
+  "year-flow",
+  // diet-method — 그래서 무엇을 어떻게 하는가 (TASK-40)
   "diet-approach",
   "eating",
   "movement",
-  "year-flow",
+  "execution-window",
   "monthly-actions",
 ] as const;
 
@@ -69,14 +71,23 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "current-flow", title: "지금의 흐름", optional: true },
     { id: "next-steps", title: "지금 신경 쓰면 좋은 것" },
   ],
+  /**
+   * 두 다이어트 유형은 **몸의 결(diet)과 실행 방법(diet-method)으로 갈라져 있다** (TASK-40).
+   * 섹션 id 는 겹치지 않는다 — 옮긴 것이지 공유하는 것이 아니다. `SECTION_INSTRUCTION` 이
+   * id 로 매기므로 id 를 공유하면 맥락이 다른 두 유형이 한 지시문을 떠안게 된다.
+   */
   diet: [
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "constitution", title: "오행으로 본 체질" },
     { id: "gain-pattern", title: "살이 붙는 패턴" },
-    { id: "diet-approach", title: "잘 맞는 다이어트 방법" },
-    { id: "eating", title: "잘 맞는 식습관" },
-    { id: "movement", title: "잘 맞는 움직임" },
     { id: "year-flow", title: "올해의 몸 흐름" },
+  ],
+  "diet-method": [
+    { id: "summary", title: "한눈에 보기", emphasis: "summary" },
+    { id: "diet-approach", title: "무엇을 먼저 고정할까" },
+    { id: "movement", title: "어떤 종류로 움직일까" },
+    { id: "eating", title: "어떤 순서로 먹을까" },
+    { id: "execution-window", title: "언제 어떻게 실행할까" },
     { id: "monthly-actions", title: "이번 달 실천 3가지" },
   ],
 };

@@ -20,16 +20,23 @@ import type { YearlyAnalysis } from "./yearly";
  * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
  * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
  */
-export const READING_TYPES = ["general", "diet", "diet-method"] as const;
+export const READING_TYPES = ["general", "diet", "gain-cause", "diet-method"] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
 /**
  * **`diet` 의 id 는 바꾸지 않는다** (TASK-39). 라벨만 `종합 체질 풀이` 로 바뀌었다.
  * 세그먼트가 곧 URL 이라 id 를 바꾸면 이미 공유된 `/reading/diet` 링크와 공유 카드가 죽는다.
+ *
+ * 다이어트 계열 셋은 **묻는 것이 서로 다르다** (TASK-44).
+ *   `diet`        몸이 어떤 결인가 (체질·패턴·올해 흐름)
+ *   `gain-cause`  왜 붙는가 (걸리는 지점·상황·치우침)
+ *   `diet-method` 그래서 무엇을 어떻게 하는가 (순서·종류·실행 조건)
+ * 목록 순서가 UI 순서이므로 이 순서(결 → 원인 → 방법)로 둔다.
  */
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
   diet: "종합 체질 풀이",
+  "gain-cause": "내가 살이 찌는 이유",
   "diet-method": "나에게 맞는 다이어트 방법",
 };
 
@@ -49,6 +56,7 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
 export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal"> = {
   general: "internal",
   diet: "public",
+  "gain-cause": "public",
   "diet-method": "public",
 };
 
@@ -76,6 +84,7 @@ export const INTERNAL_READING_TYPES = READING_TYPES.filter(
 export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   general: "타고난 기질과 사람을 대하는 방식, 지금 지나는 흐름까지 한 번에 봅니다.",
   diet: "오행 균형과 한열에서 몸의 결을 읽고, 올해의 몸 흐름까지 함께 봅니다.",
+  "gain-cause": "살이 붙을 때 어디서부터, 어떤 상황에서 붙는지 그 결의 뿌리를 찾습니다.",
   "diet-method":
     "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
 };
@@ -100,6 +109,11 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
     title: "종합 체질 풀이 | 다이어트 사주",
     description:
       "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결과 살이 붙는 패턴을 읽어 올해의 몸 흐름까지 풀어드립니다.",
+  },
+  "gain-cause": {
+    title: "내가 살이 찌는 이유 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 대사 기조와 십신 우세에서 살이 붙을 때 어디서부터 붙는지·어떤 상황에서 붙기 쉬운지를 짚어드립니다.",
   },
   "diet-method": {
     title: "나에게 맞는 다이어트 방법 | 다이어트 사주",

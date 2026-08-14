@@ -27,7 +27,7 @@ import { type ReadingType } from "../saju/schema";
  */
 
 export const READING_SECTION_IDS = [
-  // 두 유형이 공유한다
+  // 모든 유형이 공유하는 유일한 id (요약은 유형마다 요구가 달라 지침만 따로 간다)
   "summary",
   // general
   "temperament",
@@ -39,6 +39,11 @@ export const READING_SECTION_IDS = [
   "constitution",
   "gain-pattern",
   "year-flow",
+  // gain-cause — 왜 붙는가 (TASK-44)
+  "gain-site",
+  "gain-trigger",
+  "gain-imbalance",
+  "gain-misread",
   // diet-method — 그래서 무엇을 어떻게 하는가 (TASK-40)
   "diet-approach",
   "eating",
@@ -72,15 +77,34 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "next-steps", title: "지금 신경 쓰면 좋은 것" },
   ],
   /**
-   * 두 다이어트 유형은 **몸의 결(diet)과 실행 방법(diet-method)으로 갈라져 있다** (TASK-40).
-   * 섹션 id 는 겹치지 않는다 — 옮긴 것이지 공유하는 것이 아니다. `SECTION_INSTRUCTION` 이
-   * id 로 매기므로 id 를 공유하면 맥락이 다른 두 유형이 한 지시문을 떠안게 된다.
+   * 다이어트 계열 셋은 **묻는 것으로 갈라져 있다** — 결(diet) · 원인(gain-cause) ·
+   * 방법(diet-method). **섹션 id 를 공유하지 않는다.** `SECTION_INSTRUCTION` 이 id 로
+   * 매기므로 id 를 공유하면 맥락이 다른 유형들이 한 지시문을 떠안게 된다.
    */
   diet: [
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "constitution", title: "오행으로 본 체질" },
     { id: "gain-pattern", title: "살이 붙는 패턴" },
     { id: "year-flow", title: "올해의 몸 흐름" },
+  ],
+  /**
+   * 원인 유형 (TASK-44). `diet` 의 `gain-pattern` 과 **같은 판정을 다른 각도로 쓴다** —
+   * 거기서는 체질 풀이 안의 한 절이라 패턴 이름과 장면 하나까지지만, 여기서는 원인이
+   * 주제 전부라 걸리는 지점 · 상황 · 오행 치우침 · 오해로 나눠 파고든다.
+   *
+   * `diet` 에서 절을 떼어 오지 않은 것은 **`diet` 가 "종합" 이라는 약속을 지키기 위함**이다
+   * (2026-08-14 결정). 대신 두 지시문이 서로 다른 것을 요구하게 해서 같은 문장이 두 번
+   * 나오지 않게 막는다.
+   *
+   * **실행 방법 절이 없다.** 무엇을 어떻게 할지는 `diet-method` 몫이고, 결과 뒤 링크가
+   * 이미 그쪽으로 보낸다. 여기에 순서를 넣으면 두 유형이 같은 말을 한다.
+   */
+  "gain-cause": [
+    { id: "summary", title: "한눈에 보기", emphasis: "summary" },
+    { id: "gain-site", title: "어디서부터 붙는가" },
+    { id: "gain-trigger", title: "어떤 상황에서 붙는가" },
+    { id: "gain-imbalance", title: "오행이 만드는 결" },
+    { id: "gain-misread", title: "오해하기 쉬운 지점" },
   ],
   "diet-method": [
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },

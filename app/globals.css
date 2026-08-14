@@ -344,3 +344,84 @@
   color: var(--color-link);
   text-decoration: underline;
 }
+
+/* ── 가로 스크롤러 (TASK-43) ─────────────────────────────────────────────────
+ *
+ * 지금 적용처는 `ResultView` 의 대운 카드 줄 **한 곳뿐**이다. 클래스로 뺀 것은 두께·색
+ * 정의를 이 파일 한 곳에 두기 위함이지, 다른 곳에도 쓰라는 뜻이 아니다.
+ *
+ * **스크롤바를 숨기지 않는다.** "가로로 밀어 볼 수 있습니다" 안내가 있긴 하지만,
+ * 스크롤바는 **얼마나 남았는지**를 알려주는 유일한 단서다.
+ *
+ * ## 표준 속성과 webkit 의사요소를 둘 다 둔다
+ *
+ * `scrollbar-width`/`scrollbar-color` 는 Chrome 121+·Firefox 가 읽고, 그보다 오래된
+ * 사파리는 `::-webkit-scrollbar` 만 읽는다. 하나만 두면 한쪽에서 OS 기본 스크롤바가
+ * 그대로 남아 팔레트 밖 회색이 하나 생긴다. **크로미움은 표준 속성이 지정돼 있으면
+ * webkit 의사요소를 무시하므로 둘이 겹쳐 그려지지 않는다** — 대신 두 벌의 값(두께·색)이
+ * 어긋나면 브라우저마다 다르게 보이니 함께 고칠 것.
+ *
+ * ## 트랙을 투명하게 두는 이유
+ *
+ * 이 스크롤러는 `-mx-5` 로 카드 여백만큼 밖으로 늘어나 있어서, 트랙에 색을 주면 카드
+ * 폭을 가로지르는 밝은 띠가 하나 생긴다. 바로 아래 세운 목록의 `border-t` 와 나란히
+ * 놓여 구분선이 둘로 읽힌다. 남은 양은 **막대의 길이와 위치**가 이미 알려 준다.
+ */
+.scroller-x {
+  /* 카드 줄과 스크롤바 사이 여백. 카드에 `mb-*` 를 주면 스크롤 영역 안이라 간격이
+   * 생기지 않는다 — 스크롤바는 패딩 박스 **밖**의 거터에 그려지므로 여백은
+   * 스크롤러의 `padding-bottom` 이 만들어야 한다. */
+  padding-bottom: 0.75rem;
+  scrollbar-width: thin;
+  /* 두 번째 값이 트랙. `--color-line-strong` 은 흰 면에서 3:1 이라 UI 요소 기준을 넘는다. */
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+.scroller-x::-webkit-scrollbar {
+  height: 0.5rem;
+}
+.scroller-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroller-x::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+
+/* ── 접히는 근거 카드 (TASK-52) ───────────────────────────────────────────────
+ *
+ * 결과 화면의 도식 카드(`기운의 관계` · `대운·세운`)를 접어 둔다. 도식은 코드가 만든
+ * **근거**이고 사람들이 보러 온 것은 풀이 본문인데, 셋을 다 펼쳐 두면 본문이 화면
+ * 두 개쯤 아래로 밀려 스크롤해야 나온다.
+ *
+ * **풀이 섹션에는 아코디언을 쓰지 않는 것과 모순이 아니다** (`ReadingSections.tsx`).
+ * 그쪽은 스트리밍으로 써지는 중인 글이라 접으면 스트리밍의 값어치를 버린다. 도식은
+ * 반대로 요청 즉시 확정되고 그 뒤로 변하지 않으므로, 접어 둬도 놓치는 순간이 없다.
+ * 그래서 **`summary` 에 요약 한 줄을 함께 둔다** — 펴지 않아도 무엇이 들었는지 안다.
+ *
+ * 마커와 화살표는 `.select-shell` 과 같은 방식이다. 기본 마커를 지우고 삼각형을
+ * `clip-path` 로 그려 색을 시맨틱 토큰에서 받는다 (data URI 에 색을 박으면 팔레트에
+ * 없는 색이 하나 생긴다). 포커스 링은 전역 `:focus-visible` 이 `summary` 에도 건다 —
+ * 여기서 따로 `focus:ring-*` 을 붙이지 말 것. */
+.fold > summary {
+  list-style: none;
+  cursor: pointer;
+}
+/* 사파리는 `list-style: none` 만으로 삼각형이 지워지지 않는다. */
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+/* `summary` 가 flex 컨테이너라 이 의사요소도 flex 항목이 된다 → `margin-left: auto`
+   로 오른쪽 끝에 붙는다. 요약 문구가 길어져도 화살표가 눌리지 않게 `flex: none`. */
+.fold > summary::after {
+  content: "";
+  margin-left: auto;
+  flex: none;
+  width: 0.625rem;
+  height: 0.375rem;
+  background-color: var(--color-ink-muted);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transition: transform 0.2s ease;
+}
+.fold[open] > summary::after {
+  transform: rotate(180deg);
+}

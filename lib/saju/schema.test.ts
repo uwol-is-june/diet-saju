@@ -20,7 +20,7 @@ import {
  */
 
 describe("유형 라벨과 설명", () => {
-  it("세 유형 모두 라벨과 설명이 있다", () => {
+  it("모든 유형에 라벨과 설명이 있다", () => {
     for (const type of READING_TYPES) {
       expect(READING_TYPE_LABEL[type]).toBeTruthy();
       expect(READING_TYPE_DESCRIPTION[type].length).toBeGreaterThan(10);
@@ -78,10 +78,17 @@ describe("카드 설명 — 표현 규칙", () => {
     },
   );
 
-  it("diet 문구에 숫자가 없다", () => {
-    // "3주에 5kg" 같은 수치가 섞이면 처방으로 읽힌다.
-    expect(READING_TYPE_DESCRIPTION.diet).not.toMatch(/\d/);
-    expect(READING_TYPE_META.diet.description).not.toMatch(/\d/);
+  /**
+   * **모든 유형에 적용한다** (TASK-44 에서 넓혔다). 예전에는 `diet` 만 봤는데, 유형이 늘 때
+   * 목록에 이름을 더해야 하는 검사는 반드시 빠뜨린다 — 다이어트 계열이 셋이 된 지금
+   * 그게 실제 위험이다.
+   *
+   * 넓혀도 되는 이유: 수치는 다이어트 계열에서 처방으로("3주에 5kg"), 나머지에서 예언으로
+   * ("3년 안에") 읽힌다. **어느 유형에도 카드 한 줄에 숫자가 필요할 일이 없다.**
+   */
+  it.each(READING_TYPES)("%s 문구에 숫자가 없다", (type) => {
+    expect(READING_TYPE_DESCRIPTION[type]).not.toMatch(/\d/);
+    expect(READING_TYPE_META[type].description).not.toMatch(/\d/);
   });
 
   it("어느 설명도 단정형으로 끝나지 않는다", () => {
@@ -93,7 +100,7 @@ describe("카드 설명 — 표현 규칙", () => {
 });
 
 describe("유형별 검색·공유 문구 (TASK-31)", () => {
-  it("세 유형 모두 title 과 description 이 있다", () => {
+  it("모든 유형에 title 과 description 이 있다", () => {
     for (const type of READING_TYPES) {
       expect(READING_TYPE_META[type].title).toBeTruthy();
       expect(READING_TYPE_META[type].description.length).toBeGreaterThan(30);

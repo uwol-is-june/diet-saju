@@ -16,7 +16,9 @@ import {
  * 여기서 보는 것은 문장의 품질이 아니라 **경계**다.
  *  - 코드가 정한 판정이 실제로 프롬프트에 실리는가 (실리지 않으면 LLM 이 즉흥으로 판정한다)
  *  - 내보내면 안 되는 것(장부 이름·관례 눈금 숫자)이 새지 않는가
- *  - `general` 유형이 `diet` 작업으로 오염되지 않는가 (두 유형 유지가 확정 사항)
+ *  - `general` 유형이 다이어트 계열 작업으로 오염되지 않는가 (판정 블록을 받지 않는다)
+ *  - 다이어트 계열 셋이 **서로 다른 것을 요구하는가** — `diet`(결) · `gain-cause`(원인) ·
+ *    `diet-method`(방법). 지침이 겹치면 세 유형이 같은 글을 낸다.
  */
 
 /** 세운이 현재 연도에 의존하므로 결과를 고정한다 */
@@ -51,9 +53,30 @@ const PROMPTS = Object.fromEntries(
 const dietPrompt = PROMPTS.diet;
 const generalPrompt = PROMPTS.general;
 
+/**
+ * 한 유형의 **한 절 지침만** 잘라낸다. "두 곳에서 막는지" 를 보려면 절 단위로 봐야 한다 —
+ * 유형 규칙에만 있으면 그 절만 읽는 모델이 선을 못 본다.
+ */
+function sectionGuideOf(type: ReadingType, title: string): string {
+  const specs = SECTION_SPECS[type];
+  const prompt = PROMPTS[type];
+  const index = specs.findIndex((spec) => spec.title === title);
+  const start = prompt.indexOf(`## ${title}`);
+  const next = specs[index + 1];
+  const end = next ? prompt.indexOf(`## ${next.title}`) : prompt.length;
+  return prompt.slice(start, end);
+}
+
 describe("체질 판정 블록", () => {
-  it("diet 유형에만 실린다", () => {
-    expect(dietPrompt).toContain("## 체질 판정 (계산 완료 · 수정 금지)");
+  it("general 을 뺀 모든 유형에 실린다", () => {
+    // `READING_TYPES` 를 돌므로 유형이 늘면 자동으로 검사된다. 판정 블록이 빠진 유형은
+    // LLM 이 스스로 체질을 정하게 되는데, 그건 "판정은 코드가" 원칙이 뚫리는 경로다.
+    for (const type of READING_TYPES) {
+      if (type === "general") continue;
+      expect(PROMPTS[type], `${type} 에 체질 판정 없음`).toContain(
+        "## 체질 판정 (계산 완료 · 수정 금지)",
+      );
+    }
     expect(generalPrompt).not.toContain("체질 판정");
   });
 
@@ -163,16 +186,7 @@ describe("표현 규칙", () => {
  */
 describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   const prompt = PROMPTS["diet-method"];
-
-  /** 섹션 지침 한 조각만 잘라낸다 — "두 곳에서 막는지" 를 보려면 절 단위로 봐야 한다. */
-  const sectionGuide = (title: string) => {
-    const specs = SECTION_SPECS["diet-method"];
-    const index = specs.findIndex((spec) => spec.title === title);
-    const start = prompt.indexOf(`## ${title}`);
-    const next = specs[index + 1];
-    const end = next ? prompt.indexOf(`## ${next.title}`) : prompt.length;
-    return prompt.slice(start, end);
-  };
+  const sectionGuide = (title: string) => sectionGuideOf("diet-method", title);
 
   it("수치를 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
     // 한쪽만 있으면 그 절만 읽는 모델이 선을 못 본다.
@@ -236,6 +250,96 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   });
 });
 
+/**
+ * 원인 유형의 경계 (TASK-44).
+ *
+ * **표현상 가장 위험한 유형이다.** 제목이 "내가 살이 찌는 이유" 라 원인을 확정하는 글로
+ * 흐르기 쉽고, 원인을 확정하면 다음 문장이 자연히 의학적 설명(호르몬·대사질환·유전)으로
+ * 넘어간다. 그래서 검사가 세 갈래다 — 원인 단정이 막혀 있는지, 처방·식품이 계속 막혀
+ * 있는지, 그리고 **원인을 설명할 근거가 실제로 실리는지.**
+ */
+describe("표현 규칙 — 원인 유형 (TASK-44)", () => {
+  const prompt = PROMPTS["gain-cause"];
+  const sectionGuide = (title: string) => sectionGuideOf("gain-cause", title);
+
+  it("원인 단정을 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
+    expect(prompt).toContain("원인을 확정하지 않는다");
+    expect(sectionGuide("어디서부터 붙는가")).toContain("원인을 확정하지 말고");
+    // 마지막 절이 "확정이 아니라 경향" 임을 사용자에게 직접 밝히도록 요구한다.
+    expect(sectionGuide("오해하기 쉬운 지점")).toContain("원인을 확정한 것이 아니라");
+  });
+
+  it("의학적 원인을 금지 목록으로 적어 둔다", () => {
+    // 원인을 묻는 유형이라 "왜" 의 답이 의학으로 넘어가기 쉽다.
+    for (const word of ["호르몬", "대사질환", "유전"]) {
+      expect(prompt, `${word} 금지 문구 없음`).toContain(word);
+    }
+    expect(prompt).toContain("장기 이름으로 상태를 말하지 않는다");
+    expect(prompt).toContain("한의학의 사상체질");
+  });
+
+  it("처방과 수치를 계속 막는다 — 방법을 열어 둔 유형이 아니다", () => {
+    for (const word of ["단식", "간헐적 단식", "칼로리", "목표 체중", "영양제", "섭취량"]) {
+      expect(prompt, `${word} 금지 문구 없음`).toContain(word);
+    }
+    expect(prompt).toContain("감량 방법을 처방하지 않는다");
+  });
+
+  it("실행 방법을 서두와 절 지침 두 곳에서 막는다", () => {
+    // 방법은 `diet-method` 몫이고 결과 뒤 링크가 그쪽으로 보낸다. 여기서 쓰면 두 유형이
+    // 같은 말을 한다.
+    expect(prompt).toContain("실행 방법은 쓰지 마세요");
+    expect(sectionGuide("어떤 상황에서 붙는가")).toContain("대처·순서·운동 종목·식단을 쓰지 말 것");
+    expect(sectionGuide("오해하기 쉬운 지점")).toContain("방법을 처방하지 않는다");
+  });
+
+  it("식품 이름을 두 곳에서 막는다", () => {
+    // 판정 블록에 "재료 범주" 가 실려 있어서(체질 판정 블록을 공유한다) 그냥 두면
+    // 모델이 목록을 그대로 옮겨 적는다. 이 유형은 목록 안이든 밖이든 쓰지 않는다.
+    expect(prompt).toContain("식품 이름을 쓰지 않습니다");
+    // 서두에도 있어야 한다. 줄바꿈 위치에 걸리지 않도록 공백을 눌러 놓고 본다.
+    expect(prompt.replace(/\s+/g, " ")).toContain("식품 이름을 본문에 쓰지 마세요");
+    expect(sectionGuide("오행이 만드는 결")).toContain("식품 이름을 쓰지 않는다");
+  });
+
+  it("세운 판정은 이 유형에 실리지 않는다", () => {
+    // 원인은 원국 쪽 이야기다. 올해 흐름은 `diet` 몫이다.
+    expect(prompt).not.toContain("올해 세운 판정");
+  });
+
+  it("전문가 상담 권고를 요구한다", () => {
+    expect(prompt).toContain("전문가와 상의하도록 권하는 한 문장");
+  });
+
+  /** ── 여기부터는 "원인을 설명할 근거가 실려 있는지" 를 본다 ── */
+
+  it("코드가 정한 원인 축이 프롬프트에 실린다", () => {
+    const { constitution } = chart;
+    expect(prompt).toContain(constitution.gainSite);
+    expect(prompt).toContain(constitution.gainPattern);
+    expect(prompt).toContain(constitution.dominantGroup);
+    expect(prompt).toContain(constitution.metabolism);
+    expect(prompt).toContain(constitution.dietApproachCaution);
+  });
+
+  it("판정을 그대로 쓰라고 지시한다 — LLM 이 다시 판정하지 않는다", () => {
+    expect(sectionGuide("어디서부터 붙는가")).toContain('판정된 "걸리는 지점"');
+    expect(sectionGuide("어떤 상황에서 붙는가")).toContain("판정된 패턴 이름을 그대로 쓰고");
+    expect(prompt).toContain("다른 판정을 새로 만들지 말고");
+  });
+
+  it("diet 의 '살이 붙는 패턴' 과 지침이 겹치지 않는다", () => {
+    // 같은 판정(`gainPattern`)을 쓰지만 각도가 달라야 한다 — `diet` 에 절을 남기기로 한
+    // 결정(2026-08-14)의 대가가 이것이다. 문장이 같으면 두 유형이 같은 글을 낸다.
+    const trigger = sectionGuide("어떤 상황에서 붙는가");
+    const pattern = sectionGuideOf("diet", "살이 붙는 패턴");
+    expect(trigger).not.toBe(pattern);
+    // 원인 유형만 요구하는 것: 장면 둘 이상 + 원인의 범위를 닫는 문장
+    expect(trigger).toContain("범위를 닫아라");
+    expect(pattern).not.toContain("범위를 닫아라");
+  });
+});
+
 describe("섹션 계약 (TASK-06)", () => {
   /** 작성 지침 부분만 떼어 낸다. 원국 블록에도 `## ` 제목이 있어 섞이면 안 된다. */
   const guideOf = (prompt: string) => prompt.slice(prompt.indexOf("# 작성 지침"));
@@ -271,8 +375,13 @@ describe("섹션 계약 (TASK-06)", () => {
  */
 describe("올해 세운 판정 블록 (TASK-15 · TASK-39)", () => {
   it("diet 유형에만 실린다", () => {
+    // `READING_TYPES` 를 돌므로 유형이 늘면 자동으로 검사된다. 두 유형이 같은 세운 판정을
+    // 각자 서술하면 같은 사주에 서로 어긋나는 문장이 나간다.
     expect(dietPrompt).toContain("## 올해 세운 판정 (계산 완료 · 수정 금지)");
-    expect(generalPrompt).not.toContain("올해 세운 판정");
+    for (const type of READING_TYPES) {
+      if (type === "diet") continue;
+      expect(PROMPTS[type], `${type} 에 세운 판정이 실렸다`).not.toContain("올해 세운 판정");
+    }
   });
 
   it("체질 판정과 함께 실린다", () => {

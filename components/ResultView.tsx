@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Pillar, ReadingType, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 import { DaeunTimeline } from "./charts/DaeunTimeline";
 import { OhaengBars } from "./charts/OhaengBars";
@@ -104,8 +104,7 @@ export function ResultView({
         <CorrectionNote correction={chart.timeCorrection} birthplace={birthplace} />
       </section>
 
-      <section className={CARD}>
-        <h2 className="mb-1 text-lg font-bold">기운의 관계</h2>
+      <FoldCard title="기운의 관계" note={`상생·상극 · 한열 ${chart.constitution.thermal}`}>
         <p className="mb-4 text-sm text-ink-muted">
           오행은 서로 돕고(상생) 누르며(상극) 균형을 이룹니다.
         </p>
@@ -117,7 +116,7 @@ export function ResultView({
           </h3>
           <ThermalScale constitution={chart.constitution} />
         </div>
-      </section>
+      </FoldCard>
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
 
@@ -150,6 +149,15 @@ function DaeunTable({
   const currentAge = seun[0]?.age;
   const scrollerRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLDivElement>(null);
+  /** 접힌 동안은 내용이 `display: none` 이라 폭을 잴 수 없다 — 펼친 뒤에 가운데를 잡는다. */
+  const [open, setOpen] = useState(false);
+
+  const currentPeriod = daeun.periods.find(
+    (period) =>
+      currentAge !== undefined &&
+      currentAge >= period.startAge &&
+      currentAge <= period.endAge,
+  );
 
   /**
    * 대운 8~10칸은 어떤 화면에서도 가로로 넘친다. 현재 대운이 뒤쪽이면 처음엔 보이지 않아
@@ -157,8 +165,13 @@ function DaeunTable({
    *
    * scrollIntoView 를 쓰지 않는 이유: 세로 스크롤까지 움직여 폼에서 결과로 넘어오는
    * 자동 스크롤과 싸운다. 가로 위치만 직접 계산한다.
+   *
+   * **`open` 이 의존성에 있어야 한다** (TASK-52). 접힌 `<details>` 안에서는 모든 칸의
+   * `getBoundingClientRect()` 가 0 이라, 마운트 때 한 번만 계산하면 결과가 전부 0 이 되어
+   * 펼쳤을 때 맨 왼쪽에 머문다.
    */
   useEffect(() => {
+    if (!open) return;
     const scroller = scrollerRef.current;
     const current = currentRef.current;
     if (!scroller || !current) return;
@@ -166,11 +179,18 @@ function DaeunTable({
       current.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
     const centered = scroller.scrollLeft + offset - (scroller.clientWidth - current.clientWidth) / 2;
     scroller.scrollLeft = Math.max(0, centered);
-  }, [daeun]);
+  }, [daeun, open]);
 
   return (
-    <section className={CARD}>
-      <h2 className="mb-1 text-lg font-bold">대운 · 세운</h2>
+    <FoldCard
+      title="대운 · 세운"
+      note={
+        currentPeriod
+          ? `지금 ${currentPeriod.ganji} 대운 · ${currentPeriod.sipsin}`
+          : `${daeun.direction === "forward" ? "순행" : "역행"} · 첫 대운 ${daeun.startAge}세부터`
+      }
+      onToggle={setOpen}
+    >
       <p className="mb-4 text-sm text-ink-muted">
         {daeun.direction === "forward" ? "순행" : "역행"} · 첫 대운 {daeun.startAge}세부터
         <span className="text-ink-muted"> (절기까지 {daeun.daysToJeol}일 ÷ 3)</span>
@@ -184,10 +204,11 @@ function DaeunTable({
       {/*
         카드 여백만큼 밖으로 늘려 화면 끝까지 스크롤되게 한다 (모바일 p-5, 데스크톱 p-6).
         overscroll-x-contain: 끝까지 밀었을 때 iOS 의 뒤로가기 스와이프로 넘어가지 않게 막는다.
+        scroller-x: 스크롤바 두께·색과 카드와의 간격 (globals.css · TASK-43).
       */}
       <div
         ref={scrollerRef}
-        className="-mx-5 overflow-x-auto overscroll-x-contain px-5 sm:-mx-6 sm:px-6"
+        className="scroller-x -mx-5 overflow-x-auto overscroll-x-contain px-5 sm:-mx-6 sm:px-6"
       >
         <div className="flex min-w-max gap-2">
           {daeun.periods.map((period) => {
@@ -225,7 +246,50 @@ function DaeunTable({
           </li>
         ))}
       </ul>
-    </section>
+    </FoldCard>
+  );
+}
+
+/**
+ * 접어 둔 근거 카드 (TASK-52).
+ *
+ * 도식은 코드가 만든 **근거**이고 사람들이 보러 온 것은 풀이 본문이다. 도식 카드 셋을
+ * 다 펼쳐 두면 본문이 화면 두 개쯤 아래로 밀린다. 그래서 원국(4기둥 표)만 펼쳐 두고
+ * 나머지는 접는다 — 원국은 "무엇으로 이 풀이가 나왔는가" 를 한눈에 보여주는 카드라
+ * 접으면 결과가 어디서 왔는지 알 수 없다.
+ *
+ * **풀이 섹션에 아코디언을 쓰지 않는 것과 모순이 아니다** (`ReadingSections.tsx`).
+ * 그쪽은 지금 써지고 있는 글이라 접으면 스트리밍이 보이지 않는다. 도식은 요청 즉시
+ * 확정되고 그 뒤로 변하지 않으므로 접어 둬도 놓치는 순간이 없다.
+ *
+ * `note` 는 **펴지 않아도 알 수 있어야 하는 한 줄**이다. 제목만 있는 접힌 줄은 무엇이
+ * 들었는지 알려주지 않아 결국 전부 펴 보게 만든다. 모양·화살표는 `globals.css` 의
+ * `.fold` 가 정한다.
+ */
+function FoldCard({
+  title,
+  note,
+  onToggle,
+  children,
+}: {
+  title: string;
+  note: string;
+  /** 접힌 동안 잴 수 없는 것(대운 가로 위치)이 있는 카드가 쓴다. */
+  onToggle?: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      className="fold rounded-2xl border border-line bg-surface shadow-sm"
+      onToggle={(event) => onToggle?.(event.currentTarget.open)}
+    >
+      {/* 제목을 `h2` 로 두어 원국·풀이와 같은 단계로 읽히게 한다 (제목 탐색이 살아 있다). */}
+      <summary className="flex items-center gap-x-3 gap-y-1 p-5 sm:p-6">
+        <h2 className="text-lg font-bold">{title}</h2>
+        <span className="min-w-0 truncate text-sm text-ink-muted">{note}</span>
+      </summary>
+      <div className="border-t border-line p-5 sm:p-6">{children}</div>
+    </details>
   );
 }
 

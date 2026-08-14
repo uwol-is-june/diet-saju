@@ -111,6 +111,11 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
 const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
   general: (chart) => [`${chart.ohaeng.strongest} 기운이 강함`, chart.strength.verdict],
   diet: (chart) => [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern],
+  // 원인 유형 (TASK-44): 걸리는 지점이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
+  "gain-cause": (chart) => [
+    `${chart.constitution.gainSite}에서 걸림`,
+    chart.constitution.gainPattern,
+  ],
   "diet-method": (chart) => [
     chart.constitution.dietApproach,
     chart.constitution.movementKind,
@@ -129,6 +134,9 @@ const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
   general: (chart) => `${chart.ohaeng.season} 기세 기준 · ${chart.ohaeng.strongest} 왕(旺)`,
   diet: (chart) =>
     `방식 ${chart.constitution.dietApproach} · 대사 기조 ${chart.constitution.metabolism}`,
+  // 칩이 걸리는 지점·패턴을 쓰므로 여기는 그 둘이 어디서 나왔는지를 밝힌다.
+  "gain-cause": (chart) =>
+    `대사 기조 ${chart.constitution.metabolism} · 십신 우세 ${chart.constitution.dominantGroup}`,
   // 칩이 방식·종류를 쓰므로 여기는 그 둘이 어디서 나왔는지를 밝힌다.
   "diet-method": (chart) =>
     `대사 기조 ${chart.constitution.metabolism} · 걸리는 지점 ${chart.constitution.gainSite}`,

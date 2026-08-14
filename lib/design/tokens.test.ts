@@ -212,6 +212,50 @@ describe("대비비 — UI 경계 (1.4.11, 3:1)", () => {
 });
 
 /**
+ * 가로 스크롤러 (TASK-43).
+ *
+ * 브라우저 기본 스크롤바를 그대로 쓰면 팔레트 밖 회색이 하나 생긴다. 규칙이 `globals.css`
+ * 한 곳에 있는지와 **두 벌(표준·webkit)이 같은 색을 쓰는지**를 여기서 고정한다.
+ */
+describe("가로 스크롤러 (.scroller-x)", () => {
+  const blocks = [...CSS.matchAll(/\.scroller-x[^{]*\{([^}]*)\}/g)].map((m) => m[1]!);
+
+  it("규칙 블록을 읽어 온다", () => {
+    expect(blocks.length).toBeGreaterThan(1);
+  });
+
+  it("표준 속성과 webkit 의사요소를 둘 다 둔다", () => {
+    // 하나만 두면 한쪽 브라우저(구형 사파리 또는 Firefox)에서 OS 기본 스크롤바가 남는다.
+    expect(CSS).toMatch(/\.scroller-x\s*\{[^}]*scrollbar-width:/);
+    expect(CSS).toMatch(/\.scroller-x\s*\{[^}]*scrollbar-color:/);
+    expect(CSS).toMatch(/\.scroller-x::-webkit-scrollbar-thumb\s*\{/);
+  });
+
+  it("표준과 webkit 이 같은 막대 색을 쓴다", () => {
+    // 두 벌이 어긋나면 브라우저마다 다른 색으로 보인다.
+    const standard = /scrollbar-color:\s*var\((--color-[\w-]+)\)/.exec(CSS)?.[1];
+    const webkit = /::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\((--color-[\w-]+)\)/.exec(
+      CSS,
+    )?.[1];
+    expect(standard).toBeDefined();
+    expect(webkit).toBe(standard);
+  });
+
+  it("색이 시맨틱 토큰에서만 온다", () => {
+    for (const body of blocks) {
+      expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+      // 원시 팔레트를 직접 참조하면 2층 구조가 깨진다.
+      expect(body).not.toMatch(/var\(--raw-/);
+    }
+  });
+
+  it("카드 줄과 스크롤바 사이에 여백이 있다", () => {
+    // 스크롤바는 패딩 박스 밖의 거터에 그려지므로 카드의 `mb-*` 로는 간격이 생기지 않는다.
+    expect(CSS).toMatch(/\.scroller-x\s*\{[^}]*padding-bottom:/);
+  });
+});
+
+/**
  * 미리 렌더해 커밋하는 정적 이미지의 원본들. CSS 를 import 할 수 없어 팔레트 값을
  * **복사해 쓰므로** 여기서 원본과 대조해 드리프트를 막는다.
  *

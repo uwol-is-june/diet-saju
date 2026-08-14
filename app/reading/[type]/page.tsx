@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
 import { SajuForm } from "@/components/SajuForm";
+import { ViewBeacon } from "@/components/ViewBeacon";
 import {
   READING_TYPES,
   READING_TYPE_DESCRIPTION,
@@ -100,6 +101,8 @@ export default async function ReadingPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
+      {/* 조회수는 브라우저가 센다 (TASK-51). 서버 렌더에서 세면 이 페이지의 프리렌더가 죽는다. */}
+      <ViewBeacon type={readingType} />
       <header className="mb-8">
         <BackLink label="다른 풀이 고르기" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">

@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 /**
  * 실제 코드 동작과 일치해야 하는 문서다.
  * 데이터 흐름을 바꾸면(캐싱 도입, 로그 추가, 결과 저장 등) 여기도 함께 고쳐야 한다.
- * 특히 TASK-08(결과 캐싱)은 "저장하지 않는다"는 이 문장을 무효화한다.
+ * 특히 결과 캐싱(CLAUDE.md "보류한 작업")은 "저장하지 않는다"는 이 문장을 무효화한다.
+ *
+ * 5·6항의 유형별 누계는 `lib/counters.ts` 를 서술한 것이다 — 세는 항목을 늘리면 여기도
+ * 같은 커밋에서 고치고 시행일과 위 변경 안내를 갱신한다 (TASK-51).
  */
 export default function PrivacyPage() {
   return (
@@ -17,7 +20,18 @@ export default function PrivacyPage() {
       {/* 문서가 길어 푸터까지 스크롤해야 나가는 길이 나온다 (TASK-42) */}
       <BackLink />
       <h1 className="mb-2 mt-1 text-2xl font-bold">개인정보 처리방침</h1>
-      <p className="mb-8 text-sm text-ink-muted">시행일: 2026년 8월 13일</p>
+      <p className="mb-3 text-sm text-ink-muted">시행일: 2026년 8월 14일</p>
+      {/*
+        9항이 "데이터 처리 방식이 바뀌는 변경은 서비스 내에 별도로 안내합니다" 를 약속한다.
+        조회수·좋아요 집계는 그런 변경이라 무엇이 달라졌는지를 문서 맨 위에 적는다 —
+        전문을 다시 읽어야 알 수 있으면 안내가 아니다.
+      */}
+      <aside className="mb-8 rounded-xl border border-brand-border bg-brand-subtle px-4 py-3 text-sm leading-relaxed text-ink-soft">
+        <strong>2026년 8월 14일 변경</strong> — 어떤 풀이가 많이 읽히는지 알기 위해 풀이 유형별
+        열람 수와 &lsquo;도움이 됐어요&rsquo; 수를 세기 시작했습니다. 누가 열었는지·눌렀는지는
+        기록하지 않으며 생년월일을 저장하지 않는 원칙은 그대로입니다. 자세한 내용은 아래 5항에
+        있습니다.
+      </aside>
 
       <div className="reading">
         <h2>요약</h2>
@@ -101,6 +115,11 @@ export default function PrivacyPage() {
             <strong>Vercel</strong> — 웹 호스팅. 접속 기록(IP, 시각, 요청 경로 등)이 Vercel 의
             자체 정책에 따라 처리될 수 있습니다.
           </li>
+          <li>
+            <strong>Upstash</strong> — 풀이 유형별 열람 수·&lsquo;도움이 됐어요&rsquo; 수를
+            보관하는 저장소(아래 5항). <strong>전송되는 것은 유형 이름과 숫자뿐</strong>이며
+            생년월일·이름·풀이 내용은 전송되지 않습니다.
+          </li>
         </ul>
         <p>
           두 사업자 모두 해외에 서버를 둘 수 있습니다. 이 서비스는 위 목적 외로 정보를 제3자에게
@@ -109,10 +128,30 @@ export default function PrivacyPage() {
 
         <h2>5. 쿠키와 방문자 분석</h2>
         <p>
-          추적용 쿠키나 광고 식별자를 사용하지 않습니다. <strong>방문자 분석 도구를 전혀 쓰지
-          않습니다</strong> — 페이지 조회수를 세는 스크립트도 넣지 않았습니다. 첫 방문 안내를
-          닫았는지 여부만 브라우저 저장소(localStorage)에 기록하며, 이 값은 서버로 전송되지
-          않습니다.
+          추적용 쿠키나 광고 식별자를 사용하지 않습니다. <strong>외부 방문자 분석 도구를 전혀
+          쓰지 않습니다</strong> — Google Analytics 같은 제3자 스크립트를 넣지 않았습니다.
+        </p>
+        <p>
+          다만 어떤 풀이가 많이 읽히는지 알기 위해 <strong>풀이 유형별로 두 가지 누계</strong>를
+          저희가 직접 셉니다.
+        </p>
+        <ul>
+          <li>
+            <strong>열람 횟수</strong> — 풀이 유형 페이지를 연 횟수입니다. 유형마다 숫자 하나가
+            늘어날 뿐이며, <strong>누가 열었는지는 기록하지 않습니다.</strong> IP·기기 정보·
+            방문 시각을 함께 남기지 않으므로 개별 방문을 되짚을 수 없습니다.
+          </li>
+          <li>
+            <strong>&lsquo;도움이 됐어요&rsquo; 수</strong> — 결과 화면에서 누르신 횟수입니다.
+            같은 사람이 두 번 누르지 않도록 <strong>누른 사실만 브라우저 저장소</strong>
+            (localStorage)에 기록하며, 이 값은 서버로 전송되지 않습니다. 서버는 누가 눌렀는지
+            알지 못하고, 다시 누르면 취소됩니다.
+          </li>
+        </ul>
+        <p>
+          이 두 숫자에는 <strong>생년월일·시각·성별·이름이 들어가지 않습니다.</strong> 풀이
+          내용도 저장하지 않습니다 — 남는 것은 유형별 합계 숫자뿐입니다. 첫 방문 안내를
+          닫았는지 여부도 같은 브라우저 저장소에 기록하며 서버로 전송되지 않습니다.
         </p>
 
         <h2>6. 운영 지표 (서버 로그)</h2>
@@ -133,6 +172,12 @@ export default function PrivacyPage() {
         <p>
           이 로그는 Vercel 의 로그 보관 정책에 따라 일정 기간이 지나면 삭제됩니다. API 키가 로그에
           섞여 들어가지 않도록 마스킹 처리하고 있습니다.
+        </p>
+        <p>
+          위 5항의 <strong>유형별 누계 두 가지</strong>는 로그가 아니라 별도 저장소(Upstash
+          Redis)에 <strong>기간 제한 없이</strong> 쌓입니다. 저장되는 것은{" "}
+          <code>유형 이름 → 숫자</code> 여덟 줄이 전부이며, 개인을 구분하는 값이 없어 삭제를
+          요청할 대상 데이터가 생기지 않습니다.
         </p>
 
         <h2>7. 이용자의 권리</h2>

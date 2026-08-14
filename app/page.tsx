@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { readCounters } from "@/lib/counters";
 import {
   PUBLIC_READING_TYPES,
   READING_TYPE_DESCRIPTION,
@@ -39,7 +40,26 @@ import {
  * 사진으로 바꿀 때 지울 곳 목록은 `globals.css` 의 `--color-thumb-*` 정의 옆에 있다.
  */
 const THUMBNAIL_TONES = ["bg-thumb-1", "bg-thumb-2", "bg-thumb-3"] as const;
-export default function HomePage() {
+
+/**
+ * 조회수·좋아요를 카드에 띄우면서도 **이 페이지를 정적으로 둔다** (TASK-51).
+ *
+ * 클라이언트에서 fetch 하면 `/` 에 JS 가 들어와 위 "클라이언트 컴포넌트가 없다" 가 깨진다.
+ * 대신 서버에서 읽고 그 결과를 5분간 재사용한다 — 숫자가 5분 늦지만 조회수가 실시간일
+ * 이유가 없다. 저장소를 읽는 fetch 에 같은 시간을 걸어 두어 (`readCounters(300)`) 재생성
+ * 때만 저장소를 두드린다.
+ */
+export const revalidate = 300;
+
+export default async function HomePage() {
+  /**
+   * 저장소가 없거나 죽어도 화면은 그대로다 — 숫자 자리만 사라진다. 여기서 `null` 이면
+   * 아래에서 그 줄을 그리지 않는다. **0 을 대신 보여주지 않는다**: 아무도 안 봤다는
+   * 거짓말이 되는데 실제로는 셀 수가 없는 상태다.
+   */
+  const counters = await readCounters(revalidate);
+  const counts = counters.state === "ok" ? counters.counts : null;
+
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <header className="mb-8 text-center">
@@ -72,6 +92,15 @@ export default function HomePage() {
                 <span className="mt-1 block text-sm leading-relaxed text-ink-muted">
                   {READING_TYPE_DESCRIPTION[type]}
                 </span>
+                {counts && (
+                  /* 숫자만 나열하면 무엇인지 알 수 없다. 단위 낱말을 붙여 읽히게 한다. */
+                  <span className="mt-2 block text-xs text-ink-muted">
+                    조회 {counts[type].views.toLocaleString("ko-KR")}
+                    {counts[type].likes > 0 && (
+                      <> · 도움됐어요 {counts[type].likes.toLocaleString("ko-KR")}</>
+                    )}
+                  </span>
+                )}
               </span>
               {/* 장식용 화살표라 스크린리더에서 숨긴다 — 링크 이름은 위 제목이 만든다 */}
               <span aria-hidden className="shrink-0 text-ink-muted transition group-hover:text-brand-ink">

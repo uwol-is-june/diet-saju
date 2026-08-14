@@ -19,8 +19,14 @@ export interface RateLimitResult {
   retryAfterSeconds: number;
 }
 
-export function checkRateLimit(identifier: string): RateLimitResult {
-  const limit = getRuntimeConfig().RATE_LIMIT_PER_MINUTE;
+/**
+ * @param overrideLimit 분당 허용 수를 따로 정한다. 기본값(`RATE_LIMIT_PER_MINUTE`, 5)은
+ *   **Gemini 호출 기준**이라 카운터 비콘처럼 훨씬 자주 일어나는 요청에 그대로 쓰면
+ *   유형을 훑어보는 정상 사용자가 막힌다 (TASK-51). 버킷은 `identifier` 로 갈리므로
+ *   부르는 쪽이 접두사를 붙여 서로 침범하지 않게 한다.
+ */
+export function checkRateLimit(identifier: string, overrideLimit?: number): RateLimitResult {
+  const limit = overrideLimit ?? getRuntimeConfig().RATE_LIMIT_PER_MINUTE;
   const now = Date.now();
   const windowStart = now - WINDOW_MS;
 

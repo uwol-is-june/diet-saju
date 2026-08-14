@@ -1,5 +1,5 @@
 import "server-only";
-import { getCounterStore } from "./env";
+import { getCounterStore, type CounterStoreConfig } from "./env";
 import { READING_TYPES, type ReadingType } from "./saju/schema";
 
 /**
@@ -18,6 +18,12 @@ import { READING_TYPES, type ReadingType } from "./saju/schema";
  * 그건 결과를 서버에 두는 것이라 개인정보 처리방침의 "저장하지 않습니다" 가 죽는다.
  * **생년월일에서 파생된 어떤 값도 키에 넣지 않는다** — 해시도 안 된다. 입력 공간이 작아
  * 전수 대조가 되므로 익명화가 아니라 가명화까지다.
+ *
+ * ## 누가 눌렀는지는 어디에도 남지 않는다
+ *
+ * 좋아요 중복은 브라우저의 `localStorage` 플래그로만 막는다. 서버에 신원을 만들면
+ * 처리방침 3항("IP 주소: 최대 1분")을 고쳐야 하는데, 좋아요는 정확한 수가 필요한 값이
+ * 아니라 그 값을 치를 이유가 없다.
  *
  * ## 실패해도 서비스는 죽지 않는다
  *
@@ -49,8 +55,7 @@ export function counterKey(kind: CounterKind, type: ReadingType): string {
 
 /**
  * `MGET` 에 넘길 키 목록. **순서가 곧 응답 순서**라 한 곳에서 정하고 파싱도 같은 순서로
- * 되돌린다. 종류별로 묶지 않고 유형 안에서 종류를 도는 것은 뜻이 있어서가 아니라
- * 한 곳에서만 정하면 되기 때문이다.
+ * 되돌린다.
  */
 export const COUNTER_KEYS: readonly string[] = READING_TYPES.flatMap((type) =>
   COUNTER_KINDS.map((kind) => counterKey(kind, type)),
@@ -63,18 +68,21 @@ function emptySnapshot(): CounterSnapshot {
 }
 
 /**
- * `MGET` 응답을 스냅샷으로 되돌린다. **순수 함수라 테스트가 직접 부른다.**
- *
- * Redis 는 없는 키에 `null` 을 준다 — 아직 아무도 안 본 유형이라는 뜻이므로 0 이다.
- * 값은 문자열로 오고, 숫자가 아닌 것이 섞여 있으면(사람이 손으로 넣었거나 키가 겹쳤거나)
- * 0 으로 떨어뜨린다. 여기서 던지면 화면 하나가 통째로 죽는다.
+ * 값 하나를 세는 수로 바꾼다. Redis 는 없는 키에 `null` 을 주고(아직 아무도 안 본 유형),
+ * 값은 문자열로 온다. 숫자가 아니거나 음수면 0 이다 — **여기서 던지면 화면 하나가 통째로
+ * 죽는데** 카운터는 없어도 되는 값이라 그럴 이유가 없다.
  */
+export function toCount(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+}
+
+/** `MGET` 응답을 스냅샷으로 되돌린다. **순수 함수라 테스트가 직접 부른다.** */
 export function snapshotFromMget(values: readonly unknown[]): CounterSnapshot {
   const snapshot = emptySnapshot();
   COUNTER_KEYS.forEach((key, index) => {
     const [kind, type] = key.split(":") as [CounterKind, ReadingType];
-    const parsed = Number(values[index]);
-    snapshot[type][kind] = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+    snapshot[type][kind] = toCount(values[index]);
   });
   return snapshot;
 }
@@ -84,6 +92,10 @@ export function snapshotFromMget(values: readonly unknown[]): CounterSnapshot {
  * 기다릴 이유가 없다.
  */
 const TIMEOUT_MS = 2_000;
+
+class HttpError extends Error {
+  readonly name = "HttpError";
+}
 
 /**
  * 토큰이 섞여 나갈 여지를 없앤다. 상태 코드와 예외 이름까지만 쓰고 응답 본문·URL·헤더는
@@ -97,21 +109,46 @@ function toSafeReason(error: unknown): string {
   return "저장소에 연결하지 못했습니다";
 }
 
-class HttpError extends Error {
-  readonly name = "HttpError";
+async function unwrap(response: Response): Promise<unknown> {
+  if (!response.ok) {
+    // 401 은 토큰, 404 는 URL 이 틀렸다는 뜻이라 구분해서 보여줄 값이 있다.
+    throw new HttpError(
+      response.status === 401
+        ? "인증 실패 (401) — 토큰을 확인하세요"
+        : `저장소가 ${response.status} 를 돌려줬습니다`,
+    );
+  }
+  const body: unknown = await response.json();
+  return (body as { result?: unknown })?.result;
+}
+
+/**
+ * 쓰기 명령. **POST 로 보낸다** — Upstash 는 GET 경로 형태도 받지만, 상태를 바꾸는 요청을
+ * GET 으로 두면 중간 캐시나 프리페치가 값을 올릴 수 있다.
+ */
+async function write(store: CounterStoreConfig, command: readonly string[]): Promise<unknown> {
+  const response = await fetch(store.url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${store.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(command),
+    cache: "no-store",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  return unwrap(response);
 }
 
 /**
  * 모든 유형의 조회수·좋아요를 한 번에 읽는다 (`MGET` 한 번 = 명령 1회).
  *
- * Upstash REST 는 **명령 하나를 JSON 배열로 POST** 하면 `{ result: … }` 를 돌려준다.
- * 공식 SDK(`@upstash/redis`)를 넣지 않은 이유는 여기서 쓰는 것이 `MGET`·`INCR` 둘뿐이라
- * 의존성 하나를 더할 값이 없어서다.
+ * **읽기만 GET 경로 형태(`/mget/키/키…`)를 쓴다.** Next 의 Data Cache 는 GET 만 캐시하므로,
+ * POST 로 보내면 `/` 가 `revalidate` 로 숫자를 들고 있을 수가 없다 (요청마다 저장소를
+ * 두드리게 되고 그러면 `/` 가 동적이 된다).
  *
- * `no-store` 가 필요하다 — Next 의 fetch 캐시에 걸리면 숫자가 고정된다. `/` 의 숫자를
- * 늦추는 것은 그 페이지의 `revalidate` 가 할 일이지 이 함수가 할 일이 아니다.
+ * @param revalidateSeconds 없으면 `no-store`(항상 최신). 주면 그 초만큼 Data Cache 에 둔다.
+ *   `/admin` 은 지금 붙어 있는지를 보는 화면이라 캐시하면 안 되고, `/` 의 숫자는 반대로
+ *   실시간일 이유가 없다.
  */
-export async function readCounters(): Promise<CounterStatus> {
+export async function readCounters(revalidateSeconds?: number): Promise<CounterStatus> {
   const lookup = getCounterStore();
   if (lookup.state === "unset") return { state: "unconfigured" };
   if (lookup.state === "invalid") return { state: "misconfigured", names: lookup.names };
@@ -119,38 +156,75 @@ export async function readCounters(): Promise<CounterStatus> {
 
   const started = Date.now();
   try {
-    const response = await fetch(store.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${store.token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(["MGET", ...COUNTER_KEYS]),
+    const path = COUNTER_KEYS.map((key) => encodeURIComponent(key)).join("/");
+    const response = await fetch(`${store.url}/mget/${path}`, {
+      headers: { Authorization: `Bearer ${store.token}` },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      ...(revalidateSeconds === undefined
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: revalidateSeconds } }),
+    });
+
+    const result = await unwrap(response);
+    if (!Array.isArray(result)) throw new HttpError("응답 형식이 예상과 다릅니다");
+
+    return { state: "ok", counts: snapshotFromMget(result), elapsedMs: Date.now() - started };
+  } catch (error) {
+    return { state: "error", reason: toSafeReason(error), elapsedMs: Date.now() - started };
+  }
+}
+
+/**
+ * 조회수 +1. 실패해도 조용히 넘어간다 — 이걸 부르는 쪽은 이미 화면을 보여준 뒤다.
+ *
+ * 돌려주는 값은 증가 후의 수이며, 저장소가 없거나 실패하면 `null` 이다.
+ */
+export async function incrementView(type: ReadingType): Promise<number | null> {
+  const lookup = getCounterStore();
+  if (lookup.state !== "configured") return null;
+  try {
+    return toCount(await write(lookup.config, ["INCR", counterKey("views", type)]));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 좋아요 +1 / -1. 취소를 허용하기로 했으므로(2026-08-14) 감소 경로가 있다.
+ *
+ * **하한이 0 이다.** 좋아요 여부는 브라우저에만 있어서, 저장소를 지운 사람이 취소만 누르면
+ * `DECR` 이 음수로 내려간다. Redis 에 "0 밑으로는 안 내려가는 감소" 가 없으므로 내려간
+ * 뒤에 되돌린다 — 드문 경로라 명령 한 번 더 쓰는 값이 있다.
+ */
+export async function applyLike(type: ReadingType, delta: 1 | -1): Promise<number | null> {
+  const lookup = getCounterStore();
+  if (lookup.state !== "configured") return null;
+  const key = counterKey("likes", type);
+  try {
+    const next = Number(await write(lookup.config, ["INCRBY", key, String(delta)]));
+    if (next < 0) {
+      await write(lookup.config, ["SET", key, "0"]);
+      return 0;
+    }
+    return toCount(next);
+  } catch {
+    return null;
+  }
+}
+
+/** 좋아요 버튼이 자기 수를 읽을 때 쓴다. 한 유형뿐이라 `MGET` 을 쓰지 않는다. */
+export async function readLikes(type: ReadingType): Promise<number | null> {
+  const lookup = getCounterStore();
+  if (lookup.state !== "configured") return null;
+  try {
+    const store = lookup.config;
+    const response = await fetch(`${store.url}/get/${encodeURIComponent(counterKey("likes", type))}`, {
+      headers: { Authorization: `Bearer ${store.token}` },
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-
-    if (!response.ok) {
-      // 401 은 토큰, 404 는 URL 이 틀렸다는 뜻이라 구분해서 보여줄 값이 있다.
-      throw new HttpError(
-        response.status === 401
-          ? "인증 실패 (401) — 토큰을 확인하세요"
-          : `저장소가 ${response.status} 를 돌려줬습니다`,
-      );
-    }
-
-    const body: unknown = await response.json();
-    const result = (body as { result?: unknown })?.result;
-    if (!Array.isArray(result)) {
-      throw new HttpError("응답 형식이 예상과 다릅니다");
-    }
-
-    return {
-      state: "ok",
-      counts: snapshotFromMget(result),
-      elapsedMs: Date.now() - started,
-    };
-  } catch (error) {
-    return { state: "error", reason: toSafeReason(error), elapsedMs: Date.now() - started };
+    return toCount(await unwrap(response));
+  } catch {
+    return null;
   }
 }

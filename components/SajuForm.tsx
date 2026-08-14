@@ -15,6 +15,7 @@ import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth
 import { BIRTHPLACE_SIDO } from "@/lib/form/birthplaces";
 import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
 import { useBirthInput } from "./BirthInputProvider";
+import { LikeButton } from "./LikeButton";
 import { OtherReadingLinks } from "./OtherReadingLinks";
 import { ResultView } from "./ResultView";
 
@@ -523,8 +524,14 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                  화면 표시는 폼이 들고 있는 값으로 한다. */
               birthplace={placeApplies ? describeBirthplace(input) : null}
             />
-            {/* 생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하면 지금 글을 끊는다. */}
-            {!streaming && <OtherReadingLinks current={readingType} />}
+            {/* 생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하거나 평가를
+                요구하면 지금 쓰이고 있는 글을 끊는다 (TASK-51 도 같은 이유로 여기 있다). */}
+            {!streaming && (
+              <>
+                <LikeButton type={readingType} />
+                <OtherReadingLinks current={readingType} />
+              </>
+            )}
           </>
         )}
       </div>

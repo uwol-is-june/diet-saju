@@ -28,6 +28,17 @@ import {
  * 목록의 접근 가능한 이름은 `aria-label` 이 잇는다 — 화면에서 제목만 지우면 스크린리더
  * 사용자는 이 목록이 무엇인지 알 수 없다.
  */
+
+/**
+ * 카드 썸네일 자리 (TASK-36) — **사진이 들어오기 전까지 쓰는 단색이다.**
+ *
+ * `READING_TYPES` 를 순서대로 돌려 쓴다. `Record<ReadingType, …>` 로 두지 않은 이유는
+ * 이것이 **장식**이기 때문이다 — 유형이 늘었을 때 컴파일 오류로 잡아야 하는 것은 계약
+ * (라벨·설명·섹션)이지 색이 아니다. 색은 모자라면 앞에서부터 다시 쓰면 된다.
+ *
+ * 사진으로 바꿀 때는 이 배열과 `globals.css` 의 `--color-thumb-*` 를 함께 지운다.
+ */
+const THUMBNAIL_TONES = ["bg-thumb-1", "bg-thumb-2", "bg-thumb-3"] as const;
 export default function HomePage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
@@ -42,12 +53,19 @@ export default function HomePage() {
       </header>
 
       <ul aria-label="풀이 유형" className="space-y-3">
-        {READING_TYPES.map((type) => (
+        {READING_TYPES.map((type, index) => (
           <li key={type}>
             <Link
               href={`/reading/${type}`}
               className="group flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-sm transition hover:border-brand hover:bg-brand-subtle"
             >
+              {/* 장식이라 스크린리더에서 숨긴다 — 링크 이름은 아래 제목이 만든다 */}
+              <span
+                aria-hidden
+                className={`size-14 shrink-0 rounded-xl ${
+                  THUMBNAIL_TONES[index % THUMBNAIL_TONES.length]
+                }`}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{READING_TYPE_LABEL[type]}</span>
                 <span className="mt-1 block text-sm leading-relaxed text-ink-muted">

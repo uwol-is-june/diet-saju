@@ -87,6 +87,9 @@ describe("토큰 정의", () => {
       "--color-line", "--color-line-strong",
       "--color-link", "--color-danger", "--color-danger-subtle", "--color-danger-ink",
       "--color-warning", "--color-warning-subtle", "--color-warning-ink",
+      // 카드 썸네일 자리 (TASK-36) — 글자를 올리지 않아 대비 조합은 없다.
+      // 사진으로 바꿀 때 이 셋을 globals.css 와 함께 지운다.
+      "--color-thumb-1", "--color-thumb-2", "--color-thumb-3",
       "--color-ohaeng-mok", "--color-ohaeng-mok-ink",
       "--color-ohaeng-hwa", "--color-ohaeng-hwa-ink",
       "--color-ohaeng-to", "--color-ohaeng-to-ink",

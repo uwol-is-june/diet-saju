@@ -30,13 +30,13 @@ import {
  */
 
 /**
- * 카드 썸네일 자리 (TASK-36) — **사진이 들어오기 전까지 쓰는 단색이다.**
+ * 카드 썸네일 자리 — **사진이 들어오기 전까지 쓰는 단색이다.**
  *
  * `READING_TYPES` 를 순서대로 돌려 쓴다. `Record<ReadingType, …>` 로 두지 않은 이유는
  * 이것이 **장식**이기 때문이다 — 유형이 늘었을 때 컴파일 오류로 잡아야 하는 것은 계약
  * (라벨·설명·섹션)이지 색이 아니다. 색은 모자라면 앞에서부터 다시 쓰면 된다.
  *
- * 사진으로 바꿀 때는 이 배열과 `globals.css` 의 `--color-thumb-*` 를 함께 지운다.
+ * 사진으로 바꿀 때 지울 곳 목록은 `globals.css` 의 `--color-thumb-*` 정의 옆에 있다.
  */
 const THUMBNAIL_TONES = ["bg-thumb-1", "bg-thumb-2", "bg-thumb-3"] as const;
 export default function HomePage() {

@@ -203,14 +203,18 @@ function buildHtml(card, css) {
 }
 
 /**
- * 인스타그램 본문에 붙일 캡션. 사진 출처를 여기 모은다.
+ * 인스타그램 본문에 붙일 캡션. 본문 문구(`caption`)와 사진 출처를 여기 모은다.
  * Pexels 라이선스는 표기 의무가 없지만 API 가이드라인이 링크백을 권하고,
  * 촬영자를 밝히는 편이 브랜드 콘텐츠로서 맞다.
+ *
+ * `caption` 이 없으면 표지 제목만 올린다 — 새 주제를 잡는 도중에도 렌더가
+ * 멈추지 않아야 하고, 캡션은 카드가 다 나온 뒤에 쓰는 것이라 순서가 늦다.
  */
 function buildCaption(data) {
   const lines = [];
   const cover = data.cards.find((c) => c.layout === "cover");
-  if (cover) lines.push(cover.title.replaceAll("\n", " "), "");
+  const lede = data.caption?.trim() || cover?.title.replaceAll("\n", " ");
+  if (lede) lines.push(lede, "");
 
   const credits = data.cards
     .map((c) => c.photoCredit)

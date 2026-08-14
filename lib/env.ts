@@ -98,47 +98,74 @@ export function getRuntimeConfig(): RuntimeConfig {
  */
 export type CounterStoreConfig = { readonly url: string; readonly token: string };
 
+/**
+ * **이름이 두 벌이다.** Vercel 마켓플레이스에서 Upstash Redis 를 연결하면 `KV_REST_API_*`
+ * 로 주입되고(옛 Vercel KV 시절 이름), Upstash 콘솔에서 직접 받으면 `UPSTASH_REDIS_REST_*`
+ * 다. 둘 다 받는다 — 한쪽만 읽으면 대시보드에서 분명히 연결했는데 앱에서는 "설정 없음"
+ * 으로 보이고, 그 사실이 화면 어디에도 안 나와서 원인을 찾는 데 배포 한 번을 쓴다.
+ *
+ * 앞에 적은 이름이 이긴다. 손으로 넣은 값이 자동 주입값을 덮어쓸 수 있어야 한다.
+ */
+const URL_VARS = ["UPSTASH_REDIS_REST_URL", "KV_REST_API_URL"] as const;
+const TOKEN_VARS = ["UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_TOKEN"] as const;
+
+export type CounterStoreLookup =
+  | { readonly state: "configured"; readonly config: CounterStoreConfig; readonly names: readonly string[] }
+  /** 아무 이름도 없다 — 안 쓰기로 한 것이라 정상 상태다. */
+  | { readonly state: "unset" }
+  /** 한쪽만 있거나 형식이 틀리다 — 설정 실수다. 어떤 이름이 있었는지 함께 돌려준다. */
+  | { readonly state: "invalid"; readonly names: readonly string[] };
+
 const counterStoreSchema = z.object({
-  UPSTASH_REDIS_REST_URL: z.string().startsWith("https://"),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(20),
+  url: z.string().startsWith("https://"),
+  token: z.string().min(20),
 });
 
-/** `null` 도 캐시해야 하므로 "아직 안 봄" 을 `undefined` 로 구분한다. */
-let cachedCounterStore: CounterStoreConfig | null | undefined;
+/**
+ * 순수 함수라 테스트가 직접 부른다 — `process.env` 를 건드리면 아래 캐시와 얽힌다.
+ *
+ * **이름만 돌려주고 값은 돌려주지 않는다**(`names`). 진단에 필요한 것은 "어느 이름이
+ * 들어와 있나" 이지 값이 아니다.
+ */
+export function resolveCounterStore(env: Record<string, string | undefined>): CounterStoreLookup {
+  const pick = (names: readonly string[]) => names.find((name) => env[name]?.trim());
+  const urlName = pick(URL_VARS);
+  const tokenName = pick(TOKEN_VARS);
+  const names = [urlName, tokenName].filter((name): name is string => name !== undefined);
 
-export function getCounterStore(): CounterStoreConfig | null {
-  if (cachedCounterStore !== undefined) return cachedCounterStore;
-
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  // 둘 다 없으면 "안 쓰기로 한 것" 이다 — 정상 상태라 로그를 남기지 않는다.
-  if (!url && !token) {
-    cachedCounterStore = null;
-    return null;
-  }
+  if (!urlName && !tokenName) return { state: "unset" };
 
   const parsed = counterStoreSchema.safeParse({
-    UPSTASH_REDIS_REST_URL: url,
-    UPSTASH_REDIS_REST_TOKEN: token,
+    url: urlName ? env[urlName]?.trim() : undefined,
+    token: tokenName ? env[tokenName]?.trim() : undefined,
   });
+  if (!parsed.success) return { state: "invalid", names };
 
-  // 한쪽만 있거나 형식이 틀린 것은 설정 실수다. 필드명만 남기고 값은 절대 남기지 않는다.
-  if (!parsed.success) {
+  return {
+    state: "configured",
+    // 끝 슬래시가 남으면 경로를 붙일 때 `//` 가 된다.
+    config: { url: parsed.data.url.replace(/\/+$/, ""), token: parsed.data.token },
+    names,
+  };
+}
+
+/** 조회는 요청마다 일어나므로 결과를 캐시한다. "아직 안 봄" 을 `undefined` 로 구분한다. */
+let cachedCounterStore: CounterStoreLookup | undefined;
+
+export function getCounterStore(): CounterStoreLookup {
+  if (cachedCounterStore !== undefined) return cachedCounterStore;
+
+  const lookup = resolveCounterStore(process.env);
+  // 설정 실수는 서버 로그에도 남긴다. 이름만 남기고 값은 절대 남기지 않는다.
+  if (lookup.state === "invalid") {
     console.error(
-      "[env] 카운터 저장소 설정이 올바르지 않아 카운터를 끕니다:",
-      Object.keys(parsed.error.flatten().fieldErrors).join(", "),
+      "[env] 카운터 저장소 설정이 올바르지 않아 카운터를 끕니다. 들어온 변수:",
+      lookup.names.join(", ") || "(없음)",
     );
-    cachedCounterStore = null;
-    return null;
   }
 
-  cachedCounterStore = {
-    // 끝 슬래시가 있으면 `${url}/pipeline` 이 `//pipeline` 이 된다.
-    url: parsed.data.UPSTASH_REDIS_REST_URL.replace(/\/+$/, ""),
-    token: parsed.data.UPSTASH_REDIS_REST_TOKEN,
-  };
-  return cachedCounterStore;
+  cachedCounterStore = lookup;
+  return lookup;
 }
 
 /** 디버깅용. 앞 4자리만 남기고 마스킹한다. 전체 키는 어디에도 출력하지 않는다. */

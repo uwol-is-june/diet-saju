@@ -35,6 +35,11 @@ export type CounterSnapshot = Record<ReadingType, Record<CounterKind, number>>;
 export type CounterStatus =
   /** 환경변수가 없다 — 설정하지 않았을 뿐이므로 오류가 아니다. */
   | { readonly state: "unconfigured" }
+  /**
+   * 한쪽 변수만 있거나 형식이 틀리다. **`unconfigured` 와 반드시 구분해서 보여준다** —
+   * 둘을 같은 문구로 뭉뚱그리면 "연결했는데 왜 안 되지" 의 답이 화면에 없다.
+   */
+  | { readonly state: "misconfigured"; readonly names: readonly string[] }
   | { readonly state: "ok"; readonly counts: CounterSnapshot; readonly elapsedMs: number }
   | { readonly state: "error"; readonly reason: string; readonly elapsedMs: number };
 
@@ -107,8 +112,10 @@ class HttpError extends Error {
  * 늦추는 것은 그 페이지의 `revalidate` 가 할 일이지 이 함수가 할 일이 아니다.
  */
 export async function readCounters(): Promise<CounterStatus> {
-  const store = getCounterStore();
-  if (!store) return { state: "unconfigured" };
+  const lookup = getCounterStore();
+  if (lookup.state === "unset") return { state: "unconfigured" };
+  if (lookup.state === "invalid") return { state: "misconfigured", names: lookup.names };
+  const store = lookup.config;
 
   const started = Date.now();
   try {

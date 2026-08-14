@@ -107,8 +107,18 @@ function CounterPanel({ counters }: { counters: Awaited<ReturnType<typeof readCo
 
       {counters.state === "unconfigured" && (
         <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm leading-relaxed text-ink-muted">
-          연결되어 있지 않습니다. <code>UPSTASH_REDIS_REST_URL</code> 과{" "}
-          <code>UPSTASH_REDIS_REST_TOKEN</code> 이 없으면 카운터는 꺼진 채로 동작합니다.
+          연결되어 있지 않습니다. <code>UPSTASH_REDIS_REST_URL</code>·
+          <code>UPSTASH_REDIS_REST_TOKEN</code> 또는 <code>KV_REST_API_URL</code>·
+          <code>KV_REST_API_TOKEN</code> 중 한 쌍이 있어야 하며, 없으면 카운터는 꺼진 채로
+          동작합니다.
+        </p>
+      )}
+
+      {/* 한쪽만 들어온 경우다. `unconfigured` 와 같은 문구를 쓰면 원인을 못 찾는다. */}
+      {counters.state === "misconfigured" && (
+        <p className="rounded-xl bg-warning-subtle px-4 py-3 text-sm leading-relaxed text-warning-ink">
+          설정이 반쪽입니다 — 들어온 변수: <code>{counters.names.join(", ")}</code>. URL 과
+          토큰이 모두 있어야 켜집니다.
         </p>
       )}
 

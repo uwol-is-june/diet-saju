@@ -7,6 +7,7 @@ import {
   readCounters,
   snapshotFromMget,
 } from "./counters";
+import { resolveCounterStore } from "./env";
 import { READING_TYPES } from "./saju/schema";
 
 /**
@@ -74,6 +75,72 @@ describe("저장소가 없을 때", () => {
   /** 테스트 환경에는 환경변수가 없다 — 그 상태가 정상 동작이어야 한다. */
   it("던지지 않고 unconfigured 를 돌려준다", async () => {
     await expect(readCounters()).resolves.toEqual({ state: "unconfigured" });
+  });
+});
+
+/**
+ * 환경변수 이름이 두 벌인 것이 실제로 문제를 냈다 — Vercel 마켓플레이스 연동은
+ * `KV_REST_API_*` 로 주입하는데 앱이 `UPSTASH_*` 만 읽어서, 대시보드에서는 연결됐는데
+ * 앱에서는 "설정 없음" 으로 보였다. 그걸 다시 겪지 않도록 고정한다.
+ */
+describe("환경변수 이름 두 벌", () => {
+  const URL = "https://example.upstash.io";
+  const TOKEN = "x".repeat(40);
+
+  it("Upstash 콘솔 이름을 받는다", () => {
+    const lookup = resolveCounterStore({
+      UPSTASH_REDIS_REST_URL: URL,
+      UPSTASH_REDIS_REST_TOKEN: TOKEN,
+    });
+    expect(lookup).toMatchObject({ state: "configured", config: { url: URL, token: TOKEN } });
+  });
+
+  it("Vercel 마켓플레이스 이름(KV_REST_API_*)도 받는다", () => {
+    const lookup = resolveCounterStore({ KV_REST_API_URL: URL, KV_REST_API_TOKEN: TOKEN });
+    expect(lookup).toMatchObject({ state: "configured", config: { url: URL, token: TOKEN } });
+  });
+
+  /** 손으로 넣은 값이 자동 주입값을 덮어쓸 수 있어야 한다. */
+  it("둘 다 있으면 UPSTASH_ 쪽이 이긴다", () => {
+    const lookup = resolveCounterStore({
+      UPSTASH_REDIS_REST_URL: URL,
+      UPSTASH_REDIS_REST_TOKEN: TOKEN,
+      KV_REST_API_URL: "https://other.upstash.io",
+      KV_REST_API_TOKEN: "y".repeat(40),
+    });
+    expect(lookup).toMatchObject({ state: "configured", config: { url: URL, token: TOKEN } });
+  });
+
+  it("끝 슬래시를 떼어 낸다", () => {
+    const lookup = resolveCounterStore({
+      UPSTASH_REDIS_REST_URL: `${URL}//`,
+      UPSTASH_REDIS_REST_TOKEN: TOKEN,
+    });
+    expect(lookup).toMatchObject({ state: "configured", config: { url: URL } });
+  });
+
+  it("아무것도 없으면 unset", () => {
+    expect(resolveCounterStore({})).toEqual({ state: "unset" });
+  });
+
+  /** 한쪽만 있는 것은 "안 쓰기로 한 것" 이 아니라 설정 실수다 — 화면에서 구분해야 한다. */
+  it("한쪽만 있으면 invalid 이고 들어온 이름을 알려준다", () => {
+    expect(resolveCounterStore({ KV_REST_API_URL: URL })).toEqual({
+      state: "invalid",
+      names: ["KV_REST_API_URL"],
+    });
+  });
+
+  it("값이 있어도 형식이 틀리면 invalid", () => {
+    expect(
+      resolveCounterStore({ UPSTASH_REDIS_REST_URL: "redis://x", UPSTASH_REDIS_REST_TOKEN: TOKEN }),
+    ).toMatchObject({ state: "invalid" });
+  });
+
+  /** 진단용이라 이름만 나간다. 값이 섞이면 `/admin` 에 토큰이 찍힌다 (인증이 없는 화면이다). */
+  it("invalid 응답에 값이 섞이지 않는다", () => {
+    const lookup = resolveCounterStore({ KV_REST_API_TOKEN: TOKEN });
+    expect(JSON.stringify(lookup)).not.toContain(TOKEN);
   });
 });
 

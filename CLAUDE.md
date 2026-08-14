@@ -593,6 +593,18 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
   그래서 `--raw-*-700` 파생값을 만들었다. `docs/design-tokens.md` 에 원본/파생 구분이 있다.
 - 대비비와 "컴포넌트에 raw 색상 없음"은 `lib/design/tokens.test.ts` 가 **globals.css 를 파싱해서**
   검증한다. 토큰을 추가하면 그 테스트에 조합도 추가한다.
+- **드롭다운 화살표는 `globals.css` 의 `.select-shell` 이 그린다** (TASK-38). `select` 에는
+  `::after` 를 붙일 수 없어 감싸는 요소가 필요하고, 폼의 `SelectShell` 이 그 역할이다.
+  - **모든 `select` 가 이걸 쓴다.** 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아
+    폼 안에 화살표가 두 종류가 된다. `birth-input.test.ts` 가 `<select` 개수와 껍데기
+    개수를 대조하므로 새 select 를 추가하면서 빠뜨리면 걸린다.
+  - 삼각형은 `clip-path` 로 그린다 — data URI 에 색을 박으면 팔레트에 없는 색이 하나 생긴다.
+  - `.select-shell > select` 에 **`min-width: 0`** 이 필요하다. `select` 의 내재 최소 폭은
+    가장 긴 항목 기준이라 좁은 화면에서 껍데기를 밀어낸다.
+- **모바일 폭을 헤드리스 스크린샷으로 확인할 때 390px 를 그대로 믿지 말 것.** 크로미움이
+  창 최소 폭(약 500px)을 강제해서 레이아웃 뷰포트가 요청한 값보다 넓어지고, 내용이 잘린
+  것처럼 보인다. iframe 으로 우회하려 해도 `next.config.ts` 의 `X-Frame-Options: DENY` 에
+  막힌다. 500px 이상에서 확인하고 `sm:` 분기(640px)를 넘지 않게 두는 것이 실용적이다.
 - **포커스 링은 `globals.css` 의 전역 `:focus-visible` 하나로 정한다.** 컴포넌트에
   `focus:ring-*` 을 붙이지 말 것 — 버튼·`summary`·링크에서 빠뜨리게 되고, 같은 클래스의
   `outline-none` 이 유틸리티 레이어 우선순위로 전역 규칙을 조용히 덮는다.

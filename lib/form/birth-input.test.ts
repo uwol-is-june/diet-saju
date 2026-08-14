@@ -310,6 +310,24 @@ describe("유형은 라우트가 정한다", () => {
     expect(home).not.toContain("useRouter");
   });
 
+  it("카드가 이미 말하는 것을 문구로 되풀이하지 않는다 (TASK-34 · 35)", () => {
+    const home = readCode("app/page.tsx");
+    expect(home).not.toContain("무엇을 볼까요");
+    expect(home).not.toContain("입력하는 화면으로 넘어갑니다");
+    expect(home).not.toContain("입력한 정보는 저장하지 않습니다");
+  });
+
+  it("목록의 접근 가능한 이름은 남아 있다", () => {
+    // 화면에서 제목만 지우면 스크린리더 사용자는 이 목록이 무엇인지 알 수 없다.
+    expect(readCode("app/page.tsx")).toMatch(/<ul[^>]*aria-label=/);
+  });
+
+  it("\"저장하지 않는다\" 안내는 입력 화면에 그대로 있다", () => {
+    // `/` 에서 지운 것은 중복이지 약속이 아니다.
+    expect(readCode("components/FirstVisitNotice.tsx")).toContain("저장하지 않습니다");
+    expect(readCode("components/SajuForm.tsx")).toContain("저장하지 않고");
+  });
+
   it("잘못된 세그먼트는 404 다", () => {
     const page = readCode("app/reading/[type]/page.tsx");
     expect(page).toContain("notFound");

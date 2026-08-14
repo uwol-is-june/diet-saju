@@ -13,6 +13,20 @@ import {
  *
  * 카드는 버튼 + `router.push` 가 아니라 **`next/link`** 다. 새 탭·가운데 클릭·크롤러가
  * 다 동작해야 한다.
+ *
+ * ## 설명을 덧붙이지 않는다 (TASK-34 · 35)
+ *
+ * 예전에는 목록 위에 "무엇을 볼까요?" 가, 아래에 "유형을 고르면 입력 화면으로 넘어갑니다"
+ * 가 있었다. 둘 다 카드가 이미 보여주는 것이다 — 헤더가 무엇을 하는 화면인지 말하고,
+ * 화살표 달린 링크 카드 셋이 누르면 넘어간다는 것을 그림으로 설명한다.
+ *
+ * **"입력한 정보는 저장하지 않습니다" 도 여기서 뺐다.** 약속이 사라진 것이 아니라
+ * `FirstVisitNotice`(입력 화면) · 폼 아래 한 줄 · `app/privacy/page.tsx` 에 그대로 있고,
+ * **정보를 넣기 직전에 보여야 뜻이 있다** (TASK-30 에서 안내를 옮긴 이유와 같다).
+ * 처리방침 링크는 `SiteFooter` 가 모든 페이지에 깔아 둔다.
+ *
+ * 목록의 접근 가능한 이름은 `aria-label` 이 잇는다 — 화면에서 제목만 지우면 스크린리더
+ * 사용자는 이 목록이 무엇인지 알 수 없다.
  */
 export default function HomePage() {
   return (
@@ -27,8 +41,7 @@ export default function HomePage() {
         </p>
       </header>
 
-      <h2 className="mb-3 text-sm font-medium text-ink-soft">무엇을 볼까요?</h2>
-      <ul className="space-y-3">
+      <ul aria-label="풀이 유형" className="space-y-3">
         {READING_TYPES.map((type) => (
           <li key={type}>
             <Link
@@ -49,12 +62,6 @@ export default function HomePage() {
           </li>
         ))}
       </ul>
-
-      <p className="mt-8 text-center text-xs leading-relaxed text-ink-muted">
-        유형을 고르면 생년월일을 입력하는 화면으로 넘어갑니다.
-        <br />
-        입력한 정보는 저장하지 않습니다.
-      </p>
     </main>
   );
 }

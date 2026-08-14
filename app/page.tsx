@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  READING_TYPES,
+  PUBLIC_READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
 } from "@/lib/saju/schema";
@@ -52,8 +52,9 @@ export default function HomePage() {
         </p>
       </header>
 
+      {/* 내부 유형은 목록에 내지 않는다 (TASK-41). `/admin` 에서만 들어간다. */}
       <ul aria-label="풀이 유형" className="space-y-3">
-        {READING_TYPES.map((type, index) => (
+        {PUBLIC_READING_TYPES.map((type, index) => (
           <li key={type}>
             <Link
               href={`/reading/${type}`}

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_BIRTH_INPUT } from "../form/birth-input";
 import {
+  INTERNAL_READING_TYPES,
+  PUBLIC_READING_TYPES,
   READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   READING_TYPE_META,
+  READING_TYPE_VISIBILITY,
   sajuInputSchema,
 } from "./schema";
 
@@ -136,8 +139,42 @@ describe("폼 기본값이 서버 스키마 기본값과 같다", () => {
     expect(parsed.dayBoundary).toBe(EMPTY_BIRTH_INPUT.dayBoundary);
   });
 
-  it("스키마 기본 유형은 첫 유형이다", () => {
+  /**
+   * 예전 계약은 "기본값 = 첫 유형" 이었는데, 노출 구분(TASK-41)이 생기면서 첫 유형이
+   * 내부 유형이 될 수 있게 됐다. **기본값은 사용자가 실제로 요청할 수 있는 것**이어야
+   * 한다 — 유형을 생략한 요청이 화면에서 고를 수 없는 유형으로 가면 안 된다.
+   */
+  it("스키마 기본 유형은 공개 유형이다", () => {
     const parsed = sajuInputSchema.parse({ birthDate: "1990-05-17" });
-    expect(parsed.readingType).toBe(READING_TYPES[0]);
+    expect(READING_TYPE_VISIBILITY[parsed.readingType]).toBe("public");
+  });
+});
+
+describe("노출 구분 (TASK-41)", () => {
+  it("모든 유형에 노출 구분이 있다", () => {
+    for (const type of READING_TYPES) {
+      expect(["public", "internal"]).toContain(READING_TYPE_VISIBILITY[type]);
+    }
+  });
+
+  it("공개 유형이 최소 하나는 있다", () => {
+    // 전부 internal 이 되면 메인 화면에 고를 것이 없다.
+    expect(PUBLIC_READING_TYPES.length).toBeGreaterThan(0);
+  });
+
+  it("공개와 내부가 겹치지 않고 둘을 합치면 전체가 된다", () => {
+    // 파생 목록이 손으로 유지되는 두 번째 목록이 되지 않게 막는다.
+    expect([...PUBLIC_READING_TYPES, ...INTERNAL_READING_TYPES].sort()).toEqual(
+      [...READING_TYPES].sort(),
+    );
+  });
+
+  /** 내부 유형도 라벨·설명·메타 문구가 있어야 한다 — `/admin` 과 그 페이지가 쓴다. */
+  it("내부 유형도 문구가 비어 있지 않다", () => {
+    for (const type of INTERNAL_READING_TYPES) {
+      expect(READING_TYPE_LABEL[type]).toBeTruthy();
+      expect(READING_TYPE_DESCRIPTION[type].length).toBeGreaterThan(10);
+      expect(READING_TYPE_META[type].description.length).toBeGreaterThan(10);
+    }
   });
 });

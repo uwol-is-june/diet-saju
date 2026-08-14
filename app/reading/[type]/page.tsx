@@ -8,6 +8,7 @@ import {
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   READING_TYPE_META,
+  READING_TYPE_VISIBILITY,
   type ReadingType,
 } from "@/lib/saju/schema";
 
@@ -63,6 +64,15 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: url },
+    /**
+     * 내부 유형은 검색에 노출하지 않는다 (TASK-41). 메인 목록에서 링크가 사라져도
+     * 이미 색인됐을 수 있고, 검색에서 들어오면 내린 의미가 없다.
+     * 프리렌더는 계속 한다 — 빼면 `/reading/general` 자체가 죽는다.
+     */
+    robots:
+      READING_TYPE_VISIBILITY[readingType] === "internal"
+        ? { index: false, follow: false }
+        : undefined,
     openGraph: {
       type: "website",
       siteName: "다이어트 사주",

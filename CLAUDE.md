@@ -458,10 +458,32 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
 프롬프트로 검사하고 있었다. 지금은 둘 다 `Record` 와 `READING_TYPES` 순회로 바꿨다.
 
 손대야 하는 곳: `schema.ts` 의 유형 문구 셋(`READING_TYPE_LABEL` · **카드 설명**
-`READING_TYPE_DESCRIPTION` · **검색·공유 문구** `READING_TYPE_META`) · 섹션 계약
-(`reading/sections.ts`) · 섹션 지침과 유형별 서두·규칙(`prompt.ts`) · 공유 카드 칩
-(`share/card-model.ts`). 유형 선택 카드 · 결과 뒤 링크 · `/reading/[type]` 프리렌더는
-`READING_TYPES` 를 순회하므로 자동이다.
+`READING_TYPE_DESCRIPTION` · **검색·공유 문구** `READING_TYPE_META`) · **노출 구분**
+(`READING_TYPE_VISIBILITY`) · 섹션 계약(`reading/sections.ts`) · 섹션 지침과 유형별
+서두·규칙(`prompt.ts`) · **유형별 판정 블록**(`prompt.ts` 의 `VERDICT_BLOCK`) · 공유 카드 칩
+(`share/card-model.ts`). 유형 선택 카드 · 결과 뒤 링크 · `/admin` · `/reading/[type]`
+프리렌더는 목록을 순회하므로 자동이다.
+
+#### 노출 구분 — 목록과 프리렌더는 다른 목록을 쓴다 (TASK-41)
+
+`READING_TYPE_VISIBILITY` 가 `public`/`internal` 을 정하고, `PUBLIC_READING_TYPES` ·
+`INTERNAL_READING_TYPES` 가 **거기서 파생된다.** 손으로 유지하는 두 번째 목록을 만들지 말 것.
+
+| 쓰는 곳 | 도는 목록 | 왜 |
+| --- | --- | --- |
+| 유형 선택 카드 · 결과 뒤 링크 | `PUBLIC_READING_TYPES` | 내부 유형은 보이면 안 된다 |
+| `/admin` | `INTERNAL_READING_TYPES` | 내린 유형으로 들어가는 유일한 입구 |
+| `generateStaticParams` | **`READING_TYPES` 전부** | 빼면 `/reading/general` 자체가 죽는다 |
+
+- **내부 유형 페이지와 `/admin` 은 `noindex` 다.** 메인에서 링크가 사라져도 이미 색인됐을 수
+  있고, 검색에서 들어오면 내린 의미가 없다.
+- **`/admin` 에 인증이 없다 — 숨김이지 보호가 아니다.** URL 을 아는 사람은 누구나 들어온다.
+  지금 목적(본인이 다른 서비스와 결과 대조)에는 충분하고 비밀도 아니다. **여기에 진짜 관리
+  기능을 붙이려면 그 전에 인증을 먼저 넣어야 한다.**
+- **`readingType` 기본값은 공개 유형이어야 한다.** 유형을 생략한 요청이 화면에서 고를 수 없는
+  유형으로 가면 안 된다. `schema.test.ts` 가 막는다.
+- **공개 유형이 하나뿐이면 결과 뒤 링크(`OtherReadingLinks`)는 아무것도 내지 않는다.**
+  제목만 남은 빈 상자가 되기 때문이다. 유형이 늘면 저절로 다시 나타난다.
 
 **카드 설명과 메타 설명은 사용자에게 그대로 보이는 문구다.** 그 유형의 표현 규칙이 판정
 문구와 똑같이 적용된다 — `diet` 는 처방·수치도, 예언 어휘도 쓰지 않는다 (올해 흐름을
@@ -633,6 +655,11 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
     한때 유효했고 검색·공유 문구까지 있던 URL 이라 밖에 링크가 남아 있을 수 있다.
     목적지가 `/reading/diet` 가 아닌 이유: 운세를 보러 온 사람에게 체질 풀이를 들이미는 것은
     다른 것을 준 것이다. 유형 선택 화면에서 직접 고르게 한다.
+  - **`general` 은 메인에서 내려 `/admin` 에서만 들어간다** (2026-08-14 · TASK-41).
+    나중에 없앨 유형이지만 그때까지 다른 사주 서비스와 결과를 대조하는 데 쓴다.
+    `READING_TYPES` 에서 빼지 않는 이유는 그러면 `Record<ReadingType, …>` 가 general 몫을
+    전부 지우라고 하고, 되살릴 때 프롬프트·섹션 계약을 다시 써야 하기 때문이다.
+    지금 필요한 건 노출 제어뿐이다 — 자세한 것은 아래 "노출 구분" 절.
   - 새 기능은 **두 유형 모두**에 적용되는지 확인한다.
   (궁합·직업 적성은 도입하지 않았다 — 궁합은 입력이 2인분이 되어 개인정보 처리방침 1항까지
   손대야 하고, 직업 적성은 십신→직업 매핑표를 새로 만들어야 한다.)

@@ -33,6 +33,36 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
 };
 
 /**
+ * 노출 구분 (TASK-41). **유형을 지우는 게 아니라 "보이는 곳" 만 나눈다.**
+ *
+ * `general` 은 나중에 없앨 유형이지만 그때까지 다른 사주 서비스와 대조해 문제를 잡는 데
+ * 쓴다. `READING_TYPES` 에서 빼면 `Record<ReadingType, …>` 가 general 몫을 전부 지우라고
+ * 하고, 그러면 되살릴 때 프롬프트·섹션 계약을 다시 써야 한다. 지금 필요한 건 노출 제어뿐이다.
+ *
+ * **`Record` 로 둔다.** 배열로 두면 새 유형이 조용히 빠진 채 나가지만, `Record` 면
+ * 유형을 늘릴 때 여기가 컴파일 오류로 잡힌다.
+ *
+ * `internal` 은 **숨김이지 보호가 아니다** — `/admin` 에 인증이 없으므로 URL 을 아는
+ * 사람은 누구나 들어온다. 지금 목적(본인 비교용)에는 충분하고 비밀도 아니다.
+ */
+export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal"> = {
+  general: "internal",
+  diet: "public",
+};
+
+/**
+ * 사용자에게 목록으로 보여줄 유형. **`READING_TYPE_VISIBILITY` 에서 파생시킨다** —
+ * 손으로 유지하는 두 번째 목록을 만들지 않기 위해서다.
+ */
+export const PUBLIC_READING_TYPES = READING_TYPES.filter(
+  (type) => READING_TYPE_VISIBILITY[type] === "public",
+);
+
+export const INTERNAL_READING_TYPES = READING_TYPES.filter(
+  (type) => READING_TYPE_VISIBILITY[type] === "internal",
+);
+
+/**
  * 유형 선택 카드의 한 줄 설명 (TASK-30).
  *
  * **`Record<ReadingType, string>` 를 유지한다.** 삼항이나 인덱스 시그니처로 두면
@@ -96,7 +126,14 @@ export const sajuInputSchema = z.object({
   /** 음력 입력일 때 윤달 여부. 양력이면 무시된다. */
   isLeapMonth: z.boolean().default(false),
   gender: z.enum(["male", "female", "unspecified"]).default("unspecified"),
-  readingType: z.enum(READING_TYPES).default("general"),
+  /**
+   * 유형 없이 온 요청의 기본값. **공개 유형이어야 한다** (TASK-41).
+   *
+   * 예전 기본값은 `general` 이었는데 그 유형이 `internal` 이 되면서, 유형을 생략한 요청이
+   * 화면에서는 고를 수 없는 유형으로 가게 됐다. 폼은 항상 세그먼트에서 유형을 주므로
+   * 실동작 문제는 없었지만, **기본값은 사용자가 실제로 요청할 수 있는 것**이어야 한다.
+   */
+  readingType: z.enum(READING_TYPES).default("diet"),
 
   /**
    * 시각 보정 방식.

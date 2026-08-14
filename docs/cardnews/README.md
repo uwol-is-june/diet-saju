@@ -44,7 +44,7 @@ node docs\cardnews\render.mjs docs\cardnews\다른주제.json
 | `cards.json` | 카드별 내용 (제목·본문·사진 경로·해시태그) |
 | `render.mjs` | 데이터 + CSS → HTML → PNG + caption.txt |
 | `fetch-photos.mjs` | Pexels 에서 후보 사진 받기 → 고른 것만 확정 |
-| `extract-logo.mjs` | 레퍼런스에서 로고 잘라내기 (한 번만) |
+| `extract-parts.mjs` | 레퍼런스에서 로고·느낌표 잘라내기 (한 번만) |
 | `generate-photos.mjs` | Gemini 이미지 생성 (**무료 등급에서는 못 쓴다**, 아래 참조) |
 | `fonts/` | 나눔스퀘어 네오 woff2 4종 |
 
@@ -65,23 +65,35 @@ ExtraBold 800 · Heavy 900)을 `@font-face` 로 물린다. 네이버 배포 폰�
   자간이 미묘하게 다른 결과물이 나올 때까지 모른다.
 - `fonts/` 를 지우면 폴백으로 떨어져 크기·자간이 달라진다. 지우지 말 것.
 
-## 로고
+## 레퍼런스에서 잘라낸 조각 (로고 · 느낌표)
 
-**레퍼런스에서 잘라낸 이미지를 그대로 쓴다** (`assets/logo.png`, 124×40).
-도형으로 다시 그리면 그 순간 변형이 되므로 SVG 로 흉내내지 않는다.
+**도형으로 다시 그리지 않고 레퍼런스에서 잘라낸 이미지를 그대로 쓴다.** 그리는 순간
+변형이 되기 때문이다. 느낌표도 같다 — 원본은 하이라이트와 그림자가 들어간 입체 그림이라
+CSS 도형으로는 납작한 다른 물건이 나온다.
 
 ```powershell
-node docs\cardnews\extract-logo.mjs   # ref2.png → assets/logo.png (한 번만)
+node docs\cardnews\extract-parts.mjs        # 둘 다 (한 번만)
+node docs\cardnews\extract-parts.mjs bang   # 하나만
 ```
 
-잘라낸 것은 **흰 바탕 위의 회색 로고 한 장**뿐이다. 어두운 사진 위에 밝은 로고가 필요한
-커버는 CSS 가 뒤집어 쓴다 (`filter: invert(1)` + `mix-blend-mode: screen`). 두 벌을 만들면
-나중에 한쪽만 바뀐다.
+| 조각 | 파일 | 원본 |
+| --- | --- | --- |
+| "다시," 로고 | `assets/logo.png` (124×40) | `ref2.png` 우상단 |
+| 빨간 느낌표 | `assets/bang.png` (158×224) | `ref4.png` 우하단 (`notice` 카드) |
+
+좌표는 `extract-parts.mjs` 의 `PARTS` 에 실측값으로 있다. 캔버스가 레퍼런스와 같은
+1080×1350 이라 **거기서 잰 위치가 곧 카드에서 쓸 위치**다 (`card.css` 의 배치도 같은 값).
+
+잘라낸 것은 **흰 바탕 위의 그림** 한 장씩이다. 카드 바탕이 흰색이 아니어도 CSS 가
+`mix-blend-mode: multiply` 로 합성해 흰 바탕만 사라진다 — 느낌표의 옅은 그림자는 그래서
+사각형 없이 카드 바탕 위에 얹힌다. 어두운 사진 위에 밝은 로고가 필요한 커버는 CSS 가
+뒤집어 쓴다 (`filter: invert(1)` + `mix-blend-mode: screen`). 두 벌을 만들면 나중에
+한쪽만 바뀐다.
 
 - **`.logo` 에 `z-index` 를 주지 말 것.** 스태킹 컨텍스트가 생기면 `mix-blend-mode` 가 그
   상자 안에서만 합성되어 흰 바탕이 그대로 남는다 (실제로 커버에 검은 박스가 나왔다).
   로고는 DOM 에서 사진·스크림보다 뒤에 오므로 z-index 없이도 위에 그려진다.
-- 원본 벡터 파일을 받으면 `extract-logo.mjs` 를 지우고 그 파일로 교체한다.
+- 원본 벡터 파일을 받으면 그 조각을 `PARTS` 에서 지우고 받은 파일로 교체한다.
 
 ## cards.json 쓰는 법
 

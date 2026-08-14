@@ -89,7 +89,7 @@ body {
 
 /* ── 로고 (우상단 고정) ───────────────────────────────
  * 레퍼런스(ref2.png)에서 그대로 잘라낸 이미지다 — 다시 그리지 않는다.
- * 위치·크기도 원본과 같다 (extract-logo.mjs 의 LOGO_BOX).            */
+ * 위치·크기도 원본과 같다 (extract-parts.mjs 의 PARTS.logo).          */
 
 /* z-index 를 주지 않는다 — 스태킹 컨텍스트가 생기면 아래 mix-blend-mode 가
  * 이 상자 안에서만 합성되어(배경이 비어 있으므로) 흰 바탕이 그대로 남는다.
@@ -336,26 +336,22 @@ body {
   color: var(--body);
 }
 
-/* ref4 우하단의 빨간 느낌표 — 이미지가 아니라 도형이다 */
+/* ref4 우하단의 빨간 느낌표 — 레퍼런스에서 그대로 잘라낸 이미지다
+ * (extract-parts.mjs 의 PARTS.bang). 로고와 같은 이유로 도형으로 다시 그리지
+ * 않는다: 원본은 하이라이트와 그림자가 들어간 입체 그림이라 CSS 도형으로는
+ * 납작한 다른 물건이 나온다. 위치·크기도 원본과 같다 (PARTS.bang.box). */
 .is-notice .bang {
   position: absolute;
-  right: 92px;
-  bottom: 84px;
+  right: 64px; /* 1080 − (858 + 158) */
+  bottom: 74px; /* 1350 − (1052 + 224) */
+  width: 158px;
+  height: 224px;
 }
-.is-notice .bang i {
+.is-notice .bang img {
   display: block;
-  background: var(--red);
-  box-shadow: inset -10px 0 22px rgba(0, 0, 0, 0.18);
-}
-.is-notice .bang .stem {
-  width: 62px;
-  height: 168px;
-  border-radius: 30px 30px 16px 16px;
-  clip-path: polygon(6% 0, 94% 0, 78% 100%, 22% 100%);
-}
-.is-notice .bang .dot {
-  width: 62px;
-  height: 52px;
-  margin-top: 20px;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  /* 잘라낸 이미지엔 흰 바탕이 붙어 있다. multiply 로 흰색만 사라지고
+   * 원본의 옅은 그림자는 카드 바탕 위에 그대로 얹힌다. */
+  mix-blend-mode: multiply;
 }

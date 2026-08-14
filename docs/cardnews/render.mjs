@@ -90,11 +90,13 @@ function richTitle(raw) {
 /* ── 조각 ─────────────────────────────────────────────── */
 
 /**
- * 로고는 레퍼런스에서 잘라낸 이미지를 그대로 쓴다 (extract-logo.mjs).
+ * 로고와 느낌표는 레퍼런스에서 잘라낸 이미지를 그대로 쓴다 (extract-parts.mjs).
  * 다시 그리면 그 순간 변형이 되므로 도형으로 흉내내지 않는다.
  */
-const LOGO_SRC = pathToFileURL(path.join(HERE, "assets", "logo.png")).href;
-const LOGO = `<div class="logo"><img src="${LOGO_SRC}" alt="다시,"></div>`;
+const assetUrl = (name) => pathToFileURL(path.join(HERE, "assets", name)).href;
+const LOGO = `<div class="logo"><img src="${assetUrl("logo.png")}" alt="다시,"></div>`;
+/** 장식이므로 대체 텍스트를 비운다 — 뜻은 제목과 목록이 이미 전한다. */
+const BANG = `<div class="bang"><img src="${assetUrl("bang.png")}" alt=""></div>`;
 
 const WARN_ICON = `
 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -165,7 +167,7 @@ const LAYOUTS = {
           .join("")}
       </ul>
     </div>
-    <div class="bang"><i class="stem"></i><i class="dot"></i></div>`,
+    ${BANG}`,
 };
 
 function buildHtml(card, css) {

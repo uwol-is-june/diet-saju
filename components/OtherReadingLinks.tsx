@@ -1,0 +1,53 @@
+import Link from "next/link";
+import {
+  READING_TYPES,
+  READING_TYPE_DESCRIPTION,
+  READING_TYPE_LABEL,
+  type ReadingType,
+} from "@/lib/saju/schema";
+
+/**
+ * 결과 아래에 두는 "다른 유형도 보기" (TASK-31).
+ *
+ * **평범한 라우트 이동이다.** `router.replace` 로 URL 과 화면을 따로 맞추는 편법을 쓰지
+ * 않는다 — `BirthInputProvider` 가 입력을 들고 있으므로 옮겨 간 화면은 값이 채워진 채
+ * 접혀 있고, 제출 한 번이면 그 유형의 풀이가 나온다. URL 과 보이는 결과가 항상 일치하는
+ * 쪽을 택한 것이다.
+ *
+ * 현재 유형은 빼고 나머지만 낸다. `READING_TYPES` 를 순회하므로 유형이 늘면 자동이다.
+ */
+export function OtherReadingLinks({ current }: { current: ReadingType }) {
+  const others = READING_TYPES.filter((type) => type !== current);
+
+  return (
+    <section className="rounded-2xl border border-line bg-surface-muted p-5 sm:p-6">
+      <h2 className="mb-1 text-base font-bold">다른 유형으로도 보기</h2>
+      <p className="mb-4 text-sm text-ink-muted">
+        입력한 생년월일은 그대로 남아 있어, 다시 넣지 않아도 됩니다.
+      </p>
+      <ul className="space-y-2">
+        {others.map((type) => (
+          <li key={type}>
+            <Link
+              href={`/reading/${type}`}
+              className="group flex items-center gap-3 rounded-xl border border-line-strong bg-surface px-4 py-3 transition hover:border-brand hover:bg-brand-subtle"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{READING_TYPE_LABEL[type]}</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-ink-muted">
+                  {READING_TYPE_DESCRIPTION[type]}
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className="shrink-0 text-ink-muted transition group-hover:text-brand-ink"
+              >
+                →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

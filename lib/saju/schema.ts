@@ -44,6 +44,34 @@ export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   yearly: "올해 들어오는 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지 봅니다.",
 };
 
+/**
+ * `/reading/[type]` 의 검색·공유용 문구 (TASK-31).
+ *
+ * 카드 설명(`READING_TYPE_DESCRIPTION`)과 **따로 둔다.** 카드는 화면에서 제목 바로 밑에
+ * 붙으므로 짧아야 하고, 여기는 링크만 보고 판단하는 사람이 읽으므로 무엇을 넣어야 하는지
+ * (생년월일시)와 무엇이 나오는지를 같이 말해야 한다.
+ *
+ * **og:image 는 유형별로 만들지 않는다.** 고정 카드(`app/opengraph-image.png`) 하나를
+ * 유지한다 — 세 벌이 되면 `docs/og-card.html` 원본도 세 벌이고 팔레트 검사도 그만큼 는다.
+ */
+export const READING_TYPE_META: Record<ReadingType, { title: string; description: string }> = {
+  general: {
+    title: "종합 사주 풀이 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 일간·십신·오행 균형에서 타고난 기질과 사람을 대하는 방식, 지금 지나는 대운의 흐름을 풀어드립니다.",
+  },
+  diet: {
+    title: "체질·다이어트 풀이 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 오행 균형과 한열(조후)에서 몸의 결을 읽어 식습관과 움직임을 무엇부터 고정할지 순서로 짚어드립니다.",
+  },
+  yearly: {
+    title: "올해 운세 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 올해 세운의 기운이 원국의 어디에 닿는지와 어디에 힘을 쓰면 좋을지를 경향으로 풀어드립니다.",
+  },
+};
+
 export const sajuInputSchema = z.object({
   /** 표시용 이름. 없으면 익명으로 처리한다. */
   name: z.string().trim().max(20, "이름은 20자 이내로 입력해 주세요").optional(),

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
@@ -6,6 +7,7 @@ import {
   READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
+  READING_TYPE_META,
   type ReadingType,
 } from "@/lib/saju/schema";
 
@@ -28,6 +30,51 @@ function toReadingType(value: string): ReadingType {
   const match = READING_TYPES.find((type) => type === value);
   if (!match) notFound();
   return match;
+}
+
+/**
+ * 공유 카드 이미지 — **`/` 와 같은 고정 카드 하나**를 가리킨다 (TASK-31).
+ *
+ * `app/opengraph-image.png` 는 **파일 규약이라 그 세그먼트에만 붙고 하위로 상속되지
+ * 않는다** (Next 문서: "set ... for a route segment"). 실측으로 확인했다 — 이 줄이 없으면
+ * `/reading/diet` 를 카카오톡에 붙였을 때 이미지 없는 카드가 나간다. 사람들이 실제로
+ * 공유하는 URL 이 여기라 그쪽이 더 아프다.
+ *
+ * **유형별 카드를 만들지 않는다.** 세 벌이 되면 `docs/og-card.html` 원본도 세 벌이고
+ * 팔레트 검사(`lib/design/tokens.test.ts`)도 그만큼 는다. 얻는 것보다 유지 비용이 크다.
+ */
+const SHARED_OG_IMAGE = "/opengraph-image.png";
+
+/** 유형별 title·description (TASK-31). */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ type: string }>;
+}): Promise<Metadata> {
+  const readingType = toReadingType((await params).type);
+  const { title, description } = READING_TYPE_META[readingType];
+  const url = `/reading/${readingType}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      siteName: "다이어트 사주",
+      locale: "ko_KR",
+      url,
+      title,
+      description,
+      images: [SHARED_OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [SHARED_OG_IMAGE],
+    },
+  };
 }
 
 export default async function ReadingPage({

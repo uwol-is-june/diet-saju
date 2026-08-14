@@ -10,6 +10,7 @@ import {
 import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth-time";
 import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
 import { useBirthInput } from "./BirthInputProvider";
+import { OtherReadingLinks } from "./OtherReadingLinks";
 import { ResultView } from "./ResultView";
 
 /**
@@ -420,12 +421,16 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
         )}
 
         {chart && (
-          <ResultView
-            chart={chart}
-            reading={reading}
-            readingType={readingType}
-            streaming={streaming}
-          />
+          <>
+            <ResultView
+              chart={chart}
+              reading={reading}
+              readingType={readingType}
+              streaming={streaming}
+            />
+            {/* 생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하면 지금 글을 끊는다. */}
+            {!streaming && <OtherReadingLinks current={readingType} />}
+          </>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import {
   READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
+  READING_TYPE_META,
   sajuInputSchema,
 } from "./schema";
 
@@ -61,7 +62,11 @@ describe("카드 설명 — 표현 규칙", () => {
     "합격", "당첨", "투자", "돈이 들어온다",
   ];
 
-  const all = READING_TYPES.map((type) => READING_TYPE_DESCRIPTION[type]);
+  /** 카드 설명과 검색·공유 문구 전부 — 어느 쪽도 사용자에게 그대로 보인다. */
+  const all = READING_TYPES.flatMap((type) => [
+    READING_TYPE_DESCRIPTION[type],
+    READING_TYPE_META[type].description,
+  ]);
 
   it.each([...BANNED_MEDICAL, ...BANNED_PRESCRIPTION, ...BANNED_PROPHECY])(
     "어느 설명에도 %s 가 없다",
@@ -70,15 +75,52 @@ describe("카드 설명 — 표현 규칙", () => {
     },
   );
 
-  it("diet 설명에 숫자가 없다", () => {
+  it("diet 문구에 숫자가 없다", () => {
     // "3주에 5kg" 같은 수치가 섞이면 처방으로 읽힌다.
     expect(READING_TYPE_DESCRIPTION.diet).not.toMatch(/\d/);
+    expect(READING_TYPE_META.diet.description).not.toMatch(/\d/);
   });
 
   it("어느 설명도 단정형으로 끝나지 않는다", () => {
     // "~합니다" 로 서술하는 화법을 지킨다. "~됩니다"·"~드립니다" 도 같은 결이다.
     for (const text of all) {
       expect(text.endsWith("다.")).toBe(true);
+    }
+  });
+});
+
+describe("유형별 검색·공유 문구 (TASK-31)", () => {
+  it("세 유형 모두 title 과 description 이 있다", () => {
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_META[type].title).toBeTruthy();
+      expect(READING_TYPE_META[type].description.length).toBeGreaterThan(30);
+    }
+  });
+
+  it("title 이 서로 다르고 유형 라벨을 담는다", () => {
+    const titles = READING_TYPES.map((type) => READING_TYPE_META[type].title);
+    expect(new Set(titles).size).toBe(READING_TYPES.length);
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_META[type].title).toContain(READING_TYPE_LABEL[type]);
+    }
+  });
+
+  it("description 이 서로 다르다", () => {
+    const seen = new Set(READING_TYPES.map((type) => READING_TYPE_META[type].description));
+    expect(seen.size).toBe(READING_TYPES.length);
+  });
+
+  it("카드 설명과 같은 문장을 쓰지 않는다", () => {
+    // 링크만 보고 판단하는 사람이 읽는 글이라, 무엇을 넣어야 하는지까지 말해야 한다.
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_META[type].description).not.toBe(READING_TYPE_DESCRIPTION[type]);
+      expect(READING_TYPE_META[type].description).toContain("생년월일시");
+    }
+  });
+
+  it("title 이 검색 결과에서 잘리지 않을 길이다", () => {
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_META[type].title.length).toBeLessThanOrEqual(40);
     }
   });
 });

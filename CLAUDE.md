@@ -119,6 +119,15 @@ Gemini 실패는 이벤트로** 알린다. 원국은 LLM 실패와 무관하게 
 - `FirstVisitNotice` 는 `/reading/*` 에 있다. "입력한 생년월일은 저장하지 않습니다" 는
   **정보를 넣기 직전에** 보여야 뜻이 있다. 그래서 `/` 에는 클라이언트 컴포넌트가 없다.
 
+#### 결과 뒤 동선 (TASK-31)
+
+결과 아래의 `OtherReadingLinks` 가 나머지 두 유형으로 보낸다. **평범한 라우트 이동이다** —
+`router.replace` 로 URL 과 화면을 따로 맞추는 편법을 쓰지 않는다. 프로바이더가 입력을 들고
+있으므로 옮겨 간 화면은 값이 채워진 채 접혀 있고, 제출 한 번이면 그 유형의 풀이가 나온다.
+URL 과 보이는 결과가 항상 일치하는 쪽을 택한 것이다.
+
+**스트리밍 중에는 내지 않는다** — 지금 쓰이고 있는 글을 끊게 만든다.
+
 ### 섹션 계약 — JSON 구조화 출력을 쓰지 않는 이유 (TASK-06 결정)
 
 `responseMimeType: "application/json"` + `responseSchema` 는 **채택하지 않았다.** JSON 은
@@ -206,7 +215,13 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
   간지·십신만 적는다 (구간을 적으면 출생 연도가 좁혀진다). 테스트가 이 규칙을 막는다.
 - **og:image 는 고정 카드다** — `app/opengraph-image.png`. 원본은 `docs/og-card.html` 이고
   1200×630 으로 렌더해 교체한다. 팔레트 값은 globals.css 에서 복사한 것이며 어긋나면
-  `lib/design/tokens.test.ts` 가 실패한다.
+  `lib/design/tokens.test.ts` 가 실패한다. **유형별로 만들지 않는다** — 세 벌이 되면 원본
+  HTML 도 팔레트 검사도 세 벌이 된다.
+- **파일 규약 이미지는 그 세그먼트에만 붙고 하위로 상속되지 않는다.** Next 문서가
+  "set ... **for a route segment**" 라고 쓴 그대로이며 실측으로 확인했다 —
+  `app/opengraph-image.png` 만 두면 `/reading/*` 에는 og:image 가 아예 없다. 그래서
+  `app/reading/[type]/page.tsx` 의 `generateMetadata` 가 **같은 고정 카드 경로**를 명시한다.
+  사람들이 실제로 공유하는 URL 이 그쪽이므로 이 줄을 지우면 이미지 없는 카드가 나간다.
 - `metadataBase` 없이는 og:image 가 상대 경로로 나가고 카카오톡 크롤러가 못 읽는다. 지우지 말 것.
 - **파비콘·앱 아이콘도 같은 방식이다** (TASK-26). 원본은 `docs/icon.html` 이고
   `node scripts/render-icons.mjs` 로 `app/icon.png`(512) · `app/apple-icon.png`(180) ·
@@ -433,14 +448,17 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
 새어 나갈 뻔했고, `prompt.test.ts` 도 `type === "diet" ? … : …` 때문에 새 유형을 general
 프롬프트로 검사하고 있었다. 지금은 둘 다 `Record` 와 `READING_TYPES` 순회로 바꿨다.
 
-손대야 하는 곳: 유형 라벨·**카드 설명**(`schema.ts` 의 `READING_TYPE_LABEL` ·
-`READING_TYPE_DESCRIPTION`) · 섹션 계약(`reading/sections.ts`) · 섹션 지침과 유형별
-서두·규칙(`prompt.ts`) · 공유 카드 칩(`share/card-model.ts`). 유형 선택 카드와
-`/reading/[type]` 프리렌더는 `READING_TYPES` 를 순회하므로 자동이다.
+손대야 하는 곳: `schema.ts` 의 유형 문구 셋(`READING_TYPE_LABEL` · **카드 설명**
+`READING_TYPE_DESCRIPTION` · **검색·공유 문구** `READING_TYPE_META`) · 섹션 계약
+(`reading/sections.ts`) · 섹션 지침과 유형별 서두·규칙(`prompt.ts`) · 공유 카드 칩
+(`share/card-model.ts`). 유형 선택 카드 · 결과 뒤 링크 · `/reading/[type]` 프리렌더는
+`READING_TYPES` 를 순회하므로 자동이다.
 
-**카드 설명은 사용자에게 그대로 보이는 문구다.** 그 유형의 표현 규칙이 판정 문구와 똑같이
-적용된다 — `diet` 는 처방·수치를, `yearly` 는 예언 어휘를 쓰지 않는다.
-`lib/saju/schema.test.ts` 가 세 유형의 설명을 금지 어휘로 훑는다.
+**카드 설명과 메타 설명은 사용자에게 그대로 보이는 문구다.** 그 유형의 표현 규칙이 판정
+문구와 똑같이 적용된다 — `diet` 는 처방·수치를, `yearly` 는 예언 어휘를 쓰지 않는다.
+`lib/saju/schema.test.ts` 가 세 유형의 문구를 금지 어휘로 훑는다.
+둘을 하나로 합치지 말 것 — 카드는 제목 바로 밑이라 짧아야 하고, 메타는 링크만 보고
+판단하는 사람이 읽으므로 무엇을 넣어야 하는지(생년월일시)까지 말해야 한다.
 
 ### 그 밖의 도메인 규칙
 

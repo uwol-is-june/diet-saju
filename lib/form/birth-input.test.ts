@@ -177,3 +177,40 @@ describe("유형은 라우트가 정한다", () => {
     expect(page).toContain("generateStaticParams");
   });
 });
+
+/**
+ * 결과 뒤 동선 (TASK-31) — 다른 유형으로 **평범한 라우트 이동**으로 넘어간다.
+ * `router.replace` 로 URL 과 화면을 따로 맞추면 URL 과 보이는 결과가 어긋난다.
+ */
+describe("결과 뒤 동선", () => {
+  it("다른 유형 링크가 next/link 로 이동한다", () => {
+    const links = readCode("components/OtherReadingLinks.tsx");
+    expect(links).toContain("next/link");
+    expect(links).not.toContain("useRouter");
+    expect(links).not.toContain("replace");
+  });
+
+  it("현재 유형은 목록에서 빠진다", () => {
+    const links = readCode("components/OtherReadingLinks.tsx");
+    expect(links).toContain("READING_TYPES.filter((type) => type !== current)");
+  });
+
+  it("결과 화면이 그 링크를 낸다", () => {
+    expect(readCode("components/SajuForm.tsx")).toContain("OtherReadingLinks");
+  });
+
+  it("유형별 메타데이터가 붙어 있다", () => {
+    const page = readCode("app/reading/[type]/page.tsx");
+    expect(page).toContain("generateMetadata");
+    expect(page).toContain("READING_TYPE_META");
+  });
+
+  it("og:image 는 / 와 같은 고정 카드 하나를 가리킨다", () => {
+    // 파일 규약(app/opengraph-image.png)은 하위 세그먼트로 상속되지 않는다.
+    // 이 줄이 없으면 사람들이 실제로 공유하는 URL 에서 이미지 없는 카드가 나간다.
+    const page = readCode("app/reading/[type]/page.tsx");
+    expect(page).toContain('"/opengraph-image.png"');
+    // 유형별 카드를 만들면 원본 HTML 과 팔레트 검사가 세 벌이 된다.
+    expect(page).not.toMatch(/opengraph-image-(?:general|diet|yearly)/);
+  });
+});

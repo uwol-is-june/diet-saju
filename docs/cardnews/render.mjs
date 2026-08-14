@@ -104,6 +104,18 @@ const WARN_ICON = `
   <path d="M12 8.5v6M12 17.4v.2" stroke="#3A2E00" stroke-width="2.2" stroke-linecap="round"/>
 </svg>`;
 
+/**
+ * 정보 출처 한 줄. **사진 출처와 다른 것이다** — 사진 쪽은 표기 의무가 없어
+ * caption.txt 로 모으지만(buildCaption), 이건 카드에 적은 사실의 근거라
+ * 그 사실과 같은 화면에 있어야 뜻이 있다. 캡션으로 내리면 카드만 캡처해
+ * 퍼가는 경우 근거가 떨어져 나간다.
+ *
+ * 표지에는 붙이지 않는다 — 표지는 주장이 아니라 제목이라 댈 근거가 없다.
+ * 라벨(`출처 ·`)은 코드가 붙인다. 데이터에 적게 하면 카드마다 표기가 갈린다.
+ */
+const sourceLine = (card) =>
+  card.source ? `<p class="source">출처 · ${escape(card.source)}</p>` : "";
+
 function photoDiv(card) {
   const [a, b] = card.tone ?? [];
   const tone = a && b ? `--tone-a:${a};--tone-b:${b};` : "";
@@ -133,6 +145,7 @@ const LAYOUTS = {
       <h2 class="title">${richTitle(c.title)}</h2>
       <div class="body">${richText(c.body)}</div>
     </div>
+    ${sourceLine(c)}
     ${photoDiv(c)}`,
 
   split: (c) => `
@@ -141,14 +154,16 @@ const LAYOUTS = {
     <div class="copy">
       <h2 class="title">${richTitle(c.title)}</h2>
       <div class="body">${richText(c.body)}</div>
-    </div>`,
+    </div>
+    ${sourceLine(c)}`,
 
   plain: (c) => `
     ${LOGO}
     <div class="copy">
       <h2 class="title">${richTitle(c.title)}</h2>
       <div class="body">${richText(c.body)}</div>
-    </div>`,
+    </div>
+    ${sourceLine(c)}`,
 
   notice: (c) => `
     ${LOGO}
@@ -167,6 +182,7 @@ const LAYOUTS = {
           .join("")}
       </ul>
     </div>
+    ${sourceLine(c)}
     ${BANG}`,
 };
 
@@ -180,6 +196,7 @@ function buildHtml(card, css) {
   // 사진 출처는 카드에 찍지 않는다 — Pexels 라이선스가 표기를 요구하지 않고,
   // 다섯 장마다 같은 줄이 들어가면 읽는 데 방해가 된다. 대신 out/caption.txt 로
   // 모아서 인스타그램 본문에 한 번 붙인다 (buildCaption).
+  // 반대로 **정보 출처**(card.source)는 카드에 찍는다 — sourceLine 참고.
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><style>${css}</style></head>
 <body><div class="card is-${card.layout}">${layout(card)}</div></body></html>`;

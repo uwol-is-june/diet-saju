@@ -49,6 +49,7 @@
   --bg: #f5f5f5; /* 카드 바탕 */
   --red: #ff2a21; /* 주의 카드 제목 */
   --logo: #b6b6b6; /* 로고(밝은 배경) */
+  --muted: #8b8b90; /* 출처 한 줄 */
 
   --pad: 68px; /* 좌우 안전 여백 */
 }
@@ -173,6 +174,26 @@ body {
   margin-top: 44px;
 }
 
+/* ── 정보 출처 한 줄 ──────────────────────────────────
+ * 카드에 적은 사실의 근거다. 사진 출처(caption.txt)와 다른 것이다.
+ *
+ * 본문 하한 44px 이 적용되지 않는 유일한 글자다 — 읽으라고 두는 줄이 아니라
+ * "어디서 나온 얘기지" 를 확인하려는 사람이 찾을 수 있게 두는 줄이라서
+ * 28px(피드에서 10px 남짓)로 둔다. 본문 크기로 키우면 이 줄이 마지막 문장처럼
+ * 읽혀서 카드의 결론을 흐린다.
+ *
+ * 위치는 레이아웃마다 다르다 — 카드 밑변이 아니라 **글 칸의 밑변**에 붙인다.
+ * stack 은 아래가 사진이고 split 은 왼쪽이 사진이라, 밑변에 고정하면 사진 위로
+ * 올라가 사진 밝기에 따라 읽히거나 안 읽힌다.                                */
+.source {
+  position: absolute;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -0.03em;
+  color: var(--muted);
+}
+
 /* ── 레이아웃 1 · 커버 (ref1) ─────────────────────────── */
 
 .card.is-cover {
@@ -243,6 +264,12 @@ body {
   inset: auto 0 0 0;
   height: 596px;
 }
+/* 사진 바로 위. 사진 높이(596px)에 묶여 있으므로 둘을 함께 고칠 것. */
+.is-stack .source {
+  left: var(--pad);
+  right: var(--pad);
+  bottom: 632px;
+}
 
 /* ── 레이아웃 3 · 좌 사진 + 우 텍스트 (ref3) ───────────── */
 
@@ -267,6 +294,12 @@ body {
   font-size: 41px;
   line-height: 1.7;
 }
+/* 글 칸 안에서만 — 왼쪽 372px 는 사진이다. */
+.is-split .source {
+  left: 424px;
+  right: 52px;
+  bottom: 62px;
+}
 
 /* ── 레이아웃 4 · 텍스트 전면 ──────────────────────────── */
 
@@ -278,6 +311,11 @@ body {
 }
 .is-plain .body {
   margin-top: 56px;
+}
+.is-plain .source {
+  left: var(--pad);
+  right: var(--pad);
+  bottom: 62px;
 }
 
 /* ── 레이아웃 5 · 주의사항 (ref4) ─────────────────────── */
@@ -334,6 +372,14 @@ body {
 .is-notice .detail .arrow {
   font-weight: 700;
   color: var(--body);
+}
+
+/* 오른쪽은 느낌표 자리(64 + 158)라 260px 를 비운다. 여기 겹치면 출처가
+ * 느낌표 그림 위에 얹혀 읽히지 않는다. */
+.is-notice .source {
+  left: var(--pad);
+  right: 260px;
+  bottom: 62px;
 }
 
 /* ref4 우하단의 빨간 느낌표 — 레퍼런스에서 그대로 잘라낸 이미지다

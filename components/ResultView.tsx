@@ -10,6 +10,7 @@ import { OhaengCycle } from "./charts/OhaengCycle";
 import { ThermalScale } from "./charts/ThermalScale";
 import { ReadingSections } from "./ReadingSections";
 import { ShareActions } from "./ShareActions";
+import { VerdictCallout } from "./VerdictCallout";
 
 /* 오행 배지 톤 표는 `charts/OhaengBars.tsx` 로 옮겼다 (TASK-25에서 배지 줄을 막대로 교체). */
 
@@ -120,6 +121,14 @@ export function ResultView({
       </FoldCard>
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
+
+      {/*
+        판정 한 줄 콜아웃 (TASK-47). **풀이 바로 위**에 둔다 — 원국은 60~70ms 에 오고
+        첫 글자는 1초 뒤라, 기다리는 동안 결론 한 줄이 먼저 뜬다.
+        스트리밍 중에도 낸다. `OtherReadingLinks` 와 달리 **읽고 있는 글을 끊는 것이
+        아니라 그 글의 결론**이라, 먼저 떠 있는 편이 오히려 읽는 데 도움이 된다.
+      */}
+      <VerdictCallout chart={chart} readingType={readingType} />
 
       <div aria-label="풀이" aria-busy={streaming} role="region">
         <ReadingSections reading={reading} readingType={readingType} streaming={streaming} />

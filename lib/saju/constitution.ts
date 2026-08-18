@@ -379,6 +379,30 @@ export const METABOLISM_NOTE: Record<MetabolismTendency, string> = {
     "일간을 돕는 힘이 얇아 쌓아 두려는 쪽이다. 무리하게 줄이기보다 수면과 끼니를 먼저 고정하고 강도는 나중에 올리는 순서가 맞는다.",
 };
 
+/**
+ * 살이 붙는 패턴의 **한 줄 라벨** (TASK-47). 화면 콜아웃과 프롬프트가 함께 쓴다.
+ *
+ * `gainPattern` 에서 **1:1 로 파생**되므로 새 동점 처리가 없다 (`MOVEMENT_PLAN`·
+ * `MEAL_PLAN` 과 같은 이유). 문구를 코드가 고르므로 같은 사주면 언제나 같은 라벨이다.
+ *
+ * ## 왜 `많이 먹어서 찐 살` 이 아닌가
+ *
+ * 원래 초안이 그것이었는데 **TASK-55 가 경계를 다시 그으면서 바뀌었다.** 판정 라벨은
+ * 단정해도 되지만 단정하는 대상은 **이 사주에서 읽히는 결**이지 몸에서 실제로 일어나는
+ * 일이 아니다. `~해서 찐 살` 은 몸의 인과를 주장하는 문장이라 (ii) 쪽에 걸린다.
+ *
+ * 그래서 형태를 **"~할 때 붙는 결"** 로 고정했다 — 서술은 단정형이고(무르게 만드는 어미가
+ * 없다), 주장하는 것은 결이 드러나는 **자리와 상황**까지다. `constitution.test.ts` 가
+ * `때문에`·`~해서` 류 인과 어미를 막는다.
+ */
+export const GAIN_LABEL: Record<GainPattern, string> = {
+  근육형: "몰아붙일 때 붙는 결",
+  식욕형: "먹는 자리에서 붙는 결",
+  불규칙형: "때를 놓칠 때 붙는 결",
+  스트레스형: "긴장이 쌓일 때 붙는 결",
+  정체형: "덜 움직일 때 붙는 결",
+};
+
 export const GAIN_PATTERN_NOTE: Record<GainPattern, string> = {
   근육형:
     "겨루듯 몰아붙이기 쉬운 결이다. 체중 숫자보다 몸의 구성이 더 의미 있고, 한 번에 쏟아붓는 방식은 오래가지 않는다.",
@@ -469,6 +493,8 @@ export interface ConstitutionAnalysis {
   dominantGroup: SipsinGroup;
   gainPattern: GainPattern;
   gainPatternNote: string;
+  /** 패턴의 한 줄 라벨 (TASK-47). 화면 콜아웃과 프롬프트가 함께 쓴다. */
+  gainLabel: string;
 
   /**
    * 다이어트 접근 순서 — 대사 기조 × 걸리는 지점 (우리 관례, TASK-24).
@@ -569,6 +595,7 @@ export function analyzeConstitution(input: ConstitutionInput): ConstitutionAnaly
     dominantGroup,
     gainPattern,
     gainPatternNote: GAIN_PATTERN_NOTE[gainPattern],
+    gainLabel: GAIN_LABEL[gainPattern],
 
     gainSite,
     dietApproach,

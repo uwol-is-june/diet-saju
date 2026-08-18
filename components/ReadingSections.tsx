@@ -92,7 +92,14 @@ export function ReadingSections({
                 접두어로 맞춰지므로 id 가 처음부터 안정적이다.
               */
               <article
-                key={section.id ?? `unmatched-${index}`}
+                /*
+                  **id 뒤에 index 를 붙인다.** 모델이 같은 제목을 두 번 낼 때가 있어서
+                  (표본 4건 중 1건에서 `## 어디서부터 붙는가` 가 두 번 왔다) id 만 쓰면
+                  key 가 겹친다. index 는 스트리밍 중에도 앞쪽 섹션에서 바뀌지 않으므로
+                  위 주석의 안정성은 그대로다 — 제목을 key 로 쓸 때와 달리 조각마다
+                  remount 되지 않는다.
+                */
+                key={section.id ? `${section.id}-${index}` : `unmatched-${index}`}
                 className="anim-rise py-5 first:pt-0 last:pb-0"
               >
                 <h2 className="mb-2 text-base font-bold">

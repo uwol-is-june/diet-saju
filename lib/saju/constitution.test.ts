@@ -8,6 +8,7 @@ import {
   EXCESS_RATIO,
   FOCUS_GUIDE,
   FOOD_HOW,
+  GAIN_LABEL,
   GAIN_PATTERN_NOTE,
   MEAL_PLAN,
   METABOLISM_NOTE,
@@ -456,6 +457,8 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     ]),
     ...Object.values(METABOLISM_NOTE),
     ...Object.values(GAIN_PATTERN_NOTE),
+    // 한 줄 라벨 (TASK-47) — 콜아웃으로 **가장 크게** 나가는 문구다
+    ...Object.values(GAIN_LABEL),
     ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
     // 실행 방법 (TASK-40) — (B) 로 넓힌 축이라 여기가 가장 처방에 가깝다
     ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.kind, plan.how, plan.caution]),
@@ -470,7 +473,7 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
 
   it("문구 표가 비어 있지 않다", () => {
     // 위 수집이 깨져 빈 배열이 되면 아래 검사가 통과해 버린다.
-    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 8 + 12 + 10 + 20 + 2);
+    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 5 + 8 + 12 + 10 + 20 + 2);
   });
 
   it.each(BANNED)("어느 문구에도 %s 가 없다", (word) => {
@@ -494,6 +497,31 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
    * 실려 나가는데 목록이 두 벌이라 한쪽만 늘어난 것이다. 같은 목록을 쓰면 표를
    * `userFacing` 에 더하는 순간 숫자 검사도 함께 걸린다.
    */
+  /**
+   * 한 줄 라벨 (TASK-47)은 **콜아웃으로 가장 크게 나가는 문구**라 따로 본다.
+   *
+   * 단정해도 되는 것은 이 사주에서 읽히는 **결**이고, 막을 것은 **몸의 인과**다
+   * (TASK-55 경계). `~해서 찐 살` · `~때문에` 는 몸에서 실제로 일어나는 일을 주장한다.
+   */
+  it("라벨이 몸의 인과를 주장하지 않는다", () => {
+    for (const label of Object.values(GAIN_LABEL)) {
+      expect(label, `${label} 이 인과로 읽힌다`).not.toMatch(/때문에|해서 찐|라서 찐/);
+    }
+  });
+
+  it("라벨이 무르게 만드는 어미를 쓰지 않는다", () => {
+    // 판정 라벨은 단정한다 (TASK-55). 콜아웃에 hedge 가 붙으면 결론이 사라진다.
+    for (const label of Object.values(GAIN_LABEL)) {
+      expect(label).not.toMatch(/편|수 있|듯|경향/);
+    }
+  });
+
+  it("라벨이 패턴마다 다르고 짧다", () => {
+    const labels = Object.values(GAIN_LABEL);
+    expect(new Set(labels).size).toBe(labels.length);
+    for (const label of labels) expect(label.length).toBeLessThanOrEqual(16);
+  });
+
   it("사용자에게 나가는 문구에 아라비아 숫자가 없다", () => {
     expect(userFacing.filter((text) => /\d/.test(text))).toEqual([]);
   });

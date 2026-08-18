@@ -104,7 +104,17 @@ describe("스트리밍 중 등장이 다시 재생되지 않는다", () => {
      * remount 되고, CSS 애니메이션은 mount 마다 재생되므로 글이 떨린다.
      */
     expect(READING_SECTIONS).not.toContain("key={section.title}");
-    expect(READING_SECTIONS).toMatch(/key=\{section\.id \?\?/);
+    expect(READING_SECTIONS).toContain("${section.id}-${index}");
+  });
+
+  it("같은 제목이 두 번 와도 key 가 겹치지 않는다", () => {
+    /**
+     * 모델이 같은 제목을 두 번 내는 일이 실제로 있다 (표본 4건 중 1건에서
+     * `## 어디서부터 붙는가` 가 두 번 왔다). id 만 key 로 쓰면 그때 겹친다.
+     * index 는 스트리밍 중에도 앞쪽 섹션에서 바뀌지 않으므로 위 안정성은 그대로다 —
+     * 제목을 key 로 쓸 때와 달리 조각마다 remount 되지 않는다.
+     */
+    expect(READING_SECTIONS).toContain("section.id ? `${section.id}-${index}`");
   });
 
   it("등장 애니메이션을 JS 상태로 제어하지 않는다", () => {

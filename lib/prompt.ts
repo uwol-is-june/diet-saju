@@ -475,6 +475,11 @@ function buildConstitutionBlock(constitution: SajuChart["constitution"]): string
     `- 한열(조후): **${constitution.thermal}** — ${constitution.thermalTendency}`,
     `- 대사 기조: **${constitution.metabolism}** — ${constitution.metabolismNote}`,
     `- 살이 붙는 패턴: **${constitution.gainPattern}** (십신 우세 ${constitution.dominantGroup} ${dominantCount}자) — ${constitution.gainPatternNote}`,
+    /*
+      한 줄 라벨 (TASK-47). **화면이 이 문장을 콜아웃으로 이미 크게 띄우고 있다.**
+      본문이 그대로 되풀이하면 같은 말이 화면 위아래에 두 번 나온다.
+    */
+    `  - 이 패턴의 한 줄 라벨: "${constitution.gainLabel}" — **화면에 이미 이 문장이 떠 있으므로 본문에 그대로 옮겨 적지 말 것.** 같은 결을 다른 말로 풀어 쓰라.`,
     `- 다이어트 접근 순서: **${constitution.dietApproach}** (대사 기조 ${constitution.metabolism} × 걸리는 지점 ${constitution.gainSite})`,
     `  - 순서: ${constitution.dietApproachOrder}`,
     `  - 흔히 어긋나는 지점: ${constitution.dietApproachCaution}`,

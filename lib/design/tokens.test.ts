@@ -301,6 +301,7 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     "components/OtherReadingLinks.tsx",
     "components/ScrollToTop.tsx",
     "components/LikeButton.tsx",
+    "components/VerdictCallout.tsx",
     // 도식 (TASK-25) — SVG 의 fill/stroke 도 토큰에서만 온다
     "components/charts/OhaengBars.tsx",
     "components/charts/OhaengCycle.tsx",

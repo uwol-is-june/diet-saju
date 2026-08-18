@@ -87,9 +87,6 @@ describe("토큰 정의", () => {
       "--color-line", "--color-line-strong",
       "--color-link", "--color-danger", "--color-danger-subtle", "--color-danger-ink",
       "--color-warning", "--color-warning-subtle", "--color-warning-ink",
-      // 카드 썸네일 자리 — 글자를 올리지 않아 대비 조합은 없다.
-      // 사진으로 바꿀 때 이 셋을 globals.css 와 함께 지운다 (지울 곳 목록은 그쪽 주석에).
-      "--color-thumb-1", "--color-thumb-2", "--color-thumb-3",
       "--color-ohaeng-mok", "--color-ohaeng-mok-ink",
       "--color-ohaeng-hwa", "--color-ohaeng-hwa-ink",
       "--color-ohaeng-to", "--color-ohaeng-to-ink",
@@ -307,6 +304,8 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     "components/charts/OhaengCycle.tsx",
     "components/charts/ThermalScale.tsx",
     "components/charts/DaeunTimeline.tsx",
+    // 유형 카드 모티프 (TASK-50) — SVG 라 fill-*/stroke-* 에 hex 가 새기 쉽다
+    "components/thumbnails/ReadingThumbnail.tsx",
     // 캔버스 카드도 색을 CSS 토큰에서 읽는다. hex 를 박으면 단일 소스가 깨진다.
     "lib/share/draw-card.ts",
   ];

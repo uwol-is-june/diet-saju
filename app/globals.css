@@ -115,29 +115,6 @@
   --color-warning-subtle: var(--raw-yellow-100);
   --color-warning-ink: var(--raw-yellow-700);
 
-  /* 유형 선택 카드(`/`)의 썸네일 자리. **사진이 들어오기 전까지 쓰는 단색이다.**
-
-     사진으로 바꿀 때 함께 지울 곳 넷:
-       1. 이 토큰 셋
-       2. `app/page.tsx` 의 `THUMBNAIL_TONES` 배열과 그것을 쓰는 `<span>`
-       3. `lib/design/tokens.test.ts` 의 `--color-thumb-*` 세 줄
-       4. `docs/design-tokens.md` 의 "유형 카드 썸네일 자리" 절
-
-     기존 토큰을 재사용하지 않은 이유: `--color-brand-solid` 은 "주 액션 버튼 전용" 이고
-     `--color-ohaeng-*` 은 오행을 인코딩하는 값이라(막대·오각형·공유 카드가 공유한다)
-     장식으로 끌어 쓰면 그 의미가 흐려진다. 시맨틱 토큰은 "어디에 쓰는가" 를 말해야 한다.
-
-     **유형별 테마가 아니다.** 목록에서 카드가 서로 구분되게 하는 명도 차이일 뿐이라
-     번호로 이름 붙였고, 컴포넌트가 순서대로 돌려 쓴다 (유형이 늘어도 CSS 를 안 고친다).
-     글자를 올리지 않으므로 대비 조합은 없다 — 올리게 되면 그때 조합을 테스트에 넣을 것.
-
-     사진을 넣을 때 지킬 것: 파일을 **내려받아 `public/` 에 커밋한다.** 외부 URL 을 그대로
-     `src` 에 넣으면 방문자 IP 가 새 제3자에게 가고 `app/privacy/page.tsx` 4항을 고쳐야 한다.
-     `next.config.ts` 에 `images.remotePatterns` 가 필요해졌다면 핫링크하고 있다는 뜻이다. */
-  --color-thumb-1: var(--raw-green-500);
-  --color-thumb-2: var(--raw-green-600);
-  --color-thumb-3: var(--raw-green-700);
-
   /* 오행 (목화토금수) — 배지와 TASK-10 OG 이미지가 공유한다 */
   --color-ohaeng-mok: var(--raw-ohaeng-mok-bg);
   --color-ohaeng-mok-ink: var(--raw-green-700);

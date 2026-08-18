@@ -7,7 +7,8 @@ import { getRuntimeConfig } from "./env";
  * 목적: Gemini 무료 등급 한도(분당 요청 수)를 우리 쪽에서 먼저 막는 것.
  *
  * 한계: Vercel 서버리스는 인스턴스마다 메모리가 분리되므로 전역 한도가 아니다.
- * 트래픽이 붙으면 Upstash Redis 로 교체할 것 (docs/TASK.md TASK-07).
+ * 트래픽이 붙으면 Upstash Redis 로 교체할 것 — 저장소는 이미 붙어 있다
+ * (`CLAUDE.md` 의 "보류한 작업 > 레이트 리밋 영속화").
  */
 
 const WINDOW_MS = 60_000;

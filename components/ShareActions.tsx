@@ -17,7 +17,8 @@ import type { ReadingType, SajuChart } from "@/lib/saju/schema";
  * 처리 경로가 그대로다 (근거는 `lib/share/draw-card.ts`).
  *
  * 링크 복사는 **결과 링크가 아니라 서비스 주소**를 복사한다. 결과 영구 링크는 결과를 서버에
- * 저장한다는 뜻이고 "저장하지 않습니다" 를 무효화하므로 도입하지 않았다 (판단 근거는 TASK.md).
+ * 저장한다는 뜻이고 "저장하지 않습니다" 를 무효화하므로 도입하지 않았다
+ * (판단 근거는 `CLAUDE.md` 의 "결과 영구 링크(/r/[id])는 도입하지 않았다").
  */
 export function ShareActions({
   chart,

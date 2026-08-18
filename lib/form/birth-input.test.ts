@@ -13,6 +13,8 @@ import {
   type BirthInput,
 } from "./birth-input";
 import { BIRTHPLACES, BIRTHPLACE_SIDO } from "./birthplaces";
+import { birthInputSignature, keyMatchesInput, readingCacheKey } from "./reading-cache";
+import { READING_TYPES } from "../saju/schema";
 
 function make(patch: Partial<BirthInput> = {}): BirthInput {
   return { ...EMPTY_BIRTH_INPUT, ...patch };
@@ -264,6 +266,90 @@ describe("출생지 조회와 적용 조건", () => {
 });
 
 /**
+ * 이미 받은 풀이를 다시 만들지 않기 위한 캐시 키 (TASK-60).
+ *
+ * **키가 틀리면 다른 사람의 풀이가 나온다.** 그래서 프로바이더 안이 아니라 순수 함수로
+ * 빼 두고 여기서 검사한다. 아래 첫 검사는 `EMPTY_BIRTH_INPUT` 을 순회하므로
+ * **`BirthInput` 에 필드가 늘면 자동으로 그 필드까지 본다** — 손으로 나열하면 새 필드가
+ * 생겼을 때 조용히 옛 결과가 나온다.
+ */
+describe("풀이 캐시 키 (TASK-60)", () => {
+  /** 필드마다 "지금 값과 다른 값" 하나. 타입을 보고 뒤집는다. */
+  function flip(value: BirthInput[keyof BirthInput]): BirthInput[keyof BirthInput] {
+    if (typeof value === "boolean") return !value;
+    return value === "달라진값" ? "또다른값" : "달라진값";
+  }
+
+  it.each(Object.keys(EMPTY_BIRTH_INPUT) as (keyof BirthInput)[])(
+    "%s 가 달라지면 키도 달라진다",
+    (field) => {
+      const changed = make({ [field]: flip(EMPTY_BIRTH_INPUT[field]) } as Partial<BirthInput>);
+      expect(birthInputSignature(changed)).not.toBe(birthInputSignature(EMPTY_BIRTH_INPUT));
+    },
+  );
+
+  it("이름만 달라도 다른 키다", () => {
+    // 호칭이 본문에 박히므로 이름만 바꿔도 다른 글이다.
+    expect(readingCacheKey(make({ name: "가" }), "diet")).not.toBe(
+      readingCacheKey(make({ name: "나" }), "diet"),
+    );
+  });
+
+  it("유형이 다르면 키도 다르다", () => {
+    const keys = READING_TYPES.map((type) => readingCacheKey(EMPTY_BIRTH_INPUT, type));
+    expect(new Set(keys).size).toBe(READING_TYPES.length);
+  });
+
+  it("필드 순서가 달라도 같은 키다", () => {
+    // 정렬해서 만드는 이유다 — 객체를 어떻게 조립했느냐가 키를 바꾸면 안 된다.
+    const input = make({ name: "가", birthDate: "1990-05-17" });
+    const reordered = Object.fromEntries(Object.entries(input).reverse()) as BirthInput;
+    expect(readingCacheKey(reordered, "diet")).toBe(readingCacheKey(input, "diet"));
+  });
+
+  it("요청 시점 키가 지금 입력값의 것인지 가려낸다", () => {
+    // 스트리밍 중에 입력을 고치면 그 완성본은 바뀐 입력의 것이 아니다.
+    const before = readingCacheKey(make({ birthDate: "1990-05-17" }), "diet");
+    expect(keyMatchesInput(before, make({ birthDate: "1990-05-17" }))).toBe(true);
+    expect(keyMatchesInput(before, make({ birthDate: "1991-05-17" }))).toBe(false);
+  });
+
+  it("유형이 달라도 같은 입력이면 통과시킨다", () => {
+    // 키의 앞부분(입력 스냅샷)만 보는 함수다 — 유형은 요청이 정한다.
+    const key = readingCacheKey(make({ birthDate: "1990-05-17" }), "gain-cause");
+    expect(keyMatchesInput(key, make({ birthDate: "1990-05-17" }))).toBe(true);
+  });
+});
+
+/**
+ * **완료된 것만 담는다** (TASK-60). 중간까지 받은 글을 캐시하면 다음에 **완결된 풀이인 척**
+ * 나온다. 판단은 `SajuForm` 이 하므로 소스에서 조건을 확인한다 — 조건이 느슨해지면
+ * 사용자가 잘린 글을 완성본으로 읽는다.
+ */
+describe("캐시에 담는 조건 (TASK-60)", () => {
+  const form = readCode("components/SajuForm.tsx");
+
+  it("done 까지 왔고 error 이벤트가 없었을 때만 담는다", () => {
+    expect(form).toMatch(/if \(finished && !failed && receivedChart/);
+    // `done`·`error` 이벤트가 실제로 그 값을 세우는지.
+    expect(form).toMatch(/case "done":\s*finished = true;/);
+    expect(form).toMatch(/case "error":\s*failed = true;/);
+  });
+
+  it("중단·네트워크 오류는 catch 로 빠져 담기지 않는다", () => {
+    // remember 호출이 try 안, catch 앞에 있어야 한다.
+    expect(form.indexOf("remember(requestKey")).toBeGreaterThan(-1);
+    expect(form.indexOf("remember(requestKey")).toBeLessThan(form.indexOf("} catch (caught)"));
+  });
+
+  it("캐시 적중에는 자동 스크롤을 걸지 않는다", () => {
+    // `chart` 에 걸면 캐시로 채운 경우에도 돌아 화면이 튄다.
+    expect(form).toContain("}, [arrivedCount]);");
+    expect(form).not.toContain("}, [chart]);");
+  });
+});
+
+/**
  * 입력값이 프로세스 밖으로 나가면 `app/privacy/page.tsx` 의 "저장하지 않습니다" 가
  * 무너진다 (TASK-30 결정 2). 저장소는 디스크에, 쿼리스트링은 방문 기록과 **Vercel
  * 액세스 로그**에 생년월일을 남긴다. 소스에서 막는다 — 리뷰로는 놓친다.
@@ -279,6 +365,7 @@ describe("입력값은 메모리에만 둔다", () => {
     "app/reading/[type]/page.tsx",
     "app/page.tsx",
     "lib/form/birth-input.ts",
+    "lib/form/reading-cache.ts",
   ];
 
   it.each(sources)("%s 가 브라우저 저장소를 쓰지 않는다", (path) => {

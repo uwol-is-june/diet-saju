@@ -35,13 +35,21 @@ import { ResultView } from "./ResultView";
  * 유형을 옮겨도 값이 남는다. 저장소·URL 로 옮기면 안 되는 이유는 그쪽 주석에 있다.
  */
 export function SajuForm({ readingType }: { readingType: ReadingType }) {
-  const { input, update } = useBirthInput();
+  const { input, update, cacheKey, recall, remember } = useBirthInput();
+
+  /**
+   * 이미 받은 풀이 (TASK-60). **렌더 중에 읽어도 되는 값이다** — 프로바이더의 ref 를
+   * 들여다보는 것뿐이고 부수효과가 없다.
+   */
+  const cached = recall(cacheKey(readingType));
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chart, setChart] = useState<SajuChart | null>(null);
-  const [reading, setReading] = useState("");
+  const [chart, setChart] = useState<SajuChart | null>(() => cached?.chart ?? null);
+  const [reading, setReading] = useState(() => cached?.reading ?? "");
   const [streaming, setStreaming] = useState(false);
+  /** 응답으로 원국이 도착한 횟수. 자동 스크롤이 이 값에 걸린다 (아래 주석 참고). */
+  const [arrivedCount, setArrivedCount] = useState(0);
   /**
    * 값이 이미 있으면 폼을 접고 요약 한 줄만 보여준다. 유형만 바꿔 다시 받는 것이
    * 두 번 클릭이어야 하므로 **접힌 상태에서 바로 제출할 수 있어야 한다.**
@@ -52,6 +60,21 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
   const [editing, setEditing] = useState(() => !canSubmit(input));
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  /**
+   * 유형이 바뀌었는데 이 컴포넌트가 살아 있으면 화면이 **옛 유형의 결과**를 들고 있게 된다.
+   * 지금은 라우트가 바뀔 때 언마운트되지만, 그 사실에 정확성을 기대지 않는다.
+   * 렌더 중 상태 조정은 React 가 권하는 "prop 이 바뀔 때 state 맞추기" 방식이다 —
+   * 효과로 하면 옛 결과가 한 번 그려진 뒤에 바뀐다.
+   */
+  const [shownType, setShownType] = useState(readingType);
+  if (shownType !== readingType) {
+    setShownType(readingType);
+    setChart(cached?.chart ?? null);
+    setReading(cached?.reading ?? "");
+    setError(null);
+    setStreaming(false);
+    setLoading(false);
+  }
 
   // 입력마다 고유 id 를 만들어 label 과 명시적으로 연결한다.
   // (label 로 감싸는 방식은 윤달 체크박스처럼 안에 또 label 이 들어갈 때 무효 HTML 이 된다)
@@ -84,16 +107,19 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
   /**
    * 원국은 폼 아래에 그려지는데, 폼이 길어 모바일에서는 화면 밖이다.
    * 그대로 두면 스트리밍이 시작돼도 "아무 일도 안 일어난" 것처럼 보인다.
-   * chart 는 요청당 한 번만 바뀌므로 이 효과도 결과당 한 번만 돈다.
+   *
+   * **`chart` 가 아니라 `arrivedCount` 에 건다** (TASK-60). `chart` 에 걸면 캐시로 채운
+   * 경우에도 돌아서, 링크를 눌러 막 들어온 사람(이미 맨 위에 있다)의 화면이 튄다.
+   * 이 값은 **응답으로 원국이 도착할 때만** 올라가므로 캐시 적중은 세지 않는다.
    */
   useEffect(() => {
-    if (!chart) return;
+    if (arrivedCount === 0) return;
     const target = resultRef.current;
     if (!target) return;
     // `behavior: "smooth"` 를 명시하면 CSS scroll-behavior 가 무시되므로 여기서 판단한다.
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-  }, [chart]);
+  }, [arrivedCount]);
 
   function stop() {
     abortRef.current?.abort();
@@ -115,6 +141,17 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
 
     const controller = new AbortController();
     abortRef.current = controller;
+
+    /**
+     * 캐시에 담을지 판단하려면 **스트림이 끝난 뒤에** 원국·풀이·완료 여부를 함께 봐야 하는데,
+     * state 는 이 함수 안에서 최신값을 볼 수 없다. 그래서 지역 변수로 같이 모은다.
+     * 키는 **요청 시점**의 것이다 — 도중에 입력이 바뀌면 프로바이더가 이 키를 버린다.
+     */
+    const requestKey = cacheKey(readingType);
+    let receivedChart: SajuChart | null = null;
+    let receivedReading = "";
+    let finished = false;
+    let failed = false;
 
     try {
       const response = await fetch("/api/saju", {
@@ -162,16 +199,21 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
         }
         switch (event.type) {
           case "chart":
+            receivedChart = event.chart;
             setChart(event.chart);
+            setArrivedCount((previous) => previous + 1);
             setLoading(false);
             break;
           case "delta":
+            receivedReading += event.text;
             setReading((previous) => previous + event.text);
             break;
           case "error":
+            failed = true;
             setError(event.error);
             break;
           case "done":
+            finished = true;
             break;
         }
       };
@@ -186,6 +228,15 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
         for (const line of lines) handleLine(line);
       }
       if (buffer.trim()) handleLine(buffer);
+
+      /**
+       * **완료된 것만 담는다** (TASK-60) — `done` 까지 왔고 `error` 이벤트가 없었으며
+       * 중단되지 않은 경우. 중간까지 받은 글을 담으면 다음에 **완결된 풀이인 척** 나온다.
+       * (중단·네트워크 오류는 여기까지 오지 않고 아래 catch 로 빠진다.)
+       */
+      if (finished && !failed && receivedChart && receivedReading.length > 0) {
+        remember(requestKey, { chart: receivedChart, reading: receivedReading });
+      }
     } catch (caught) {
       // 사용자가 중단한 경우는 오류가 아니다.
       if (!(caught instanceof DOMException && caught.name === "AbortError")) {

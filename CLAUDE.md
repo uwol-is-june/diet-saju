@@ -400,8 +400,18 @@ Tailwind 유틸리티(`@layer utilities`)를 이긴다 — 섹션 제목에 걸�
 - 모델은 `GEMINI_MODEL` 로 주입되며 기본값은 **`gemini-3.5-flash-lite`** 다.
   **`gemini-2.5-*` 는 신규 API 키에 404 NOT_FOUND 로 폐지됐다.** 되돌리지 말 것.
   **Pro 모델은 2026-04 부터 유료 전용**이다. 무료 키로 pro 로 바꾸면 호출이 실패한다.
-- `thinkingLevel` 은 `MINIMAL` 로 고정돼 있다. 해석은 이미 계산된 사실을 서술하는 작업이라
-  추론 예산이 불필요하고, 기본값(추론 활성)으로 두면 응답이 26초까지 늘어 `maxDuration=30` 에 닿는다.
+- **`thinkingLevel` 은 `MINIMAL` 고정이다** (TASK-54 로 `gemini-3.5-flash-lite` 에서
+  2026-08-18 재실측 · 근거는 `lib/gemini.ts` 주석에 표로 있다). 예전 근거는 다른 모델
+  (`gemini-3.5-flash`)에서 잰 값이었다. **수치를 옮겨 적을 때는 모델명과 측정일을 함께
+  적을 것** — 이번에 세 곳이 어긋난 원인이 그 둘이 없었기 때문이다.
+  - **lite 에서 `MINIMAL`·`LOW`·`MEDIUM` 은 같은 설정이다** — 추론 토큰이 0 이다
+    (`thoughtsTokenCount` 필드 자체가 안 온다). 실제 선택지는 `MINIMAL` 과 `HIGH` 뿐이다.
+  - `HIGH` 는 첫 글자가 1.1초에서 **9초**로 늘고, 추론 내용이 본문으로 새 섹션 계약을
+    깨뜨렸으며(18건 중 1건), 서술은 좋아지지 않았다. **밋밋함은 추론 예산에서 오지 않는다.**
+- **출력 토큰 예산은 추론과 공유한다.** 한국어는 출력 토큰당 약 1.7자라 `maxOutputTokens`
+  4096 이 약 6,900자를 담지만, 추론을 켜면 그 예산을 함께 쓴다. 예산이 마르면 본문이
+  문장 중간에서 잘리는데 **스트림은 `error` 가 아니라 `done` 으로 끝난다** — 잘린 글이
+  성공으로 보고되므로 추론을 켜는 변경에는 상한을 함께 올려야 한다.
 - SDK 는 `@google/genai` (구 `@google/generative-ai` 아님). 호출 형태는 `ai.models.generateContent({ model, contents, config })`.
 - 프롬프트는 **전부 `lib/prompt.ts` 에 모아둔다.** 컴포넌트나 route 안에 프롬프트 문자열을 흩뿌리지 않는다.
   구성은 `SYSTEM_INSTRUCTION`(공통 화법·안전) → `SECTION_INSTRUCTION`(섹션별, id 로 매김)

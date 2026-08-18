@@ -262,11 +262,27 @@ describe("표현 규칙 — 원인 유형 (TASK-44)", () => {
   const prompt = PROMPTS["gain-cause"];
   const sectionGuide = (title: string) => sectionGuideOf("gain-cause", title);
 
-  it("원인 단정을 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
-    expect(prompt).toContain("원인을 확정하지 않는다");
-    expect(sectionGuide("어디서부터 붙는가")).toContain("원인을 확정하지 말고");
-    // 마지막 절이 "확정이 아니라 경향" 임을 사용자에게 직접 밝히도록 요구한다.
-    expect(sectionGuide("오해하기 쉬운 지점")).toContain("원인을 확정한 것이 아니라");
+  it("몸의 인과를 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
+    expect(prompt).toContain("인과로 넘어가지 않는다");
+    expect(prompt).toContain("몸의 원인으로 바꾸지 않는다");
+    expect(sectionGuide("어디서부터 붙는가")).toContain("인과로 바꾸지 않는다");
+    // 마지막 절이 "진단이 아니다" 를 사용자에게 직접 밝히도록 요구한다.
+    expect(sectionGuide("오해하기 쉬운 지점")).toContain("확인한 것이 아니라는 것");
+  });
+
+  /**
+   * 막는 것만 검사하면 **조용히 다시 닫혀도 모른다** (TASK-55).
+   * `constitution.test.ts` 가 "여는 것이 실제로 열려 있는지" 를 함께 보는 것과 같은 방식이다.
+   * 이 유형은 기준선에서 hedge 가 4.70/1000자로 셋 중 가장 높았고, 원인이 위 검사 하나가
+   * (i)판정 단정과 (ii)몸의 인과를 한 줄로 묶어 놨던 데 있었다.
+   */
+  it("판정 라벨을 단정하는 것은 열어 둔다 — hedge 를 요구하지 않는다", () => {
+    expect(prompt).toContain("판정은 단정하되");
+    expect(sectionGuide("어디서부터 붙는가")).toContain("판정된 자리는 단정해서 쓴다");
+
+    // 예전 문구가 되살아나면 (i)까지 다시 무르게 만든다.
+    expect(prompt).not.toContain("조건과 경향으로 쓰세요");
+    expect(sectionGuide("어디서부터 붙는가")).not.toContain("조건과 경향으로 쓴다");
   });
 
   it("의학적 원인을 금지 목록으로 적어 둔다", () => {
@@ -366,6 +382,43 @@ describe("섹션 계약 (TASK-06)", () => {
     // 계약을 강제하는 수단이 프롬프트뿐이므로 이 문장이 사라지면 형식이 흔들린다.
     expect(SYSTEM_INSTRUCTION).toContain("글자 하나 다르지 않게 그대로 쓰세요");
   });
+
+  /**
+   * 판정과 인과의 경계 (TASK-55). **양쪽을 본다** — 막는 것만 검사하면 (i)이 조용히 다시
+   * 닫혀도 모른다.
+   *
+   * (i) 판정 라벨과 지금의 결 → 코드가 정한 결정론적 값이고 `app/disclaimer/page.tsx` 가
+   *     "언제나 같은 판정" 이라고 자랑하는 내용이다. **단정해도 된다.**
+   * (ii) 몸의 인과와 앞으로 일어날 일 → 상징 체계를 건너뛴 주장이다. **계속 막는다.**
+   */
+  it("판정은 단정하고 인과·예고는 막는 경계가 시스템 지시에 있다", () => {
+    // (i) 여는 쪽
+    expect(SYSTEM_INSTRUCTION).toContain("그대로 단정해서 쓰세요");
+    expect(SYSTEM_INSTRUCTION).toContain("무르게 만드는 어미를 습관처럼 붙이지 마세요");
+
+    // (ii) 막는 쪽
+    expect(SYSTEM_INSTRUCTION).toContain("몸의 인과");
+    expect(SYSTEM_INSTRUCTION).toContain("앞으로 일어날");
+    expect(SYSTEM_INSTRUCTION).toContain("반드시 ~한다");
+
+    // 둘을 한 줄로 묶어 (i)까지 무르게 만들던 예전 문구.
+    expect(SYSTEM_INSTRUCTION).not.toContain("성향과 경향으로 서술합니다");
+  });
+
+  /**
+   * 경계는 **모든 유형**에 걸린다. `TYPE_RULES` 가 유형마다 따로 있어서 한 곳만 고치면
+   * 나머지가 옛 문체로 남는다 — `READING_TYPES` 를 돌아 새 유형도 자동으로 잡는다.
+   * (`general` 은 `TYPE_RULES` 가 비어 있고 시스템 지시로만 걸린다.)
+   */
+  it.each(READING_TYPES.filter((type) => type !== "general"))(
+    "%s 유형 규칙 첫 줄이 판정 단정을 허용한다",
+    (type) => {
+      // 줄바꿈 위치에 걸리지 않도록 공백을 눌러 놓고 본다.
+      const rules = PROMPTS[type].slice(PROMPTS[type].indexOf("# 표현 규칙")).replace(/\s+/g, " ");
+      expect(rules).toContain("판정은 단정");
+      expect(rules).toContain("무르게 만드는 어미를 덧대지 마세요");
+    },
+  );
 });
 
 /**

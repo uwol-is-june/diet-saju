@@ -138,6 +138,65 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
   ],
 };
 
+/**
+ * 섹션 제목 앞에 붙는 아이콘 (TASK-46). **화면에서만 붙는다.**
+ *
+ * ## `title` 에 섞지 않는 이유
+ *
+ * 제목 문자열은 프롬프트와 파서의 **단일 소스**다. 계약을 `## 🌿 오행으로 본 체질` 로
+ * 바꾸면 모델이 그 이모지까지 글자 하나 틀리지 않게 재현해야 파싱된다. 어긋나는 순간
+ * 그 절이 `id: null` 로 떨어지고 **아이콘도 강조도 함께 사라진다.** 형식 강제 수단이
+ * 부탁뿐인데 부탁할 것을 늘리는 셈이라, 아이콘은 렌더러가 id 로 붙인다.
+ *
+ * ## `Record` 인 이유
+ *
+ * `ReadingSectionSpec` 의 선택 필드로 두면 새 섹션이 조용히 아이콘 없이 나간다.
+ * `Record<ReadingSectionId, string>` 이어야 섹션을 늘릴 때 여기가 컴파일 오류로 잡힌다
+ * (`Record<ReadingType, …>` 를 유지하는 이유와 같다).
+ *
+ * ## 고르는 기준
+ *
+ * **흑백 폴백이 있는 흔한 이모지만.** 이형자 선택자가 필요한 문자(`⚖️` 등)는 선택자를
+ * 붙인 채로 저장한다 — 빼면 플랫폼에 따라 글자 모양(⚖)으로 나온다.
+ *
+ * **공유 카드(`lib/share/draw-card.ts`)에는 넣지 않는다.** 캔버스 이모지는 OS 폰트에 따라
+ * 두부(□)가 되고, 카드에 절 제목이 들어가지도 않는다.
+ */
+export const SECTION_ICON: Record<ReadingSectionId, string> = {
+  summary: "🔎",
+
+  // general
+  temperament: "🌱",
+  "ohaeng-balance": "⚖️",
+  relations: "🤝",
+  "current-flow": "🌊",
+  "next-steps": "✅",
+
+  // diet
+  constitution: "🌿",
+  "gain-pattern": "🔁",
+  "year-flow": "📅",
+
+  // gain-cause
+  "gain-site": "📍",
+  "gain-trigger": "⏰",
+  "gain-imbalance": "🎚️",
+  "gain-misread": "💡",
+
+  // diet-method
+  "diet-approach": "🧭",
+  movement: "🏃",
+  eating: "🍽️",
+  "execution-window": "🌤️",
+  "monthly-actions": "📝",
+
+  // decade
+  "decade-now": "🕙",
+  "decade-change": "🔀",
+  "decade-body": "👤",
+  "decade-hold": "🧷",
+};
+
 // ── 파싱 ───────────────────────────────────────────────────────────────────
 
 export interface ParsedSection {

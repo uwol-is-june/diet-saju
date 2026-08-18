@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { READING_TYPES } from "../saju/schema";
-import { READING_SECTION_IDS, SECTION_SPECS, parseReadingSections } from "./sections";
+import {
+  READING_SECTION_IDS,
+  SECTION_ICON,
+  SECTION_SPECS,
+  parseReadingSections,
+} from "./sections";
 
 /**
  * 섹션 계약과 파서 검증 (TASK-06).
@@ -65,6 +71,50 @@ describe("섹션 계약", () => {
       const emphasized = SECTION_SPECS[type].filter((spec) => spec.emphasis);
       expect(emphasized.length).toBe(1);
     }
+  });
+});
+
+/**
+ * 제목 앞 아이콘 (TASK-46). **아이콘이 계약에 새지 않았는지**가 이 검사의 핵심이다.
+ *
+ * 제목 문자열은 프롬프트와 파서의 단일 소스라, 거기 이모지가 섞이면 모델이 그것까지
+ * 글자 하나 틀리지 않게 재현해야 파싱된다. 어긋나면 그 절이 `id: null` 로 떨어지고
+ * **아이콘도 강조도 함께 사라진다.**
+ */
+describe("섹션 아이콘 (TASK-46)", () => {
+  it("모든 섹션 id 에 아이콘이 있다", () => {
+    // `Record` 라 컴파일에서도 잡히지만, 빈 문자열로 메우는 것까지는 막지 못한다.
+    for (const id of READING_SECTION_IDS) {
+      expect(SECTION_ICON[id], `${id} 아이콘 없음`).toBeTruthy();
+    }
+  });
+
+  it("아이콘이 서로 다르다", () => {
+    // 같은 아이콘이 둘이면 훑을 때 걸리게 하려던 목적이 사라진다.
+    const icons = READING_SECTION_IDS.map((id) => SECTION_ICON[id]);
+    expect(new Set(icons).size).toBe(icons.length);
+  });
+
+  it("제목에는 이모지가 없다 — 계약은 그대로다", () => {
+    // 한글·영숫자·공백과 문장부호 몇 개만 허용한다. 이모지가 들어오면 걸린다.
+    for (const type of READING_TYPES) {
+      for (const spec of SECTION_SPECS[type]) {
+        expect(spec.title, `${spec.id} 제목에 허용되지 않은 문자`).toMatch(
+          /^[가-힣0-9a-zA-Z ·()]+$/,
+        );
+      }
+    }
+  });
+
+  it("렌더러가 아이콘을 붙이고 계약에 없는 절에는 붙이지 않는다", () => {
+    // 소스에서 본다 — `id` 가 있을 때만 붙이고 `aria-hidden` 이어야 한다.
+    const source = readFileSync(
+      new URL("../../components/ReadingSections.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain("SECTION_ICON[id]");
+    expect(source).toContain("if (!id) return null;");
+    expect(source).toContain("aria-hidden");
   });
 });
 

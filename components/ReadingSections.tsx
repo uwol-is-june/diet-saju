@@ -3,9 +3,11 @@
 import Markdown from "react-markdown";
 import { breakSentences } from "@/lib/reading/line-breaks";
 import {
+  SECTION_ICON,
   SECTION_SPECS,
   parseReadingSections,
   type ParsedSection,
+  type ReadingSectionId,
 } from "@/lib/reading/sections";
 import type { ReadingType } from "@/lib/saju/schema";
 
@@ -72,6 +74,7 @@ export function ReadingSections({
       {summary && (
         <section className="anim-rise rounded-2xl border border-brand-border bg-brand-subtle p-5 shadow-sm sm:p-6">
           <h2 className="mb-2 text-sm font-bold tracking-wide text-brand-ink">
+            <SectionIcon id={summary.id} />
             {summary.title}
           </h2>
           <Body section={summary} showCursor={streaming && isLast(summary)} />
@@ -92,7 +95,10 @@ export function ReadingSections({
                 key={section.id ?? `unmatched-${index}`}
                 className="anim-rise py-5 first:pt-0 last:pb-0"
               >
-                <h2 className="mb-2 text-base font-bold">{section.title}</h2>
+                <h2 className="mb-2 text-base font-bold">
+                  <SectionIcon id={section.id} />
+                  {section.title}
+                </h2>
                 <Body section={section} showCursor={streaming && isLast(section)} />
               </article>
             ))}
@@ -102,6 +108,21 @@ export function ReadingSections({
 
       <ProgressNote parsed={parsed} readingType={readingType} streaming={streaming} />
     </div>
+  );
+}
+
+/**
+ * 제목 앞 아이콘 (TASK-46). **계약에 있는 섹션에만 붙는다** — 계약에 없는 제목(`id: null`)
+ * 은 어느 절인지 모르므로 붙일 근거가 없고, 원문 폴백 경로에는 제목 자체가 없다.
+ *
+ * `aria-hidden` 이다. 스크린리더가 "나뭇잎 오행으로 본 체질" 로 읽으면 안 된다.
+ */
+function SectionIcon({ id }: { id: ReadingSectionId | null }) {
+  if (!id) return null;
+  return (
+    <span aria-hidden className="mr-1.5 select-none">
+      {SECTION_ICON[id]}
+    </span>
   );
 }
 

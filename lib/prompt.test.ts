@@ -378,9 +378,51 @@ describe("섹션 계약 (TASK-06)", () => {
     }
   });
 
+  /**
+   * 분량 배분 (TASK-56).
+   *
+   * `SYSTEM_INSTRUCTION` 이 "각 절 지침 끝의 `분량:` 을 목표로 삼으라" 고만 말하므로,
+   * **한 절이라도 그 줄을 빠뜨리면 그 절만 분량 지시 없이 나간다.** 기준선에서 절당
+   * 문장 수가 셋 다 3.7~4.1 로 붙어 있던 것이 균등 배분의 자국이었다.
+   */
+  it.each(READING_TYPES)("%s 의 모든 섹션에 분량이 붙는다", (type) => {
+    const guide = guideOf(PROMPTS[type]);
+    for (const spec of SECTION_SPECS[type]) {
+      const start = guide.indexOf(`## ${spec.title}\n`);
+      const nextIdx = SECTION_SPECS[type].indexOf(spec) + 1;
+      const nextSpec = SECTION_SPECS[type][nextIdx];
+      const end = nextSpec ? guide.indexOf(`## ${nextSpec.title}\n`) : guide.length;
+      expect(guide.slice(start, end), `${spec.title} 분량 없음`).toMatch(/분량: /);
+    }
+  });
+
+  it.each(READING_TYPES)("%s 에 중심 절이 있고 요약은 중심이 아니다", (type) => {
+    // 균등하게 나누면 아무 절도 알맹이가 되지 못한다. 요약은 강조 카드라 짧게 유지한다.
+    const guide = guideOf(PROMPTS[type]);
+    expect(guide).toContain("**중심 절**");
+    const summaryEnd = guide.indexOf(`## ${SECTION_SPECS[type][1]?.title}\n`);
+    expect(guide.slice(0, summaryEnd)).not.toContain("**중심 절**");
+  });
+
   it("제목을 그대로 쓰라고 시스템 지시에 박아 뒀다", () => {
     // 계약을 강제하는 수단이 프롬프트뿐이므로 이 문장이 사라지면 형식이 흔들린다.
     expect(SYSTEM_INSTRUCTION).toContain("글자 하나 다르지 않게 그대로 쓰세요");
+  });
+
+  /**
+   * 여는 자리와 근거는 **둘 다** 지켜야 한다 (TASK-56). 기준선에서 `diet` 는 절의 98%를
+   * 명리 용어로 열었다. 근거를 빼는 것이 아니라 자리를 뒤로 옮기는 것이므로, 두 문장이
+   * 함께 있어야 한 쪽만 남아 근거가 사라지거나 다시 앞으로 오지 않는다.
+   */
+  it("근거는 유지하되 여는 자리에서 뒤로 옮기라고 지시한다", () => {
+    expect(SYSTEM_INSTRUCTION).toContain("첫 문장을 명리학 용어로 열지 마세요");
+    expect(SYSTEM_INSTRUCTION).toContain("첫 문장은 그 사람이 겪는 일이나 몸으로 느끼는 결로 엽니다");
+    expect(SYSTEM_INSTRUCTION).toContain("반드시\n  언급하고");
+    expect(SYSTEM_INSTRUCTION).toContain("근거를 빼라는 뜻이 아니라");
+
+    // 균등 배분으로 되돌아가면 중심 절이 사라진다.
+    expect(SYSTEM_INSTRUCTION).not.toContain("각 절은 3~5문장");
+    expect(SYSTEM_INSTRUCTION).toContain("분량은 절마다 다릅니다");
   });
 
   /**

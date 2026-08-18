@@ -97,6 +97,44 @@ describe("애니메이션 클래스가 정의돼 있다", () => {
   });
 });
 
+/**
+ * 접힌 카드의 도식은 **펼치는 순간 재생돼야 한다** (TASK-49).
+ *
+ * TASK-52 로 도식 셋이 `FoldCard` 안으로 들어가면서 등장 애니메이션이 보이는 순간이
+ * 바뀌었다 — "스크롤해서 도착한다" 가 아니라 "이미 화면에 있는 카드를 펼친다" 다.
+ * 그런데 `anim-*` 은 mount 시점에 재생되고 카드 내용은 접힌 채로 이미 mount 돼 있다.
+ *
+ * **`display: none` 의 애니메이션 취소·재시작 동작에 기대지 않는다.** key 를 올려
+ * remount 하면 어느 브라우저에서든 같게 동작한다.
+ */
+describe("접힌 카드는 펼칠 때 재생된다 (TASK-49)", () => {
+  const RESULT_VIEW = readFileSync(
+    new URL("../../components/ResultView.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("FoldCard 가 펼칠 때 내용을 remount 한다", () => {
+    expect(RESULT_VIEW).toContain("key={openCount}");
+    expect(RESULT_VIEW).toContain("setOpenCount((previous) => previous + 1)");
+  });
+
+  it("접을 때는 세지 않는다 — 접는 것으로 재생되지 않는다", () => {
+    // `if (open)` 이 빠지면 접을 때도 key 가 올라가 보이지 않는 재생이 한 번 더 돈다.
+    expect(RESULT_VIEW).toContain("if (open) setOpenCount");
+  });
+
+  /**
+   * **`animation-timeline: view()` 는 쓰지 않는다** (TASK-49 결론).
+   *
+   * 그것은 "스크롤해서 지나가는 동안 재생" 을 푸는 도구인데, 지금 도식이 드러나는 순간은
+   * **이미 화면 안에 있는 카드를 펼치는 것**이다. 그 자리에서 `view()` 는 진행도가
+   * 100%(=최종 모습)라 아무 재생도 하지 않는다 — 지금 동작보다 나빠진다.
+   */
+  it("도식 클래스에 스크롤 타임라인을 걸지 않는다", () => {
+    expect(CSS).not.toContain("animation-timeline");
+  });
+});
+
 describe("스트리밍 중 등장이 다시 재생되지 않는다", () => {
   it("섹션 key 가 제목이 아니라 id 다", () => {
     /**

@@ -291,17 +291,40 @@ function FoldCard({
   onToggle?: (open: boolean) => void;
   children: ReactNode;
 }) {
+  /**
+   * **펼칠 때마다 내용을 remount 한다** (TASK-49).
+   *
+   * TASK-52 로 도식 셋이 이 카드 안으로 들어가면서 **등장 애니메이션이 보이는 순간이
+   * 바뀌었다** — 예전에는 "스크롤해서 도착한다" 였지만 지금은 "이미 화면에 있는 카드를
+   * 펼친다" 다. 그런데 `anim-*` 은 mount 시점에 재생되고, 이 내용은 카드가 접힌 채로
+   * (`display: none`) 이미 mount 돼 있다.
+   *
+   * `display: none` 이 애니메이션을 취소하고 다시 보일 때 재생하는지는 브라우저 구현에
+   * 기대야 하는데, **그 동작에 기대지 않는다.** key 를 올려 remount 하면 어느 브라우저에서든
+   * "펼치는 순간 재생" 이 된다. 도식은 순수 표현 컴포넌트라 remount 가 싸다.
+   *
+   * `DaeunTable` 의 가로 가운데 맞춤은 그대로 동작한다 — 그 효과는 `open` 에 걸려 있고
+   * remount 된 뒤(ref 재부착 뒤)에 돌기 때문이다.
+   */
+  const [openCount, setOpenCount] = useState(0);
+
   return (
     <details
       className="fold rounded-2xl border border-line bg-surface shadow-sm"
-      onToggle={(event) => onToggle?.(event.currentTarget.open)}
+      onToggle={(event) => {
+        const open = event.currentTarget.open;
+        if (open) setOpenCount((previous) => previous + 1);
+        onToggle?.(open);
+      }}
     >
       {/* 제목을 `h2` 로 두어 원국·풀이와 같은 단계로 읽히게 한다 (제목 탐색이 살아 있다). */}
       <summary className="flex items-center gap-x-3 gap-y-1 p-5 sm:p-6">
         <h2 className="text-lg font-bold">{title}</h2>
         <span className="min-w-0 truncate text-sm text-ink-muted">{note}</span>
       </summary>
-      <div className="border-t border-line p-5 sm:p-6">{children}</div>
+      <div key={openCount} className="border-t border-line p-5 sm:p-6">
+        {children}
+      </div>
     </details>
   );
 }

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SYSTEM_INSTRUCTION, buildUserPrompt } from "./prompt";
 import { SECTION_SPECS } from "./reading/sections";
@@ -165,11 +166,6 @@ describe("표현 규칙", () => {
     expect(dietPrompt).toContain("한의학의 사상체질");
   });
 
-  it("전문가 상담 권고를 요구한다", () => {
-    // app/disclaimer/page.tsx 가 같은 내용을 약속하고 있다.
-    expect(dietPrompt).toContain("전문가와 상의하도록 권하는 한 문장");
-  });
-
   it("재료(오행)와 조리(한열)를 다른 층으로 다루라고 지시한다", () => {
     // 섞으면 모델이 "이 재료는 몸을 따뜻하게 한다" 같은 새 판정을 만들어 낸다.
     expect(dietPrompt).toContain("재료(오행)와 조리");
@@ -210,10 +206,6 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   it("개인 변수를 모른다는 전제를 밝힌다", () => {
     expect(prompt).toContain("알레르기·지병·복약·임신 여부를");
     expect(prompt).toContain("많이 먹으라거나 끊으라고 하지 않습니다");
-  });
-
-  it("전문가 상담 권고를 요구한다", () => {
-    expect(prompt).toContain("전문가와 상의하도록 권하는 한 문장");
   });
 
   /** ── 여기부터는 "열려 있는지" 를 본다 ── */
@@ -267,7 +259,7 @@ describe("표현 규칙 — 원인 유형 (TASK-44)", () => {
     expect(prompt).toContain("몸의 원인으로 바꾸지 않는다");
     expect(sectionGuide("어디서부터 붙는가")).toContain("인과로 바꾸지 않는다");
     // 마지막 절이 "진단이 아니다" 를 사용자에게 직접 밝히도록 요구한다.
-    expect(sectionGuide("오해하기 쉬운 지점")).toContain("확인한 것이 아니라는 것");
+    expect(sectionGuide("오해하기 쉬운 지점")).toContain("몸에서 실제로 무슨 일이 일어나는지는");
   });
 
   /**
@@ -321,10 +313,6 @@ describe("표현 규칙 — 원인 유형 (TASK-44)", () => {
   it("세운 판정은 이 유형에 실리지 않는다", () => {
     // 원인은 원국 쪽 이야기다. 올해 흐름은 `diet` 몫이다.
     expect(prompt).not.toContain("올해 세운 판정");
-  });
-
-  it("전문가 상담 권고를 요구한다", () => {
-    expect(prompt).toContain("전문가와 상의하도록 권하는 한 문장");
   });
 
   /** ── 여기부터는 "원인을 설명할 근거가 실려 있는지" 를 본다 ── */
@@ -564,10 +552,45 @@ describe("프롬프트 인젝션 — 이름 칸", () => {
     expect(between(prompt, "<user_data>", "</user_data>")).toContain(name);
   });
 
-  it("빈 이름과 지워져 남지 않는 이름은 기본 호칭이 된다", () => {
+  /**
+   * 이름이 없으면 **호칭을 지어내지 않는다** (TASK-57). 예전 기본값 `고객님` 이 글 전체에
+   * 거리를 만들었다. 인젝션 방어(꺾쇠·줄바꿈·줄머리 `#` 제거)는 그대로여야 하므로
+   * 위 검사들과 함께 남겨 둔다 — 바꾼 것은 기본값뿐이다.
+   */
+  it("빈 이름과 지워져 남지 않는 이름은 호칭 없이 쓰라고 알린다", () => {
     for (const name of ["", "   ", "<>", "###"]) {
       const block = between(promptWithName(name), "<user_data>", "</user_data>");
-      expect(block, `"${name}" 에서 실패`).toContain("호칭: 고객님");
+      expect(block, `"${name}" 에서 실패`).toContain("호칭 없이 쓰세요");
+      expect(block, `"${name}" 에서 실패`).not.toContain("고객님");
+    }
+  });
+});
+
+/**
+ * 면책 문장의 자리 (TASK-57 · 2026-08-18 결정).
+ *
+ * **본문이 아니라 화면 고정 문구다.** 예전에는 `TYPE_RULES` 셋이 "마지막에 전문가 상담
+ * 권유 한 문장" 을 요구해서 모든 풀이가 법적 고지로 끝났다. 화면으로 옮기니 본문을 사람
+ * 말로 끝낼 수 있고 **약속은 오히려 더 확실해진다 — LLM 이 빠뜨릴 수 없다.**
+ *
+ * 그래서 검사도 양쪽이다. 한쪽만 보면 고지가 사라지거나 두 번 나온다.
+ */
+describe("전문가 상담 권유의 자리 (TASK-57)", () => {
+  const resultView = readFileSync(
+    new URL("../components/ResultView.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("화면 고정 문구에 있다", () => {
+    expect(resultView).toContain("전문가와 상의해 주세요");
+  });
+
+  it("프롬프트는 더 이상 요구하지 않는다", () => {
+    // 되살아나면 같은 문장이 본문과 화면에 두 번 나온다.
+    for (const type of READING_TYPES) {
+      expect(PROMPTS[type], `${type} 에 면책 요구가 남아 있음`).not.toContain(
+        "전문가와 상의하도록 권하는 한 문장",
+      );
     }
   });
 });

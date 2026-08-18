@@ -127,10 +127,17 @@ export function ResultView({
       {/* 생성이 끝난 뒤에 보여준다 — 쓰는 중에 공유 버튼을 내밀면 미완성 결과를 퍼뜨린다. */}
       {!streaming && <ShareActions chart={chart} readingType={readingType} />}
 
+      {/*
+        전문가 상담 권유가 **본문이 아니라 여기 있다** (TASK-57 · 2026-08-18).
+        예전에는 `TYPE_RULES` 셋이 "마지막에 한 문장 덧붙이세요" 를 요구해서 모든 풀이가
+        법적 고지로 끝났고, 읽고 나서 마지막에 남는 인상이 그것이었다. 화면으로 옮기니
+        본문을 사람 말로 끝낼 수 있고 **약속은 오히려 더 확실해진다 — LLM 이 빠뜨릴 수 없다.**
+        지우면 `app/disclaimer/page.tsx` 의 약속을 지키는 자리가 아무 데도 없어진다.
+      */}
       <p className="text-center text-xs leading-relaxed text-ink-muted">
         이 풀이는 명리학 해석을 참고한 오락·참고용 콘텐츠이며, AI 가 작성했습니다.
         <br />
-        의학적·법률적 조언이 아닙니다.{" "}
+        의학적·법률적 조언이 아니니, 몸과 건강에 관한 판단은 전문가와 상의해 주세요.{" "}
         <Link href="/disclaimer" className="underline hover:text-brand-ink">
           면책 고지
         </Link>

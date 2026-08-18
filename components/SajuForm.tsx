@@ -213,7 +213,7 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                 value={input.name}
                 onChange={(e) => set("name")(e.target.value)}
                 maxLength={20}
-                placeholder="비워두면 '고객님'"
+                placeholder="비워두면 호칭 없이 씁니다"
                 className={inputClass}
               />
             </Field>

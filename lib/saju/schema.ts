@@ -6,6 +6,7 @@ import type {
   StrengthAnalysis,
 } from "./analysis";
 import type { ConstitutionAnalysis } from "./constitution";
+import type { DecadeAnalysis } from "./decade";
 import type { YearlyAnalysis } from "./yearly";
 
 /**
@@ -20,7 +21,7 @@ import type { YearlyAnalysis } from "./yearly";
  * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
  * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
  */
-export const READING_TYPES = ["general", "diet", "gain-cause", "diet-method"] as const;
+export const READING_TYPES = ["general", "diet", "gain-cause", "diet-method", "decade"] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
 /**
@@ -38,6 +39,7 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   diet: "종합 체질 풀이",
   "gain-cause": "내가 살이 찌는 이유",
   "diet-method": "나에게 맞는 다이어트 방법",
+  decade: "몸이 바뀌는 10년",
 };
 
 /**
@@ -58,6 +60,7 @@ export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal">
   diet: "public",
   "gain-cause": "public",
   "diet-method": "public",
+  decade: "public",
 };
 
 /**
@@ -87,6 +90,8 @@ export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   "gain-cause": "살이 붙을 때 어디서부터, 어떤 상황에서 붙는지 그 결의 뿌리를 찾습니다.",
   "diet-method":
     "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
+  decade:
+    "지금 흐르는 대운이 몸의 결을 어느 쪽으로 받치는지, 직전 구간과 무엇이 달라졌는지 봅니다. 성별이 필요합니다.",
 };
 
 /**
@@ -120,6 +125,35 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
     description:
       "생년월일시로 사주 원국을 계산하고, 대사 기조와 살이 붙는 패턴에서 무엇을 먼저 고정할지·어떤 종류로 움직이고 어떤 순서로 먹을지를 짚어드립니다.",
   },
+  decade: {
+    title: "몸이 바뀌는 10년 | 다이어트 사주",
+    description:
+      "생년월일시와 성별로 대운을 계산하고, 지금 흐르는 대운이 원국의 오행 과부족을 받치는지 얹히는지, 직전 대운과 견주어 무엇이 달라졌는지를 몸의 결로 읽어드립니다.",
+  },
+};
+
+/**
+ * 대운을 근거로 쓰는 유형은 **성별이 있어야 한다** (TASK-45).
+ *
+ * 대운 순행/역행이 성별로 정해지므로 미지정이면 `chart.daeun` 이 null 이고 이 유형은
+ * 성립하지 않는다. **임의로 순행을 정하지 않는다** — 그러면 같은 사주에 다른 판정이 나간다.
+ *
+ * ## 왜 홈에서 카드를 막지 않는가
+ *
+ * 성별은 `BirthInputProvider` 의 **메모리**에 있고 그건 클라이언트만 안다. 홈에서 카드를
+ * 흐리게 하려면 `/` 에 클라이언트 컴포넌트가 들어가는데, 그러면 **`/` 를 통째로 정적으로
+ * 두는 성질이 깨진다**(`CLAUDE.md` "현재 페이지면 링크를 죽이는 처리는 하지 않는다" 와 같은
+ * 이유). 그래서 카드는 누구에게나 보이고, **폼이 성별을 요구한다.** 왜 막혔는지 그 자리에서
+ * 읽히는 쪽이기도 하다.
+ *
+ * `Record` 로 두어 유형을 늘릴 때 여기가 컴파일 오류로 잡히게 한다.
+ */
+export const READING_TYPE_NEEDS_GENDER: Record<ReadingType, boolean> = {
+  general: false,
+  diet: false,
+  "gain-cause": false,
+  "diet-method": false,
+  decade: true,
 };
 
 export const sajuInputSchema = z.object({
@@ -173,7 +207,21 @@ export const sajuInputSchema = z.object({
   dayBoundary: z.enum(["yajasi", "jasi"]).default("yajasi"),
   /** 출생지 경도(도). 기본값은 서울(126.9784). 부산은 129.08 처럼 지정 가능. */
   longitude: z.number().min(124).max(132).optional(),
-});
+})
+  /**
+   * 대운을 쓰는 유형은 성별이 있어야 한다 (TASK-45).
+   *
+   * 폼도 막지만 **서버가 다시 막는다** — 클라이언트 검증은 신뢰 대상이 아니고, 여기서
+   * 통과시키면 `chart.decade` 가 null 인 채로 프롬프트가 나가 LLM 이 스스로 10년을 지어낸다.
+   * 스트림을 열기 전 단계라 400 으로 돌려줄 수 있다.
+   */
+  .refine(
+    (value) => !READING_TYPE_NEEDS_GENDER[value.readingType] || value.gender !== "unspecified",
+    {
+      path: ["gender"],
+      message: "이 풀이는 대운(10년 흐름)을 쓰므로 성별을 함께 알려 주세요",
+    },
+  );
 
 export type SajuInput = z.infer<typeof sajuInputSchema>;
 
@@ -242,6 +290,14 @@ export interface SajuChart {
    * "올해의 몸 흐름" 이 근거로 쓴다 (TASK-39). 리딩 유형과 무관하게 항상 계산한다.
    */
   yearly: YearlyAnalysis;
+  /**
+   * 지금 흐르는 10년 판정 — 대운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-45).
+   *
+   * **성별 미지정이면 null 이다.** 대운 순행/역행이 성별로 정해지므로 낼 수 없고,
+   * 임의로 순행을 고르면 같은 사주에 다른 판정이 나간다. 그래서 `decade` 유형은
+   * 성별을 요구한다 (`READING_TYPE_NEEDS_GENDER`).
+   */
+  decade: DecadeAnalysis | null;
   /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */
   daeun: DaeunAnalysis | null;
   /** 세운 (기준 연도부터 3년) */

@@ -50,6 +50,11 @@ export const READING_SECTION_IDS = [
   "movement",
   "execution-window",
   "monthly-actions",
+  // decade — 지금 흐르는 10년은 어떤 구간인가 (TASK-45)
+  "decade-now",
+  "decade-change",
+  "decade-body",
+  "decade-hold",
 ] as const;
 
 export type ReadingSectionId = (typeof READING_SECTION_IDS)[number];
@@ -113,6 +118,23 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "eating", title: "어떤 순서로 먹을까" },
     { id: "execution-window", title: "언제 어떻게 실행할까" },
     { id: "monthly-actions", title: "이번 달 실천 3가지" },
+  ],
+  /**
+   * 시기 유형 (TASK-45). 공개 유형 중 **유일하게 시간축이 주제**다.
+   *
+   * `diet` 의 `year-flow`(올해)와 층이 다르지만 **둘 다 시간을 말하므로 겹칠 위험이
+   * `gain-cause` 때보다 크다.** 그래서 id 를 나누는 것으로 그치지 않고 지시문이 서로
+   * 다른 것을 요구하게 했고 `prompt.test.ts` 가 두 절을 대조한다.
+   *
+   * **다음 10년을 판정하지 않는다** — 아직 오지 않은 시간을 말하면 예측이 된다.
+   * 절은 지금 구간과 **직전 구간과의 차이**까지다.
+   */
+  decade: [
+    { id: "summary", title: "한눈에 보기", emphasis: "summary" },
+    { id: "decade-now", title: "지금 흐르는 10년" },
+    { id: "decade-change", title: "직전 10년과 달라진 것", optional: true },
+    { id: "decade-body", title: "몸에서 먼저 드러나는 자리" },
+    { id: "decade-hold", title: "이 10년을 어떻게 쓸까" },
   ],
 };
 

@@ -1,3 +1,4 @@
+import { findCurrentDaeunIndex } from "@/lib/saju/decade";
 import type { SajuChart } from "@/lib/saju/schema";
 
 /**
@@ -25,10 +26,8 @@ export function DaeunTimeline({
   currentAge: number | undefined;
 }) {
   const periods = daeun.periods;
-  const currentIndex = periods.findIndex(
-    (period) =>
-      currentAge !== undefined && currentAge >= period.startAge && currentAge <= period.endAge,
-  );
+  // 현재 대운을 찾는 규칙은 `lib/saju/decade.ts` 한 곳에 있다 (TASK-45).
+  const currentIndex = findCurrentDaeunIndex(daeun, currentAge);
 
   return (
     <div>

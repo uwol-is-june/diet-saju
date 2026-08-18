@@ -1,3 +1,4 @@
+import { findCurrentDaeun } from "../saju/decade";
 import { READING_TYPE_LABEL, type ReadingType, type SajuChart } from "../saju/schema";
 
 /**
@@ -120,6 +121,16 @@ const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
     chart.constitution.dietApproach,
     chart.constitution.movementKind,
   ],
+  /**
+   * 시기 유형 (TASK-45). **나이 구간을 넣지 않는다** — 구간을 적으면 출생 연도가 좁혀진다.
+   * 간지와 작용 판정까지만 쓴다 (`card-model.test.ts` 가 이 규칙을 막고 있다).
+   * 대운이 없으면(성별 미지정) 이 유형 자체가 성립하지 않으므로 여기 오지 않지만,
+   * 타입이 null 을 허용하니 체질 칩으로 물러선다.
+   */
+  decade: (chart) =>
+    chart.decade
+      ? [`대운 ${chart.decade.current.ganji}`, `${chart.decade.current.effect} 작용`]
+      : [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern],
 };
 
 /**
@@ -140,15 +151,21 @@ const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
   // 칩이 방식·종류를 쓰므로 여기는 그 둘이 어디서 나왔는지를 밝힌다.
   "diet-method": (chart) =>
     `대사 기조 ${chart.constitution.metabolism} · 걸리는 지점 ${chart.constitution.gainSite}`,
+  // 칩이 간지·작용을 쓰므로 여기는 그 작용이 어디서 나왔는지를 밝힌다. 나이는 넣지 않는다.
+  decade: (chart) =>
+    chart.decade
+      ? `${chart.decade.sipsin} 대운 · ${chart.decade.shift ? `직전과 ${chart.decade.shift}` : "첫 대운"}`
+      : `${chart.ohaeng.season} 기세 기준`,
 };
 
-/** 성별 미지정이면 대운이 없다 (순행·역행을 정할 수 없다) → 줄을 넣지 않는다. */
+/**
+ * 성별 미지정이면 대운이 없다 (순행·역행을 정할 수 없다) → 줄을 넣지 않는다.
+ *
+ * **현재 대운을 찾는 규칙은 `lib/saju/decade.ts` 한 곳에 있다** (TASK-45). 예전에는 같은
+ * `find` 가 여기 · `ResultView` · `DaeunTimeline` 셋에 흩어져 있어서, 나이 구간 판정이
+ * 어긋나면 화면·카드·풀이가 서로 다른 대운을 가리킬 수 있었다.
+ */
 function currentDaeunLabel(chart: SajuChart): string | null {
-  const currentAge = chart.seun[0]?.age;
-  if (!chart.daeun || currentAge === undefined) return null;
-
-  const period = chart.daeun.periods.find(
-    (candidate) => currentAge >= candidate.startAge && currentAge <= candidate.endAge,
-  );
+  const period = findCurrentDaeun(chart.daeun, chart.seun[0]?.age);
   return period ? `현재 대운 ${period.ganji} · ${period.sipsin}` : null;
 }

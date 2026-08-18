@@ -5,6 +5,7 @@ import {
   birthplaceApplies,
   birthplaceLongitude,
   canSubmit,
+  missingForType,
   describeBirthInput,
   describeBirthplace,
   hasIncompleteTime,
@@ -56,8 +57,10 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
    * 첫 방문은 값이 없으므로 펼친 폼 그대로다.
    *
    * 제출할 수 없는 값이면 접지 않는다 — 접으면 왜 버튼이 꺼져 있는지 볼 수 없다.
+   * **유형이 요구하는 것까지 본다** (TASK-45) — 성별이 빠진 채 `decade` 로 들어오면
+   * 폼이 펼쳐진 채여야 성별을 바로 고를 수 있다.
    */
-  const [editing, setEditing] = useState(() => !canSubmit(input));
+  const [editing, setEditing] = useState(() => !canSubmit(input, readingType));
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   /**
@@ -87,7 +90,12 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
 
   const timeIncomplete = hasIncompleteTime(input);
   const birthTime = composeBirthTime(input.birthHour, input.birthMinute);
-  const submittable = canSubmit(input);
+  /**
+   * 유형이 요구하는 것이 빠졌을 때의 이유 (TASK-45). 버튼만 꺼 두면 **왜 눌리지 않는지**
+   * 알 수 없다. 유형은 라우트가 정하므로 이 값도 유형이 바뀌면 따라 바뀐다.
+   */
+  const missing = missingForType(input, readingType);
+  const submittable = canSubmit(input, readingType);
   const placeApplies = birthplaceApplies(input);
   const placesInChosenSido = placesInSido(input.birthplaceSido);
 
@@ -541,6 +549,17 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
           >
             {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
           </button>
+        )}
+
+        {/*
+          유형이 요구하는 것이 빠졌으면 그 이유를 버튼 바로 위에 둔다 (TASK-45).
+          접힌 폼에서도 보이도록 `editing` 밖에 있다 — 접힌 채로 유형만 바꿔 들어오는 것이
+          기본 동선이라, 접혀 있을 때 이유가 안 보이면 버튼이 그냥 고장 난 것처럼 읽힌다.
+        */}
+        {missing && (
+          <p role="alert" className="text-center text-xs text-danger-ink">
+            {missing}
+          </p>
         )}
 
         <p className="text-center text-xs text-ink-muted">

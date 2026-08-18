@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { findCurrentDaeun } from "@/lib/saju/decade";
 import type { Pillar, ReadingType, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 import { DaeunTimeline } from "./charts/DaeunTimeline";
 import { OhaengBars } from "./charts/OhaengBars";
@@ -159,12 +160,8 @@ function DaeunTable({
   /** 접힌 동안은 내용이 `display: none` 이라 폭을 잴 수 없다 — 펼친 뒤에 가운데를 잡는다. */
   const [open, setOpen] = useState(false);
 
-  const currentPeriod = daeun.periods.find(
-    (period) =>
-      currentAge !== undefined &&
-      currentAge >= period.startAge &&
-      currentAge <= period.endAge,
-  );
+  // 현재 대운을 찾는 규칙은 `lib/saju/decade.ts` 한 곳에 있다 (TASK-45).
+  const currentPeriod = findCurrentDaeun(daeun, currentAge);
 
   /**
    * 대운 8~10칸은 어떤 화면에서도 가로로 넘친다. 현재 대운이 뒤쪽이면 처음엔 보이지 않아

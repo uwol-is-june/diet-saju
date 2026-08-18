@@ -456,6 +456,83 @@ describe("섹션 계약 (TASK-06)", () => {
  * 판정 자체는 `constitution` 의 오행 과부족에서 나오므로 몸 쪽 값이고,
  * 그래서 "올해의 몸 흐름" 섹션이 근거로 쓴다.
  */
+/**
+ * 시기 유형의 경계 (TASK-45).
+ *
+ * **이 유형은 시간축이 주제라 두 방향으로 샌다.** ① 아직 오지 않은 시간(다음 대운)을
+ * 말하는 쪽, ② `diet` 의 "올해의 몸 흐름" 과 같은 말을 하는 쪽. 검사도 그 둘과
+ * "판정이 실제로 실리는가" 셋이다.
+ */
+describe("10년 판정 블록 (TASK-45)", () => {
+  const prompt = PROMPTS.decade;
+  const sectionGuide = (title: string) => sectionGuideOf("decade", title);
+
+  it("decade 유형에만 실린다", () => {
+    expect(prompt).toContain("## 10년 판정 (계산 완료 · 수정 금지)");
+    for (const type of READING_TYPES) {
+      if (type === "decade") continue;
+      expect(PROMPTS[type], `${type} 에 10년 판정이 실렸다`).not.toContain("10년 판정");
+    }
+  });
+
+  it("체질 판정과 함께 실리고 세운은 실리지 않는다", () => {
+    // 작용 판정이 체질의 과부족에서 나오므로 근거가 같은 프롬프트 안에 있어야 한다.
+    expect(prompt).toContain("체질 판정");
+    // 올해는 `diet` 몫이다. 둘 다 시간을 말하므로 한 프롬프트에 실으면 같은 문장이 나온다.
+    expect(prompt).not.toContain("올해 세운 판정");
+  });
+
+  it("코드가 정한 작용 판정이 그대로 들어간다", () => {
+    const decade = chart.decade!;
+    expect(decade).not.toBeNull();
+    expect(prompt).toContain(decade.current.ganji);
+    expect(prompt).toContain(decade.current.effect);
+    expect(prompt).toContain(decade.effectNote);
+  });
+
+  it("다음 10년을 말하지 말라고 세 곳에서 막는다", () => {
+    // 아직 오지 않은 시간을 말하면 예측이 된다 — 이 유형의 가장 큰 위험이다.
+    expect(prompt).toContain("다음 대운은 판정하지 않았다"); // 판정 블록
+    expect(prompt).toContain("아직 오지 않은 시간을 말하지 않는다"); // 유형 규칙
+    expect(prompt).toContain("다음 10년이 어떨지는"); // 서두
+  });
+
+  it("우리 관례임을 밝히고 다시 판정하지 말라고 한다", () => {
+    expect(prompt).toContain("이 서비스가 정한 관례");
+    expect(prompt).toContain("다시 판정하지 말고");
+  });
+
+  it("몸 관리 밖으로 넓히지 말라고 지시한다", () => {
+    expect(prompt).toContain("생활 영역 운세로 넓히지 말 것");
+  });
+
+  it("표현 범위를 넓히지 않았다 — 수치·처방·식품 이름 계속 금지", () => {
+    for (const word of ["수치를 쓰지 않는다", "감량 방법을 처방하지 않는다", "식품 이름을 쓰지 않습니다"]) {
+      expect(prompt, `${word} 없음`).toContain(word);
+    }
+  });
+
+  /**
+   * `diet` 의 "올해의 몸 흐름" 과 **층이 다르지만 둘 다 시간을 말한다.**
+   * `gain-cause` 때(`gain-pattern` vs `gain-trigger`)보다 겹칠 위험이 크므로 지침을 대조한다.
+   */
+  it("올해 흐름 절과 지침이 서로 다른 것을 요구한다", () => {
+    const decadeNow = sectionGuide("지금 흐르는 10년");
+    const yearFlow = sectionGuideOf("diet", "올해의 몸 흐름");
+    expect(decadeNow).not.toBe(yearFlow);
+    // 각자만 요구하는 것
+    expect(decadeNow).toContain("대운 간지와 작용");
+    expect(decadeNow).toContain("올해가 어떤 해인지는 쓰지 말 것");
+    expect(yearFlow).toContain("올해 작용");
+    expect(yearFlow).not.toContain("대운 간지와 작용");
+  });
+
+  it("직전 구간이 없으면 그 절을 생략하라고 지시한다", () => {
+    // 첫 대운을 지나는 중이면 견줄 것이 없다. 없는 것을 지어내면 판정이 아니다.
+    expect(sectionGuide("직전 10년과 달라진 것")).toContain("제목까지 통째로 생략한다");
+  });
+});
+
 describe("올해 세운 판정 블록 (TASK-15 · TASK-39)", () => {
   it("diet 유형에만 실린다", () => {
     // `READING_TYPES` 를 돌므로 유형이 늘면 자동으로 검사된다. 두 유형이 같은 세운 판정을

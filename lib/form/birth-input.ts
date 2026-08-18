@@ -8,6 +8,7 @@
  * 값을 들고 있는 곳(프로바이더)과 값의 모양을 정하는 곳(여기)을 나눈 이유는
  * 요약 문구를 순수 함수로 검증하기 위해서다.
  */
+import { READING_TYPE_NEEDS_GENDER, type ReadingType } from "../saju/schema";
 import { BIRTHPLACES, type Birthplace } from "./birthplaces";
 import { composeBirthTime } from "./birth-time";
 
@@ -69,14 +70,35 @@ export function hasIncompleteTime(input: BirthInput): boolean {
 }
 
 /**
+ * 유형이 요구하는 것이 빠졌는가 — 빠졌으면 그 이유를 한 줄로 돌려준다 (TASK-45).
+ *
+ * **성별을 요구하는 유형이 생겼다.** 대운 순행/역행이 성별로 정해지므로 미지정이면
+ * `chart.daeun` 이 null 이고 그 유형은 성립하지 않는다. 임의로 순행을 정하지 않는다.
+ *
+ * 이유를 문자열로 돌려주는 이유: 버튼만 꺼 두면 **왜 눌리지 않는지** 알 수 없다.
+ * 서버도 같은 규칙으로 다시 막는다 (`sajuInputSchema` 의 refine) — 클라이언트 검증은
+ * UX 용이고 신뢰 대상이 아니다.
+ */
+export function missingForType(input: BirthInput, readingType: ReadingType): string | null {
+  if (READING_TYPE_NEEDS_GENDER[readingType] && input.gender === "unspecified") {
+    return "이 풀이는 10년 단위 흐름(대운)을 쓰는데, 그 방향이 성별로 정해집니다. 성별을 골라 주세요.";
+  }
+  return null;
+}
+
+/**
  * 제출할 수 있는 값인가 — 생년월일이 있고 시각이 반쪽이 아니면 된다.
  *
  * 시각 미입력 자체는 막지 않는다. 시각 미상도 유효한 입력이고 시주를 빼고 해석한다.
  * 폼이 접힐지 말지도 이 값으로 정한다 — 제출할 수 없는 값을 접으면 왜 버튼이 꺼져
  * 있는지 볼 수 없다.
+ *
+ * **유형을 주면 그 유형이 요구하는 것까지 본다** (TASK-45). 주지 않으면 유형과 무관한
+ * 조건만 본다 — 유형을 모르는 자리(값의 모양만 보는 곳)에서도 쓸 수 있어야 한다.
  */
-export function canSubmit(input: BirthInput): boolean {
-  return input.birthDate !== "" && !hasIncompleteTime(input);
+export function canSubmit(input: BirthInput, readingType?: ReadingType): boolean {
+  if (input.birthDate === "" || hasIncompleteTime(input)) return false;
+  return readingType === undefined || missingForType(input, readingType) === null;
 }
 
 // ── 출생지 (TASK-37) ────────────────────────────────────────────────────────

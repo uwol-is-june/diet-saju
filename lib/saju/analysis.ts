@@ -241,6 +241,15 @@ export interface DaeunPeriod {
   endAge: number;
   ganji: string;
   ohaeng: string;
+  /**
+   * 천간·지지의 60갑자 인덱스 (TASK-45).
+   *
+   * `ohaeng` 은 표시용 두 글자 문자열이라 판정에 쓸 수 없다. **문자열을 쪼개 쓰지 말고**
+   * 이 인덱스로 `ganOhaeng`/`jiOhaeng` 을 부른다 — 경계에서 인덱스로 바꾸고 노출 직전에만
+   * 한글로 바꾸는 원칙이 여기도 적용된다. `analyzeYearly` 가 `gan`/`ji` 를 따로 받는 것과 같다.
+   */
+  gan: number;
+  ji: number;
   /** 대운 천간의 십신 */
   sipsin: Sipsin;
   /** 대운 지지의 십신 */
@@ -290,6 +299,8 @@ export function analyzeDaeun(input: DaeunInput): DaeunAnalysis {
       endAge: startAge + i * 10 + 9,
       ganji: ganjiToKorean(ganji),
       ohaeng: pillarOhaeng(ganji),
+      gan: ganji.gan,
+      ji: ganji.ji,
       sipsin: sipsinOf(input.ilgan, ganji.gan),
       jiSipsin: jiSipsin(input.ilgan, ganji.ji),
     });

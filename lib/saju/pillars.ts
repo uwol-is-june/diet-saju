@@ -10,6 +10,7 @@ import {
   type DaeunAnalysis,
 } from "./analysis";
 import { analyzeConstitution } from "./constitution";
+import { analyzeDecade } from "./decade";
 import { analyzeYearly } from "./yearly";
 import {
   ganjiToKorean,
@@ -162,6 +163,10 @@ export function calculateSajuChart(
     constitution,
   });
 
+  // 지금 흐르는 10년 판정 (TASK-45). 성별 미지정이면 대운이 없으므로 null 이다 —
+  // 순행을 임의로 정하지 않는다. 유형과 무관하게 계산해 둔다(체질·세운과 같은 원칙).
+  const decade = analyzeDecade({ daeun, currentAge: seun[0]?.age, constitution });
+
   return {
     solarDate: formatDate(solarWallClock),
     lunarDate: formatLunarDate(solarWallClock),
@@ -176,6 +181,7 @@ export function calculateSajuChart(
     strength,
     constitution,
     yearly,
+    decade,
     daeun,
     seun,
     timeCorrection: {

@@ -7,6 +7,7 @@ import {
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   READING_TYPE_META,
+  READING_TYPE_NEEDS_GENDER,
   READING_TYPE_VISIBILITY,
   sajuInputSchema,
 } from "./schema";
@@ -154,6 +155,53 @@ describe("폼 기본값이 서버 스키마 기본값과 같다", () => {
   it("스키마 기본 유형은 공개 유형이다", () => {
     const parsed = sajuInputSchema.parse({ birthDate: "1990-05-17" });
     expect(READING_TYPE_VISIBILITY[parsed.readingType]).toBe("public");
+  });
+});
+
+/**
+ * 성별을 요구하는 유형 (TASK-45).
+ *
+ * 대운 순행/역행이 성별로 정해지므로 미지정이면 `chart.daeun` 이 null 이고 그 유형은
+ * 성립하지 않는다. **폼도 막지만 서버가 다시 막는다** — 클라이언트 검증은 신뢰 대상이
+ * 아니고, 여기서 통과시키면 판정이 빈 채로 프롬프트가 나가 LLM 이 스스로 지어낸다.
+ */
+describe("성별을 요구하는 유형 (TASK-45)", () => {
+  const base = { birthDate: "1990-05-17", birthTime: "14:30" };
+
+  it("모든 유형에 요구 여부가 정해져 있다", () => {
+    for (const type of READING_TYPES) {
+      expect(typeof READING_TYPE_NEEDS_GENDER[type]).toBe("boolean");
+    }
+  });
+
+  it("요구하는 유형은 성별 미지정을 거부한다", () => {
+    for (const type of READING_TYPES) {
+      if (!READING_TYPE_NEEDS_GENDER[type]) continue;
+      const result = sajuInputSchema.safeParse({ ...base, readingType: type });
+      expect(result.success, `${type} 이 성별 없이 통과했다`).toBe(false);
+    }
+  });
+
+  it("성별을 주면 통과한다", () => {
+    for (const type of READING_TYPES) {
+      const result = sajuInputSchema.safeParse({ ...base, readingType: type, gender: "female" });
+      expect(result.success, `${type} 이 성별을 줘도 막혔다`).toBe(true);
+    }
+  });
+
+  it("요구하지 않는 유형은 성별 없이도 통과한다", () => {
+    // 성별 미지정도 유효한 입력이다 — 대운만 빼고 해석한다.
+    for (const type of READING_TYPES) {
+      if (READING_TYPE_NEEDS_GENDER[type]) continue;
+      const result = sajuInputSchema.safeParse({ ...base, readingType: type });
+      expect(result.success, `${type} 이 성별 없이 막혔다`).toBe(true);
+    }
+  });
+
+  it("기본 유형은 성별을 요구하지 않는다", () => {
+    // 유형을 생략한 요청이 성별까지 요구하면 기본값이 기본값 구실을 못 한다.
+    const parsed = sajuInputSchema.parse(base);
+    expect(READING_TYPE_NEEDS_GENDER[parsed.readingType]).toBe(false);
   });
 });
 

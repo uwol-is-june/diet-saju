@@ -187,7 +187,7 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   it("수치를 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
     // 한쪽만 있으면 그 절만 읽는 모델이 선을 못 본다.
     expect(prompt).toContain("수치를 쓰지 않는다");
-    expect(sectionGuide("어떤 종류로 움직일까")).toContain("수치를 쓰지 말 것");
+    expect(sectionGuide("어떤 종류로 움직여 볼까")).toContain("수치를 쓰지 말 것");
     expect(sectionGuide("어떤 순서로 먹을까")).toContain("섭취량");
   });
 
@@ -219,14 +219,14 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   });
 
   it("종류를 그대로 쓰라고 지시한다 — LLM 이 다시 고르지 않는다", () => {
-    expect(sectionGuide("어떤 종류로 움직일까")).toContain("판정된 움직임 종류를 그대로 쓰고");
+    expect(sectionGuide("어떤 종류로 움직여 볼까")).toContain("판정된 움직임 종류를 그대로 쓰고");
     expect(prompt).toContain("다른 방법을 새로 고르지 말고");
     expect(prompt).toContain("판정에 없는 종목·식단을 새로 들지 마세요");
   });
 
   it("시간대·온도는 한열 층에만 맡긴다", () => {
     // 층을 섞으면 같은 사주에 다른 실행 조건이 나온다.
-    const movement = sectionGuide("어떤 종류로 움직일까");
+    const movement = sectionGuide("어떤 종류로 움직여 볼까");
     expect(movement).toContain("아래 \"실행\" 절이 맡는다");
     expect(sectionGuide("언제 어떻게 실행할까")).toContain('"한열" 항목만 근거로');
   });

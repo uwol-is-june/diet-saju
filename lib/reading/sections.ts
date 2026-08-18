@@ -49,7 +49,7 @@ export const READING_SECTION_IDS = [
   "eating",
   "movement",
   "execution-window",
-  "monthly-actions",
+  "first-step",
   // decade — 지금 흐르는 10년은 어떤 구간인가 (TASK-45)
   "decade-now",
   "decade-change",
@@ -114,10 +114,10 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
   "diet-method": [
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "diet-approach", title: "무엇을 먼저 고정할까" },
-    { id: "movement", title: "어떤 종류로 움직일까" },
+    { id: "movement", title: "어떤 종류로 움직여 볼까" },
     { id: "eating", title: "어떤 순서로 먹을까" },
     { id: "execution-window", title: "언제 어떻게 실행할까" },
-    { id: "monthly-actions", title: "이번 달 실천 3가지" },
+    { id: "first-step", title: "이번 달 먼저 할 하나" },
   ],
   /**
    * 시기 유형 (TASK-45). 공개 유형 중 **유일하게 시간축이 주제**다.
@@ -188,7 +188,7 @@ export const SECTION_ICON: Record<ReadingSectionId, string> = {
   movement: "🏃",
   eating: "🍽️",
   "execution-window": "🌤️",
-  "monthly-actions": "📝",
+  "first-step": "📝",
 
   // decade
   "decade-now": "🕙",

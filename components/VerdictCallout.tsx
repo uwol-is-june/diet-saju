@@ -36,6 +36,18 @@ const CALLOUT: Record<ReadingType, (chart: SajuChart) => Callout | null> = {
     basis: `십신 우세 ${chart.constitution.dominantGroup} · ${chart.constitution.gainSite} 쪽에서 먼저 드러나는 결입니다`,
   }),
   "diet-method": () => null,
+  /**
+   * 운동 유형 (TASK-48). **콜아웃이 이 유형의 핵심이다** — "어떤 운동을" 을 하나로 좁혀
+   * 보여주는 것이 목적이라, 종목이 본문 어딘가가 아니라 맨 위에 떠 있어야 한다.
+   *
+   * 근거 줄은 **두 층을 각자의 표에서 가져와 합친다** — 종목은 `MOVEMENT_PLAN`(접근 순서
+   * 층), 실행 조건은 `THERMAL_GUIDE`(한열 층). 층을 섞지 않으므로 4 × 5 = 20가지 문장이
+   * 나오면서도 각 칸의 근거를 설명할 수 있다.
+   */
+  exercise: (chart) => ({
+    label: chart.constitution.movementPrimary,
+    basis: `${chart.constitution.movementKind} · ${chart.constitution.dietApproach}에서 나온 종목이고, 한열 ${chart.constitution.thermal}이 실행 조건을 정합니다`,
+  }),
   decade: () => null,
 };
 

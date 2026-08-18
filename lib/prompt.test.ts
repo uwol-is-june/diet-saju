@@ -187,7 +187,7 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   it("수치를 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
     // 한쪽만 있으면 그 절만 읽는 모델이 선을 못 본다.
     expect(prompt).toContain("수치를 쓰지 않는다");
-    expect(sectionGuide("어떤 종류로 움직여 볼까")).toContain("수치를 쓰지 말 것");
+    expect(sectionGuide("어떤 운동 종류가 맞을까")).toContain("수치를 쓰지 말 것");
     expect(sectionGuide("어떤 순서로 먹을까")).toContain("섭취량");
   });
 
@@ -219,14 +219,14 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
   });
 
   it("종류를 그대로 쓰라고 지시한다 — LLM 이 다시 고르지 않는다", () => {
-    expect(sectionGuide("어떤 종류로 움직여 볼까")).toContain("판정된 움직임 종류를 그대로 쓰고");
+    expect(sectionGuide("어떤 운동 종류가 맞을까")).toContain("판정된 움직임 종류를 그대로 쓰고");
     expect(prompt).toContain("다른 방법을 새로 고르지 말고");
     expect(prompt).toContain("판정에 없는 종목·식단을 새로 들지 마세요");
   });
 
   it("시간대·온도는 한열 층에만 맡긴다", () => {
     // 층을 섞으면 같은 사주에 다른 실행 조건이 나온다.
-    const movement = sectionGuide("어떤 종류로 움직여 볼까");
+    const movement = sectionGuide("어떤 운동 종류가 맞을까");
     expect(movement).toContain("아래 \"실행\" 절이 맡는다");
     expect(sectionGuide("언제 어떻게 실행할까")).toContain('"한열" 항목만 근거로');
   });
@@ -472,6 +472,75 @@ describe("섹션 계약 (TASK-06)", () => {
  * 말하는 쪽, ② `diet` 의 "올해의 몸 흐름" 과 같은 말을 하는 쪽. 검사도 그 둘과
  * "판정이 실제로 실리는가" 셋이다.
  */
+/**
+ * 운동 유형의 경계 (TASK-48).
+ *
+ * **`diet-method` 의 `movement` 절을 떼어 오지 않았다.** 두 유형이 같은 판정을 쓰므로
+ * `gain-cause` 때(`gain-pattern` vs `gain-trigger`)와 같은 위험이 있다 — 검사도 같은 방식이다:
+ * 두 지침이 **서로 다른 것을 요구하는지.**
+ */
+describe("운동 유형 (TASK-48)", () => {
+  const prompt = PROMPTS.exercise;
+  const sectionGuide = (title: string) => sectionGuideOf("exercise", title);
+
+  it("코드가 정한 종목이 프롬프트에 실린다", () => {
+    const { constitution } = chart;
+    expect(prompt).toContain(constitution.movementPrimary);
+    for (const alt of constitution.movementAlternatives) {
+      expect(prompt, `${alt} 없음`).toContain(alt);
+    }
+    expect(prompt).toContain(constitution.movementKind);
+  });
+
+  it("종목을 새로 고르지 말라고 지시한다", () => {
+    expect(prompt).toContain("다른 종목을 새로 고르지 말고");
+    expect(sectionGuide("왜 이 운동인가")).toContain("판정에 없는 종목을 새로 만들지 않는다");
+  });
+
+  it("diet-method 의 움직임 절과 지침이 서로 다른 것을 요구한다", () => {
+    // 같은 판정을 쓰지만 각도가 달라야 한다 — `diet-method` 는 종류(결)까지,
+    // `exercise` 는 종목·강도·시간대·주의까지.
+    const pick = sectionGuide("왜 이 운동인가");
+    const movement = sectionGuideOf("diet-method", "어떤 운동 종류가 맞을까");
+    expect(pick).not.toBe(movement);
+    expect(pick).toContain("판정된 대표 종목을 그대로 쓰고");
+    expect(movement).toContain("을 콕 집어 권하지 않는다");
+    expect(movement).toContain("판정된 움직임 종류를 그대로 쓰고");
+  });
+
+  it("수치를 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
+    expect(prompt).toContain("수치를 쓰지 않는다");
+    expect(sectionGuide("어떤 강도로 할까")).toContain("수치를 쓰지 말 것");
+  });
+
+  it("먹는 이야기를 하지 말라고 지시한다", () => {
+    // 먹는 순서·식품은 `diet-method` 몫이다. 여기서 쓰면 두 유형이 같은 말을 한다.
+    expect(prompt).toContain("먹는 이야기를 하지 않습니다");
+  });
+
+  it("층을 섞지 않는다 — 시간대는 한열 절이 맡는다", () => {
+    expect(sectionGuide("어떤 강도로 할까")).toContain('아래 "언제" 절이 맡는다');
+    expect(sectionGuide("언제 하면 좋을까")).toContain('"한열" 항목만 근거로');
+  });
+
+  it("모르는 것(지병·부상)을 밝히라고 요구한다", () => {
+    // 종목을 콕 집어 권하는 유형이라 운동 처방으로 읽힌다.
+    expect(prompt).toContain("지병·부상·임신 여부를 우리는 모릅니다");
+    expect(sectionGuide("무리가 되는 지점")).toContain("전문가의 판단이 먼저");
+  });
+
+  it("마지막 절이 위 절의 요약이 되지 않게 막는다", () => {
+    // `first-step`(TASK-58)에서 얻은 것과 같은 지침이다.
+    expect(sectionGuide("이번 주에 시작할 한 가지")).toContain("이미 말한 것을 다시 적지 않는다");
+  });
+
+  it("세운·대운 판정을 받지 않는다", () => {
+    // 시간 이야기는 `diet`(올해)와 `decade`(10년) 몫이다.
+    expect(prompt).not.toContain("올해 세운 판정");
+    expect(prompt).not.toContain("10년 판정");
+  });
+});
+
 describe("10년 판정 블록 (TASK-45)", () => {
   const prompt = PROMPTS.decade;
   const sectionGuide = (title: string) => sectionGuideOf("decade", title);

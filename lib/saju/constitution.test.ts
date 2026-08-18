@@ -461,7 +461,14 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     ...Object.values(GAIN_LABEL),
     ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
     // 실행 방법 (TASK-40) — (B) 로 넓힌 축이라 여기가 가장 처방에 가깝다
-    ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.kind, plan.how, plan.caution]),
+    // 대표 종목과 대안도 함께 훑는다 (TASK-48) — 콜아웃으로 가장 크게 나가는 문구다
+    ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [
+      plan.kind,
+      plan.primary,
+      ...plan.alternatives,
+      plan.how,
+      plan.caution,
+    ]),
     ...Object.values(MEAL_PLAN).flatMap((plan) => [plan.sequence, plan.timing]),
     // 재료 범주 (TASK-27) — 사용자에게 그대로 인용되는 식품 이름이다
     ...OHAENG_LIST.flatMap((element) => [
@@ -473,7 +480,7 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
 
   it("문구 표가 비어 있지 않다", () => {
     // 위 수집이 깨져 빈 배열이 되면 아래 검사가 통과해 버린다.
-    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 5 + 8 + 12 + 10 + 20 + 2);
+    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 5 + 8 + 28 + 10 + 20 + 2);
   });
 
   it.each(BANNED)("어느 문구에도 %s 가 없다", (word) => {
@@ -520,6 +527,28 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     const labels = Object.values(GAIN_LABEL);
     expect(new Set(labels).size).toBe(labels.length);
     for (const label of labels) expect(label.length).toBeLessThanOrEqual(16);
+  });
+
+  /**
+   * **여는 것이 실제로 열려 있는지도 본다** (TASK-40 이 세운 방식). 막는 것만 검사하면
+   * 나중에 규칙을 조이면서 종목 이름이 조용히 빠져도 아무도 모른다 — 그러면 `exercise`
+   * 유형의 콜아웃이 빈 채로 나간다.
+   */
+  it("대표 종목이 실제로 들어 있고 칸마다 다르다", () => {
+    const primaries = Object.values(MOVEMENT_PLAN).map((plan) => plan.primary);
+    expect(new Set(primaries).size).toBe(primaries.length);
+    for (const plan of Object.values(MOVEMENT_PLAN)) {
+      expect(plan.primary.length).toBeGreaterThan(1);
+      expect(plan.alternatives.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("종목 이름에 기구·상표·프로그램 이름이 없다", () => {
+    // 판정에 없는 것을 새로 들지 말라고 프롬프트가 막지만, 표 자체가 새면 소용없다.
+    const names = Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.primary, ...plan.alternatives]);
+    for (const word of ["필라테스", "크로스핏", "PT", "헬스장", "머신", "런닝머신", "러닝머신"]) {
+      expect(names.filter((name) => name.includes(word)), `${word} 가 종목에 있다`).toEqual([]);
+    }
   });
 
   it("사용자에게 나가는 문구에 아라비아 숫자가 없다", () => {

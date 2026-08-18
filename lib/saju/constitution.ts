@@ -150,27 +150,55 @@ const APPROACH_TABLE: Record<MetabolismTendency, Record<GainSite, DietApproach>>
  */
 export type MovementKind = "유산소 중심" | "근력 중심" | "이완 중심" | "저강도 지속";
 
+/**
+ * 대표 종목과 대안 (TASK-48). **새 판정 축이 아니라 이 표의 필드다.**
+ *
+ * `movementKind` 가 `dietApproach`(2×2)에서 1:1 로 나와 이미 결정론적이므로, 같은 칸에
+ * 종목을 얹으면 **새 동점 처리가 필요 없다.** 종목을 별도 축으로 만들면 그 축의 동점을
+ * 새로 정해야 하고 그건 우리 관례가 하나 더 느는 것이다.
+ *
+ * **종목 선택에 한열을 넣지 않는다.** `APPROACH_TABLE` 이 같은 이유로 한열을 빼 뒀다 —
+ * 넣으면 칸이 20개가 되어 각 칸의 근거를 설명할 수 없다. 한열은 "언제·어떤 온도로" 이고,
+ * `exercise` 유형의 콜아웃이 **두 표에서 각자 가져와 합친다**(종목 = 여기, 실행 조건 =
+ * `THERMAL_GUIDE`). 그래서 4 × 5 = 20가지 문장이 나오면서도 층은 섞이지 않는다.
+ *
+ * **접은 안:** 부족 오행(`BODY_AXIS`)으로 종목을 가르기. 부족 오행이 여럿이거나 아예 없을
+ * 수 있어 **동점 처리를 새로 만들어야 하고** 표가 24칸이 된다. 되살리려면 동점 규칙을
+ * 먼저 정하고 `docs/saju-validation.md` 에 "우리 관례" 로 적을 것.
+ *
+ * **수치는 계속 막는다.** 종목 이름과 강도의 결까지만 열려 있고 횟수·세트·분·심박수·기간은
+ * 그대로 금지다. `how` 가 이미 걷기·계단 오르기·스트레칭을 쓰고 있으므로 종목 이름 자체는
+ * 새로 여는 것이 아니다.
+ */
 export const MOVEMENT_PLAN: Record<
   DietApproach,
-  { kind: MovementKind; how: string; caution: string }
+  { kind: MovementKind; primary: string; alternatives: string[]; how: string; caution: string }
 > = {
   "활동량 우선": {
     kind: "유산소 중심",
+    primary: "빠르게 걷기",
+    alternatives: ["자전거 타기", "가벼운 등산", "수영"],
     how: "걷기나 자전거처럼 오래 이어지는 움직임을 먼저 늘린다. 한 번의 길이보다 하는 횟수를 먼저 올린다.",
     caution: "숨이 조금 차되 말은 이어지는 정도까지만. 그 위로 올리면 며칠 만에 멈춘다.",
   },
   "식사량 조절 우선": {
     kind: "근력 중심",
+    primary: "맨몸 스쿼트",
+    alternatives: ["계단 오르기", "밴드 당기기", "벽 짚고 팔굽혀펴기"],
     how: "움직임은 지금 하던 만큼 유지하되 버티는 힘을 쓰는 쪽을 남겨 둔다. 맨몸으로 앉았다 일어서기, 계단 오르기처럼 가진 무게를 쓰는 것이면 된다.",
     caution: "먹는 양을 손대는 동안 움직임까지 함께 늘리면 둘 다 오래가지 않는다.",
   },
   "회복 우선": {
     kind: "이완 중심",
+    primary: "천천히 걷기",
+    alternatives: ["스트레칭", "가벼운 요가", "호흡 고르기"],
     how: "스트레칭과 천천히 걷기처럼 회복을 방해하지 않는 것부터 넣는다. 잠과 쉬는 시간이 먼저 확보된 뒤에 활동량을 올린다.",
     caution: "지탱하는 힘이 얇을 때 강도를 올리면 회복이 밀려 오히려 멈춘다.",
   },
   "리듬 고정 우선": {
     kind: "저강도 지속",
+    primary: "같은 시각에 걷기",
+    alternatives: ["실내 자전거", "집안일로 몸 쓰기", "가벼운 체조"],
     how: "매일 같은 시각에 반복할 수 있을 만큼 낮은 강도로 둔다. 무엇을 하느냐보다 같은 시각에 하느냐가 먼저다.",
     caution: "강도를 올리면 시각이 다시 흐트러진다. 리듬이 잡힌 뒤에 손대는 것이 순서다.",
   },
@@ -510,6 +538,9 @@ export interface ConstitutionAnalysis {
    * **시간대와 온도는 여기 없다** — 그건 한열(`thermal*`)이 정하는 다른 층이다.
    */
   movementKind: MovementKind;
+  /** 대표 종목과 대안 (TASK-48). `movementKind` 에서 1:1 파생이라 새 동점이 없다. */
+  movementPrimary: string;
+  movementAlternatives: string[];
   movementHow: string;
   movementCaution: string;
   mealSequence: string;
@@ -603,6 +634,8 @@ export function analyzeConstitution(input: ConstitutionInput): ConstitutionAnaly
     dietApproachCaution: DIET_APPROACH_NOTE[dietApproach].caution,
 
     movementKind: MOVEMENT_PLAN[dietApproach].kind,
+    movementPrimary: MOVEMENT_PLAN[dietApproach].primary,
+    movementAlternatives: MOVEMENT_PLAN[dietApproach].alternatives,
     movementHow: MOVEMENT_PLAN[dietApproach].how,
     movementCaution: MOVEMENT_PLAN[dietApproach].caution,
     mealSequence: MEAL_PLAN[gainPattern].sequence,

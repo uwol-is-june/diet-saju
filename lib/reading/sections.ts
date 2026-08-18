@@ -50,6 +50,12 @@ export const READING_SECTION_IDS = [
   "movement",
   "execution-window",
   "first-step",
+  // exercise — 어떤 운동을 어떤 결로 (TASK-48)
+  "exercise-pick",
+  "exercise-how",
+  "exercise-when",
+  "exercise-avoid",
+  "exercise-start",
   // decade — 지금 흐르는 10년은 어떤 구간인가 (TASK-45)
   "decade-now",
   "decade-change",
@@ -114,10 +120,27 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
   "diet-method": [
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "diet-approach", title: "무엇을 먼저 고정할까" },
-    { id: "movement", title: "어떤 종류로 움직여 볼까" },
+    { id: "movement", title: "어떤 운동 종류가 맞을까" },
     { id: "eating", title: "어떤 순서로 먹을까" },
     { id: "execution-window", title: "언제 어떻게 실행할까" },
     { id: "first-step", title: "이번 달 먼저 할 하나" },
+  ],
+  /**
+   * 운동 유형 (TASK-48). `diet-method` 가 **무엇을 어떤 순서로** 를 다루는 데 비해
+   * 이 유형은 **어떤 운동을** 하나로 좁힌다.
+   *
+   * **`diet-method` 의 `movement` 절을 떼어 오지 않았다** — 방법 유형에서 움직임을 빼면
+   * "무엇을 어떻게" 가 반쪽이 된다 (`diet` 에 `gain-pattern` 을 남긴 것과 같은 판단).
+   * 대신 **두 지침이 서로 다른 것을 요구한다**: `diet-method` 는 종류(결)까지,
+   * 여기는 종목·강도·시간대·주의까지. `prompt.test.ts` 가 두 지침을 대조한다.
+   */
+  exercise: [
+    { id: "summary", title: "한눈에 보기", emphasis: "summary" },
+    { id: "exercise-pick", title: "왜 이 운동인가" },
+    { id: "exercise-how", title: "어떤 강도로 할까" },
+    { id: "exercise-when", title: "언제 하면 좋을까" },
+    { id: "exercise-avoid", title: "무리가 되는 지점" },
+    { id: "exercise-start", title: "이번 주에 시작할 한 가지" },
   ],
   /**
    * 시기 유형 (TASK-45). 공개 유형 중 **유일하게 시간축이 주제**다.
@@ -189,6 +212,13 @@ export const SECTION_ICON: Record<ReadingSectionId, string> = {
   eating: "🍽️",
   "execution-window": "🌤️",
   "first-step": "📝",
+
+  // exercise
+  "exercise-pick": "🎯",
+  "exercise-how": "💪",
+  "exercise-when": "🕗",
+  "exercise-avoid": "🚧",
+  "exercise-start": "🚀",
 
   // decade
   "decade-now": "🕙",

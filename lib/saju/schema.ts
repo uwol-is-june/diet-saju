@@ -21,7 +21,14 @@ import type { YearlyAnalysis } from "./yearly";
  * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
  * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
  */
-export const READING_TYPES = ["general", "diet", "gain-cause", "diet-method", "decade"] as const;
+export const READING_TYPES = [
+  "general",
+  "diet",
+  "gain-cause",
+  "diet-method",
+  "exercise",
+  "decade",
+] as const;
 export type ReadingType = (typeof READING_TYPES)[number];
 
 /**
@@ -39,6 +46,7 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   diet: "종합 체질 풀이",
   "gain-cause": "내가 살이 찌는 이유",
   "diet-method": "나에게 맞는 다이어트 방법",
+  exercise: "나에게 맞는 운동",
   decade: "몸이 바뀌는 10년",
 };
 
@@ -60,6 +68,7 @@ export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal">
   diet: "public",
   "gain-cause": "public",
   "diet-method": "public",
+  exercise: "public",
   decade: "public",
 };
 
@@ -90,6 +99,8 @@ export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   "gain-cause": "살이 붙을 때 어디서부터, 어떤 상황에서 붙는지 그 결의 뿌리를 찾습니다.",
   "diet-method":
     "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
+  exercise:
+    "이 사주에 맞는 운동 한 가지를 골라 드리고, 어떤 결로 얼마나 힘을 들여 움직일지를 짚습니다.",
   decade:
     "지금 흐르는 대운이 몸의 결을 어느 쪽으로 받치는지, 직전 구간과 무엇이 달라졌는지 봅니다. 성별이 필요합니다.",
 };
@@ -125,6 +136,11 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
     description:
       "생년월일시로 사주 원국을 계산하고, 대사 기조와 살이 붙는 패턴에서 무엇을 먼저 고정할지·어떤 종류로 움직이고 어떤 순서로 먹을지를 짚어드립니다.",
   },
+  exercise: {
+    title: "나에게 맞는 운동 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 대사 기조와 걸리는 지점에서 이 사주에 맞는 운동 한 가지를 골라 어떤 결로 움직이고 언제 하면 좋을지·무엇이 무리가 되는지를 짚어드립니다.",
+  },
   decade: {
     title: "몸이 바뀌는 10년 | 다이어트 사주",
     description:
@@ -153,6 +169,7 @@ export const READING_TYPE_NEEDS_GENDER: Record<ReadingType, boolean> = {
   diet: false,
   "gain-cause": false,
   "diet-method": false,
+  exercise: false,
   decade: true,
 };
 

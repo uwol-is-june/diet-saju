@@ -50,6 +50,15 @@
   --raw-ohaeng-to-bg: #fef8e6;
   --raw-ohaeng-geum-bg: #ededed;
   --raw-ohaeng-su-bg: #e7f0ff;
+
+  /* 캐릭터가 앉는 면 (TASK-70) — 유형마다 다른 파스텔. **오행 배경을 끌어 쓰지 않는다**:
+     그건 오행을 인코딩하는 값이라 장식이 같은 색을 쓰면 "이 카드는 목(木)인가" 로 읽힌다.
+     이 면 위에는 **글자가 올라가지 않으므로** 필요한 대비는 캐릭터 선(잉크) 대 면뿐이다. */
+  --raw-seat-peach: #fdeede;
+  --raw-seat-mist: #e6eef4;
+  --raw-seat-rose: #fbe8ec;
+  --raw-seat-sand: #f6f0dd;
+  --raw-seat-sage: #e6f1e8;
 }
 
 /* ============================================================================
@@ -126,6 +135,18 @@
   --color-ohaeng-geum-ink: var(--raw-gray-500);
   --color-ohaeng-su: var(--raw-ohaeng-su-bg);
   --color-ohaeng-su-ink: var(--raw-blue-700);
+
+  /* 캐릭터 면 (TASK-70). 유형 → 면은 `ReadingCharacter.tsx` 의 `Record` 가 정한다.
+     **전면 배경으로 쓰지 않는다** — 그러면 그 위에 본문이 얹혀 대비 조합이 다섯 벌이 된다. */
+  --color-seat-peach: var(--raw-seat-peach);
+  --color-seat-mist: var(--raw-seat-mist);
+  --color-seat-rose: var(--raw-seat-rose);
+  --color-seat-sand: var(--raw-seat-sand);
+  --color-seat-sage: var(--raw-seat-sage);
+  /* 캐릭터 선·눈 — 어느 면 위에서도 또렷해야 한다 (검사는 tokens.test.ts). */
+  --color-character-ink: var(--raw-gray-900);
+  /* 볼터치 — 장식이라 대비를 요구하지 않는다. */
+  --color-character-blush: var(--raw-red-100);
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, "Segoe UI", "Malgun Gothic", sans-serif;

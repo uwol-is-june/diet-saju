@@ -536,7 +536,7 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
           <button
             type="button"
             onClick={stop}
-            className="w-full rounded-xl border border-line-strong px-4 py-3.5 font-semibold text-ink-soft transition hover:bg-surface-inset"
+            className="w-full rounded-full border border-line-strong px-4 py-3.5 font-semibold text-ink-soft transition hover:bg-surface-inset"
           >
             생성 중단
           </button>
@@ -545,7 +545,13 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             type="submit"
             disabled={loading || !submittable}
             aria-busy={loading}
-            className="w-full rounded-xl bg-brand-solid px-4 py-3.5 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
+            /*
+              필 모양이다 (TASK-71). 레퍼런스의 하단 버튼을 받은 것이고, **색은
+              `brand-solid` 를 유지한다** — 레퍼런스의 검정 필을 쓰려면 새 토큰과 대비
+              검증이 필요한데 이 조합은 이미 5.14:1 로 검증돼 있다.
+              **비활성은 회색으로 채우지 않고 면을 비운다** (중간 밝기 사각지대).
+            */
+            className="w-full rounded-full bg-brand-solid px-4 py-3.5 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
           >
             {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
           </button>

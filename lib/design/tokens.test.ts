@@ -92,6 +92,9 @@ describe("토큰 정의", () => {
       "--color-ohaeng-to", "--color-ohaeng-to-ink",
       "--color-ohaeng-geum", "--color-ohaeng-geum-ink",
       "--color-ohaeng-su", "--color-ohaeng-su-ink",
+      "--color-seat-peach", "--color-seat-mist", "--color-seat-rose",
+      "--color-seat-sand", "--color-seat-sage",
+      "--color-character-ink", "--color-character-blush",
     ];
     for (const token of expected) {
       expect(tokens[token], `${token} 미해석`).toMatch(/^#[0-9a-fA-F]{6}$/);
@@ -194,6 +197,33 @@ describe("대비비 — 오행 배지 (AA 4.5:1)", () => {
   it("다섯 배지 배경이 서로 구분된다", () => {
     const backgrounds = ["mok", "hwa", "to", "geum", "su"].map((e) => hex(`--color-ohaeng-${e}`));
     expect(new Set(backgrounds).size).toBe(5);
+  });
+});
+
+/**
+ * 캐릭터 면 (TASK-70).
+ *
+ * **글자가 올라가지 않는 면이라 4.5:1 을 요구하지 않는다.** 필요한 것은 캐릭터 선이 면 위에서
+ * 도형으로 구분되는 정도이며, 그 기준은 비텍스트 대비(WCAG 1.4.11)의 3:1 이다. 전면 배경으로
+ * 갔다면 다섯 면 × 본문·보조 텍스트 조합을 전부 여기 넣어야 했다 — 그래서 면만 칠한다.
+ */
+describe("대비비 — 캐릭터 면 (비텍스트 3:1)", () => {
+  const SEATS = ["peach", "mist", "rose", "sand", "sage"];
+
+  it.each(SEATS)("%s 면 위에서 캐릭터 선이 구분된다", (seat) => {
+    expect(contrast(hex("--color-character-ink"), hex(`--color-seat-${seat}`))).toBeGreaterThanOrEqual(3);
+  });
+
+  it("다섯 면이 서로 구분된다", () => {
+    expect(new Set(SEATS.map((s) => hex(`--color-seat-${s}`))).size).toBe(5);
+  });
+
+  it("오행 배경을 그대로 끌어 쓰지 않는다", () => {
+    // 오행 색은 **인코딩하는 값**이다. 장식이 같은 색을 쓰면 "이 카드는 목(木)인가" 로 읽힌다.
+    const ohaeng = new Set(["mok", "hwa", "to", "geum", "su"].map((e) => hex(`--color-ohaeng-${e}`)));
+    for (const seat of SEATS) {
+      expect(ohaeng.has(hex(`--color-seat-${seat}`)), `${seat} 가 오행 색과 같다`).toBe(false);
+    }
   });
 });
 

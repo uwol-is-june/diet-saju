@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { collectVerdictLabels } from "@/lib/reading/emphasis";
 import { findCurrentDaeun } from "@/lib/saju/decade";
 import type { Pillar, ReadingType, SajuChart, TimeCorrectionInfo } from "@/lib/saju/schema";
 import { DaeunTimeline } from "./charts/DaeunTimeline";
@@ -18,8 +19,12 @@ import { VerdictCallout } from "./VerdictCallout";
 const CARD = "rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
 
 /**
- * 원국은 코드가 즉시 계산하므로 먼저 그린다. 풀이는 스트리밍으로 채워진다.
- * `streaming` 이 true 면 아직 생성 중이라는 표시를 붙인다.
+ * 결과 화면. **위에서부터 판정 한 줄 → 풀이 → 공유 → 근거 도식 순이다** (TASK-61).
+ * 사람들이 보러 온 것은 풀이이므로 그것이 맨 위에서 시작하고, 코드가 만든 도식은
+ * "무엇으로 이 풀이가 나왔는가" 를 밝히는 근거로 뒤에 붙는다.
+ *
+ * `streaming` 이 true 면 아직 생성 중이라는 표시를 붙인다. 원국은 코드가 60~70ms 에
+ * 계산하지만 첫 글자는 1초 뒤에 오므로, 그 사이를 판정 콜아웃이 채운다.
  */
 export function ResultView({
   chart,
@@ -48,8 +53,42 @@ export function ResultView({
 
   return (
     <div className="space-y-6">
+
+      {/*
+        판정 한 줄 콜아웃 (TASK-47). **결과 화면의 첫 요소다** (TASK-61) — 원국은 60~70ms 에
+        오고 첫 글자는 1초 뒤라, 기다리는 동안 결론 한 줄이 먼저 뜬다.
+        스트리밍 중에도 낸다. `OtherReadingLinks` 와 달리 **읽고 있는 글을 끊는 것이
+        아니라 그 글의 결론**이라, 먼저 떠 있는 편이 오히려 읽는 데 도움이 된다.
+      */}
+      <VerdictCallout chart={chart} readingType={readingType} />
+
+      <div aria-label="풀이" aria-busy={streaming} role="region">
+        <ReadingSections
+          reading={reading}
+          readingType={readingType}
+          streaming={streaming}
+          /* 판정 라벨은 코드가 정한 값이라 매번 같은 자리에서 굵어진다 (TASK-65). */
+          verdictLabels={collectVerdictLabels(chart)}
+        />
+      </div>
+
+      {/* 생성이 끝난 뒤에 보여준다 — 쓰는 중에 공유 버튼을 내밀면 미완성 결과를 퍼뜨린다. */}
+      {!streaming && <ShareActions chart={chart} readingType={readingType} />}
+
+      {/*
+        근거 묶음 (TASK-61). **풀이 아래에 둔다** — 사람들이 보러 온 것은 풀이이고 도식은
+        그것이 무엇에서 나왔는지 보여주는 근거다. 접는 것만으로는 부족했다(TASK-52): 접힌
+        제목 줄 셋과 펼쳐진 원국 카드가 여전히 본문보다 위에 있어서 글이 아래에서 시작했다.
+
+        제목 줄을 **카드로 감싸지 않는다** — 카드 안에 카드가 되어 여백이 두 겹이 된다.
+        묶음에 이름이 있어야 이 카드들이 왜 뒤에 붙어 있는지 읽힌다.
+      */}
+      <h2 className="pt-2 text-sm font-bold tracking-wide text-ink-muted">
+        이 풀이의 근거
+      </h2>
+
       <section className={CARD}>
-        <h2 className="mb-1 text-lg font-bold">사주 원국</h2>
+        <h3 className="mb-1 text-lg font-bold">사주 원국</h3>
         <p className="mb-4 text-sm text-ink-muted">
           양력 {chart.solarDate} · 음력 {chart.lunarDate} · {chart.saencho}띠
         </p>
@@ -121,21 +160,6 @@ export function ResultView({
       </FoldCard>
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
-
-      {/*
-        판정 한 줄 콜아웃 (TASK-47). **풀이 바로 위**에 둔다 — 원국은 60~70ms 에 오고
-        첫 글자는 1초 뒤라, 기다리는 동안 결론 한 줄이 먼저 뜬다.
-        스트리밍 중에도 낸다. `OtherReadingLinks` 와 달리 **읽고 있는 글을 끊는 것이
-        아니라 그 글의 결론**이라, 먼저 떠 있는 편이 오히려 읽는 데 도움이 된다.
-      */}
-      <VerdictCallout chart={chart} readingType={readingType} />
-
-      <div aria-label="풀이" aria-busy={streaming} role="region">
-        <ReadingSections reading={reading} readingType={readingType} streaming={streaming} />
-      </div>
-
-      {/* 생성이 끝난 뒤에 보여준다 — 쓰는 중에 공유 버튼을 내밀면 미완성 결과를 퍼뜨린다. */}
-      {!streaming && <ShareActions chart={chart} readingType={readingType} />}
 
       {/*
         전문가 상담 권유가 **본문이 아니라 여기 있다** (TASK-57 · 2026-08-18).
@@ -317,9 +341,12 @@ function FoldCard({
         onToggle?.(open);
       }}
     >
-      {/* 제목을 `h2` 로 두어 원국·풀이와 같은 단계로 읽히게 한다 (제목 탐색이 살아 있다). */}
+      {/*
+        제목을 `h3` 로 두어 **`이 풀이의 근거` 묶음(h2) 아래 단계**로 읽히게 한다 (TASK-61).
+        원국 카드와 같은 단계여야 제목 탐색으로 근거 카드 셋을 훑을 수 있다.
+      */}
       <summary className="flex items-center gap-x-3 gap-y-1 p-5 sm:p-6">
-        <h2 className="text-lg font-bold">{title}</h2>
+        <h3 className="text-lg font-bold">{title}</h3>
         <span className="min-w-0 truncate text-sm text-ink-muted">{note}</span>
       </summary>
       <div key={openCount} className="border-t border-line p-5 sm:p-6">

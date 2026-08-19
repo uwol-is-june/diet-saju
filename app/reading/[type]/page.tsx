@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
 import { SajuForm } from "@/components/SajuForm";
+import { ReadingCharacter } from "@/components/ReadingCharacter";
 import { ViewBeacon } from "@/components/ViewBeacon";
 import {
+  PUBLIC_READING_TYPES,
   READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   READING_TYPE_META,
+  READING_TYPE_SHORT,
   READING_TYPE_VISIBILITY,
   type ReadingType,
 } from "@/lib/saju/schema";
@@ -105,10 +109,49 @@ export default async function ReadingPage({
       <ViewBeacon type={readingType} />
       <header className="mb-8">
         <BackLink label="다른 풀이 고르기" />
-        <h1 className="mt-1 text-2xl font-bold tracking-tight">
+
+        {/*
+          유형 줄 (TASK-71). 레퍼런스 화면 1 의 가로 아이콘 줄을 여기서 받는다.
+          **`/` 가 아니라 여기인 이유**: `/` 에는 "선택된 유형" 이 없고(선택이 곧 이동이다)
+          상태를 들면 클라이언트 컴포넌트가 되어 `/` 를 정적으로 두는 성질이 깨진다.
+          이 화면은 세그먼트로 현재 유형을 **서버가** 알므로 클라이언트 JS 없이 강조된다.
+
+          **링크이지 컨트롤이 아니다.** `/reading/*` 에 유형 선택 *컨트롤* 을 두지 않는다는
+          경계는 그대로이고 `birth-input.test.ts` 가 폼 안을 본다. 이 줄은 폼 밖이다.
+        */}
+        <nav aria-label="풀이 유형" className="mt-3">
+          <ul className="flex flex-wrap justify-center gap-1.5">
+            {PUBLIC_READING_TYPES.map((type) => {
+              const current = type === readingType;
+              return (
+                <li key={type}>
+                  <Link
+                    href={`/reading/${type}`}
+                    aria-current={current ? "page" : undefined}
+                    className={
+                      current
+                        ? "block rounded-full bg-brand-subtle px-3.5 py-1.5 text-sm font-bold text-brand-ink ring-1 ring-brand-border"
+                        : "block rounded-full px-3.5 py-1.5 text-sm text-ink-muted hover:text-brand-ink"
+                    }
+                  >
+                    {READING_TYPE_SHORT[type]}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* 유형별 캐릭터 (TASK-70). 면 색만 유형 톤이고 화면 배경은 그대로다. */}
+        <div className="mt-6">
+          <ReadingCharacter readingType={readingType} />
+        </div>
+
+        <h1 className="mt-5 text-center text-2xl font-bold tracking-tight">
           {READING_TYPE_LABEL[readingType]}
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+        {/* 중앙 정렬은 **짧은 글에만** 쓴다 — 본문 문단을 가운데로 놓으면 줄 시작점이 흔들린다. */}
+        <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-relaxed text-ink-muted">
           {READING_TYPE_DESCRIPTION[readingType]}
         </p>
       </header>

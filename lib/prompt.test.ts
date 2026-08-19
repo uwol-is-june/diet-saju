@@ -413,13 +413,60 @@ describe("섹션 계약 (TASK-06)", () => {
    */
   it("근거는 유지하되 여는 자리에서 뒤로 옮기라고 지시한다", () => {
     expect(SYSTEM_INSTRUCTION).toContain("첫 문장을 명리학 용어로 열지 마세요");
-    expect(SYSTEM_INSTRUCTION).toContain("첫 문장은 그 사람이 겪는 일이나 몸으로 느끼는 결로 엽니다");
+    expect(SYSTEM_INSTRUCTION).toContain("첫 문장은 그 사람이 겪는 일이나 몸으로 느끼는 감각으로 엽니다");
     expect(SYSTEM_INSTRUCTION).toContain("반드시\n  언급하고");
     expect(SYSTEM_INSTRUCTION).toContain("근거를 빼라는 뜻이 아니라");
 
     // 균등 배분으로 되돌아가면 중심 절이 사라진다.
     expect(SYSTEM_INSTRUCTION).not.toContain("각 절은 3~5문장");
     expect(SYSTEM_INSTRUCTION).toContain("분량은 절마다 다릅니다");
+  });
+
+  /**
+   * `결` 쏠림 (TASK-68).
+   *
+   * `결` 은 **사주 용어가 아니다** — 나뭇결의 그 낱말을 빌려 온 것이고, TASK-55 경계에서
+   * (i)판정은 단정하되 (ii)몸의 인과로 넘어가지 않는 자리를 맡는다. **장치는 맞지만 양이
+   * 문제였다**: 지시문이 절마다 이 말로 쓰여 있으니 모델도 이 말로 썼고, 화면에 반복돼
+   * 처음 보는 사람이 전문용어로 오해했다. (고치기 전 `lib/prompt.ts` 에만 66회.)
+   *
+   * **상한을 소스에서 지킨다** — 문구를 고쳐도 나중에 한 자리씩 되살아나면 알 수 없다.
+   */
+  /**
+   * 금지 낱말의 부정문 (TASK-55 에서 한 번, TASK-68 재측정에서 다시 걸렸다).
+   *
+   * 표본 30건의 금지 어휘 12건 중 **9건이 부정문**이었다 — "특정 질환을 진단하는 것이
+   * 아닙니다" 처럼. 낱말을 막아도 **범위를 밝히라는 지시가 그 낱말을 끌어온다.**
+   * 그래서 막기만 하지 않고 **쓸 문장을 준다**(TASK-55 가 `gain-misread` 에서 쓴 방법).
+   */
+  it("금지 낱말을 부정문으로도 쓰지 말라고 지시하고 대안을 준다", () => {
+    expect(SYSTEM_INSTRUCTION).toContain("부정문으로도 쓰지 마세요");
+    expect(SYSTEM_INSTRUCTION).toContain("우리가 아는 것과 모르는 것");
+    expect(SYSTEM_INSTRUCTION).toContain("덜 흔들립니다");
+  });
+
+  it("같은 낱말을 되풀이하지 말라고 지시한다", () => {
+    expect(SYSTEM_INSTRUCTION).toContain("같은 낱말로 모든 절을 쓰지 마세요");
+    expect(SYSTEM_INSTRUCTION).toContain("글 전체에서 두세 번까지");
+  });
+
+  it.each(READING_TYPES)("%s 프롬프트에 `결` 이 몰려 있지 않다", (type) => {
+    const text = SYSTEM_INSTRUCTION + PROMPTS[type];
+    const all = (text.match(/결/g) ?? []).length;
+    // `결과`·`결정` 처럼 다른 낱말은 뺀다.
+    const other = (text.match(/결과|결정|해결|연결|결합|결론|완결/g) ?? []).length;
+    expect(all - other).toBeLessThanOrEqual(12);
+  });
+
+  /**
+   * 본문 강조 (TASK-65). 강조는 두 곳에서 온다 — 여기(프롬프트)가 본류이고, 코드는
+   * 판정 라벨만 감싼다(`lib/reading/emphasis.ts`). **상한이 이 지시의 알맹이다** —
+   * 상한이 없으면 문단이 굵은 글자로 뒤덮여 아무것도 강조되지 않는다.
+   */
+  it("강조를 요구하되 절마다 한두 곳으로 제한한다", () => {
+    expect(SYSTEM_INSTRUCTION).toContain("굵게 표시합니다");
+    expect(SYSTEM_INSTRUCTION).toContain("절마다 한두 곳까지입니다");
+    expect(SYSTEM_INSTRUCTION).toContain("제목 줄에는 쓰지 마세요");
   });
 
   /**
@@ -472,6 +519,70 @@ describe("섹션 계약 (TASK-06)", () => {
  * 말하는 쪽, ② `diet` 의 "올해의 몸 흐름" 과 같은 말을 하는 쪽. 검사도 그 둘과
  * "판정이 실제로 실리는가" 셋이다.
  */
+/**
+ * 식단 유형의 경계 (TASK-63).
+ *
+ * **`diet-method` 의 `eating` 절을 떼어 오지 않았다.** 두 유형이 같은 판정을 쓰므로
+ * `exercise` 때와 같은 위험이 있다 — 검사도 같은 방식이다: 두 지침이 **서로 다른 것을
+ * 요구하는지.** 여기에 이 유형만의 위험(목록 밖 식품)을 더해 본다.
+ */
+describe("식단 유형 (TASK-63)", () => {
+  const prompt = PROMPTS["diet-food"];
+  const sectionGuide = (title: string) => sectionGuideOf("diet-food", title);
+
+  it("재료 범주가 프롬프트에 실린다", () => {
+    for (const item of chart.constitution.focus) {
+      for (const group of item.foodGroups) {
+        expect(prompt, `${group} 없음`).toContain(group);
+      }
+    }
+    expect(prompt).toContain(chart.constitution.thermal);
+  });
+
+  it("목록 밖 식품을 유형 규칙과 섹션 지침 두 곳에서 막는다", () => {
+    // 유형 이름이 "식단" 이라 모델이 메뉴를 지어내려는 압력이 가장 세다.
+    expect(prompt).toContain('식품 이름은 주어진 "재료 범주" 안에서만 씁니다');
+    expect(prompt.replace(/\s+/g, " ")).toContain("다른 재료를 새로 고르지 말고");
+    expect(sectionGuide("무엇을 곁들일까")).toContain("밖의 식품 이름을 새로 만들지 말 것");
+  });
+
+  it("diet-method 의 먹는 순서 절과 지침이 서로 다른 것을 요구한다", () => {
+    // 같은 판정을 쓰지만 층이 다르다 — `diet-method` 는 순서와 시각,
+    // `diet-food` 는 재료 범주·조리·온도다.
+    const what = sectionGuide("무엇을 곁들일까");
+    const eating = sectionGuideOf("diet-method", "어떤 순서로 먹을까");
+    expect(what).not.toBe(eating);
+    expect(what).toContain('부족으로 판정된 오행의 "재료 범주" 를 그대로 쓰고');
+    expect(eating).toContain("이 절의 중심은 순서와 시각이다");
+  });
+
+  it("층을 섞지 않는다 — 조리와 온도는 한열 절이 맡는다", () => {
+    expect(sectionGuide("어떻게 차려 먹을까")).toContain('"한열" 항목만 근거로');
+    // 끼니 시각은 `diet-method` 몫이다. 여기서 정해 주면 두 유형이 같은 말을 한다.
+    expect(prompt).toContain("끼니 시각과 먹는 순서를 정해 주지 않습니다");
+    expect(sectionGuide("어떻게 차려 먹을까")).toContain("끼니 시각을 정해 주지 않는다");
+  });
+
+  it("과다 절이 '끊어라' 로 흐르지 않게 막는다", () => {
+    // 알레르기·지병·복약·임신 여부를 모르므로 표현 범위는 "더 늘리지 않기" 까지다.
+    const enough = sectionGuide("무엇이 이미 충분한가");
+    expect(enough).toContain("굳이 더 늘리지 않아도");
+    expect(enough).toContain('"덜어내라"·"끊어라" 로 쓰지 말 것');
+  });
+
+  it("수치와 세는 말을 막는다", () => {
+    expect(prompt).toContain("수치를 쓰지 않는다");
+    // 원문이 줄바꿈을 품고 있으므로 공백을 눌러 놓고 본다.
+    expect(sectionGuide("무엇을 곁들일까").replace(/\s+/g, " ")).toContain(
+      "세는 말이 붙은 양도 같다",
+    );
+  });
+
+  it("모르는 것(알레르기·지병)을 밝히라고 요구한다", () => {
+    expect(prompt).toContain("알레르기·지병·복약·임신 여부를 우리는 모릅니다");
+  });
+});
+
 /**
  * 운동 유형의 경계 (TASK-48).
  *

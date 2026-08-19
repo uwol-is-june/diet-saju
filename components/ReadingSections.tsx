@@ -1,6 +1,8 @@
 "use client";
 
+import { createContext, useContext } from "react";
 import Markdown from "react-markdown";
+import { dropUnclosedEmphasis, emphasizeVerdictLabels } from "@/lib/reading/emphasis";
 import { breakSentences } from "@/lib/reading/line-breaks";
 import {
   SECTION_ICON,
@@ -29,20 +31,33 @@ import type { ReadingType } from "@/lib/saju/schema";
  * 그대로 그린다. 계약은 프롬프트로 부탁하는 것이라 어길 수 있고, 그때 화면이 비면
  * 형식 문제가 내용 손실로 번진다.
  */
+/**
+ * 굵게 만들 판정 라벨 (TASK-65).
+ *
+ * **prop 으로 흘리지 않고 context 로 둔다.** `Prose` 호출부가 셋(본문·프리앰블·**폴백**)이고
+ * `Body` 를 한 단계 더 거치는데, 폴백은 평소에 안 보여서 빠뜨려도 눈에 띄지 않는다.
+ * `Prose` 가 마크다운의 유일한 통로라는 성질을 그대로 쓰는 쪽이 안전하다.
+ */
+const VerdictLabels = createContext<readonly string[]>([]);
+
 export function ReadingSections({
   reading,
   readingType,
   streaming,
+  verdictLabels = [],
 }: {
   reading: string;
   readingType: ReadingType;
   streaming: boolean;
+  /** `lib/reading/emphasis.ts` 의 `collectVerdictLabels` 결과. 비면 강조하지 않는다. */
+  verdictLabels?: readonly string[];
 }) {
   const parsed = parseReadingSections(reading, readingType, streaming);
 
   if (!parsed.recognized) {
     return (
-      <section className="reading rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
+      <VerdictLabels value={verdictLabels}>
+        <section className="reading rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
         <ReadingStatus streaming={streaming} hasText={reading.length > 0} />
         {reading ? (
           <>
@@ -50,9 +65,10 @@ export function ReadingSections({
             {streaming && <StreamingCursor />}
           </>
         ) : (
-          <p className="text-sm text-ink-muted">풀이를 쓰고 있습니다…</p>
-        )}
-      </section>
+            <p className="text-sm text-ink-muted">풀이를 쓰고 있습니다…</p>
+          )}
+        </section>
+      </VerdictLabels>
     );
   }
 
@@ -62,8 +78,9 @@ export function ReadingSections({
   const isLast = (section: ParsedSection) => parsed.sections[lastIndex] === section;
 
   return (
-    <div className="space-y-4">
-      <ReadingStatus streaming={streaming} hasText />
+    <VerdictLabels value={verdictLabels}>
+      <div className="space-y-4">
+        <ReadingStatus streaming={streaming} hasText />
 
       {parsed.preamble && (
         <section className="reading rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
@@ -102,7 +119,16 @@ export function ReadingSections({
                 key={section.id ? `${section.id}-${index}` : `unmatched-${index}`}
                 className="anim-rise py-5 first:pt-0 last:pb-0"
               >
-                <h2 className="mb-2 text-base font-bold">
+                {/*
+                  **`globals.css` 의 `.reading h2`(1.125rem)와 같은 크기다** (TASK-67).
+                  예전에는 여기가 `text-base`(16px)라 본문과 같은 크기였고 굵기로만
+                  구분됐다 — 계약이 깨져 원문 폴백으로 갈 때만 제목이 커지는 셈이라
+                  두 경로가 어긋나 있었다.
+
+                  **제목에 `.reading` 을 걸면 안 된다.** 그 규칙은 `@layer` 밖이라
+                  Tailwind 유틸리티를 이기고, 여기 붙인 크기 클래스가 조용히 무시된다.
+                */}
+                <h2 className="mb-2 text-lg font-bold">
                   <SectionIcon id={section.id} />
                   {section.title}
                 </h2>
@@ -113,8 +139,9 @@ export function ReadingSections({
         </section>
       )}
 
-      <ProgressNote parsed={parsed} readingType={readingType} streaming={streaming} />
-    </div>
+        <ProgressNote parsed={parsed} readingType={readingType} streaming={streaming} />
+      </div>
+    </VerdictLabels>
   );
 }
 
@@ -195,7 +222,16 @@ function ProgressNote({
  * 빠뜨리기 쉽다 — 화면이 경로에 따라 다르게 보인다.
  */
 function Prose({ children }: { children: string }) {
-  return <Markdown>{breakSentences(children)}</Markdown>;
+  const labels = useContext(VerdictLabels);
+  /*
+    순서가 중요하다 (TASK-65).
+    ① 닫히지 않은 `**` 를 먼저 지운다 — 그래야 아래 강조 삽입이 "`**` 는 짝수" 가정 위에서
+       돈다. 스트리밍 중에는 `**식욕형` 까지만 도착한 순간이 반드시 있다.
+    ② 판정 라벨의 첫 등장을 굵게 (`lib/reading/emphasis.ts`).
+    ③ 마지막에 문장 단위로 문단을 가른다.
+  */
+  const emphasized = emphasizeVerdictLabels(dropUnclosedEmphasis(children), labels);
+  return <Markdown>{breakSentences(emphasized)}</Markdown>;
 }
 
 /** 생성 중임을 알리는 커서. 텍스트가 멈춰 있어도 살아 있다는 신호가 된다. */

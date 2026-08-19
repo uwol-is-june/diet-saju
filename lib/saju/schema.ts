@@ -26,6 +26,7 @@ export const READING_TYPES = [
   "diet",
   "gain-cause",
   "diet-method",
+  "diet-food",
   "exercise",
   "decade",
 ] as const;
@@ -36,18 +37,41 @@ export type ReadingType = (typeof READING_TYPES)[number];
  * 세그먼트가 곧 URL 이라 id 를 바꾸면 이미 공유된 `/reading/diet` 링크와 공유 카드가 죽는다.
  *
  * 다이어트 계열 셋은 **묻는 것이 서로 다르다** (TASK-44).
- *   `diet`        몸이 어떤 결인가 (체질·패턴·올해 흐름)
+ *   `diet`        몸이 어떤 쪽인가 (체질·패턴·올해 흐름)
  *   `gain-cause`  왜 붙는가 (걸리는 지점·상황·치우침)
  *   `diet-method` 그래서 무엇을 어떻게 하는가 (순서·종류·실행 조건)
- * 목록 순서가 UI 순서이므로 이 순서(결 → 원인 → 방법)로 둔다.
+ *   `diet-food`   무엇을 먹는가 (재료 범주·조리·온도 — TASK-63)
+ * 목록 순서가 UI 순서이므로 이 순서(체질 → 원인 → 방법 → 식단 → 운동)로 둔다.
  */
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
   diet: "종합 체질 풀이",
   "gain-cause": "내가 살이 찌는 이유",
   "diet-method": "나에게 맞는 다이어트 방법",
+  "diet-food": "나에게 맞는 다이어트 식단",
   exercise: "나에게 맞는 운동",
   decade: "몸이 바뀌는 10년",
+};
+
+/**
+ * 유형 줄(`/reading/[type]` 상단)에 쓰는 **짧은 이름** (TASK-71).
+ *
+ * 전체 라벨(`나에게 맞는 다이어트 방법`)로 줄을 만들면 390px 에서 가로로 넘치고,
+ * **현재 유형이 화면 밖으로 밀려난다** — 지금 어디에 있는지 보여주려고 만든 줄인데 그것을
+ * 못 보여주면 뜻이 없다. 가로 스크롤로 두면 클라이언트 JS 로 현재 칸을 끌어와야 하고,
+ * 그 순간 이 화면이 서버 컴포넌트인 이유가 사라진다.
+ *
+ * **제목이 아니라 이름표다.** 큰 제목은 그 아래 `h1` 이 맡으므로 여기는 한두 낱말이면 된다.
+ * `Record` 라 유형이 늘면 컴파일 오류로 잡힌다.
+ */
+export const READING_TYPE_SHORT: Record<ReadingType, string> = {
+  general: "종합",
+  diet: "체질",
+  "gain-cause": "원인",
+  "diet-method": "방법",
+  "diet-food": "식단",
+  exercise: "운동",
+  decade: "10년",
 };
 
 /**
@@ -68,8 +92,15 @@ export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal">
   diet: "public",
   "gain-cause": "public",
   "diet-method": "public",
+  "diet-food": "public",
   exercise: "public",
-  decade: "public",
+  /**
+   * **`decade` 는 내렸다** (TASK-62 · 2026-08-18). 공개 유형 넷이 전부 다이어트 축으로 몸을
+   * 묻는데 이것만 시간축을 물어 결이 달랐다. `general` 과 같은 이유로 **지우지 않는다** —
+   * `READING_TYPES` 에서 빼면 섹션 계약 5절과 프롬프트 지침을 되살릴 때 다시 써야 한다.
+   * 판정(`lib/saju/decade.ts`)은 계속 계산되고 대운 도식도 화면에 그대로 있다.
+   */
+  decade: "internal",
 };
 
 /**
@@ -95,14 +126,22 @@ export const INTERNAL_READING_TYPES = READING_TYPES.filter(
  */
 export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   general: "타고난 기질과 사람을 대하는 방식, 지금 지나는 흐름까지 한 번에 봅니다.",
-  diet: "오행 균형과 한열에서 몸의 결을 읽고, 올해의 몸 흐름까지 함께 봅니다.",
-  "gain-cause": "살이 붙을 때 어디서부터, 어떤 상황에서 붙는지 그 결의 뿌리를 찾습니다.",
+  diet: "오행 균형과 한열에서 몸이 어느 쪽으로 기울었는지 읽고, 올해의 몸 흐름까지 함께 봅니다.",
+  "gain-cause": "살이 붙을 때 어디서부터, 어떤 상황에서 붙는지 그 뿌리를 찾습니다.",
   "diet-method":
     "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
+  /**
+   * 컨셉 한 줄을 앞에 세운다 (TASK-63). **숫자를 쓸 수 없다** — 아래 `schema.test.ts` 가
+   * 모든 유형의 문구를 `/\d/` 로 막는다(다이어트 계열에서 숫자는 곧 처방으로 읽힌다).
+   * 그래서 "90%" 가 아니라 "열에 아홉" 이다. 이 문장은 **다이어트 일반에 대한 주장**이지
+   * 이 사람 몸에 대한 인과가 아니므로 표현 규칙의 (ii) 경계에 걸리지 않는다.
+   */
+  "diet-food":
+    "다이어트의 열에 아홉은 식단입니다. 어떤 재료를 곁들이고 어떻게 차려 먹을지를 짚습니다.",
   exercise:
-    "이 사주에 맞는 운동 한 가지를 골라 드리고, 어떤 결로 얼마나 힘을 들여 움직일지를 짚습니다.",
+    "이 사주에 맞는 운동 한 가지를 골라 드리고, 어떤 강도로 얼마나 힘을 들여 움직일지를 짚습니다.",
   decade:
-    "지금 흐르는 대운이 몸의 결을 어느 쪽으로 받치는지, 직전 구간과 무엇이 달라졌는지 봅니다. 성별이 필요합니다.",
+    "지금 흐르는 대운이 몸을 어느 쪽으로 받치는지, 직전 구간과 무엇이 달라졌는지 봅니다. 성별이 필요합니다.",
 };
 
 /**
@@ -136,15 +175,20 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
     description:
       "생년월일시로 사주 원국을 계산하고, 대사 기조와 살이 붙는 패턴에서 무엇을 먼저 고정할지·어떤 종류로 움직이고 어떤 순서로 먹을지를 짚어드립니다.",
   },
+  "diet-food": {
+    title: "나에게 맞는 다이어트 식단 | 다이어트 사주",
+    description:
+      "생년월일시로 사주 원국을 계산하고, 오행 과부족과 한열에서 어떤 재료를 곁들이면 좋은지·무엇이 이미 충분한지·어떻게 차려 먹을지를 짚어드립니다.",
+  },
   exercise: {
     title: "나에게 맞는 운동 | 다이어트 사주",
     description:
-      "생년월일시로 사주 원국을 계산하고, 대사 기조와 걸리는 지점에서 이 사주에 맞는 운동 한 가지를 골라 어떤 결로 움직이고 언제 하면 좋을지·무엇이 무리가 되는지를 짚어드립니다.",
+      "생년월일시로 사주 원국을 계산하고, 대사 기조와 걸리는 지점에서 이 사주에 맞는 운동 한 가지를 골라 어떤 강도로 움직이고 언제 하면 좋을지·무엇이 무리가 되는지를 짚어드립니다.",
   },
   decade: {
     title: "몸이 바뀌는 10년 | 다이어트 사주",
     description:
-      "생년월일시와 성별로 대운을 계산하고, 지금 흐르는 대운이 원국의 오행 과부족을 받치는지 얹히는지, 직전 대운과 견주어 무엇이 달라졌는지를 몸의 결로 읽어드립니다.",
+      "생년월일시와 성별로 대운을 계산하고, 지금 흐르는 대운이 원국의 오행 과부족을 받치는지 얹히는지, 직전 대운과 견주어 무엇이 달라졌는지를 몸 쪽에서 읽어드립니다.",
   },
 };
 
@@ -169,6 +213,7 @@ export const READING_TYPE_NEEDS_GENDER: Record<ReadingType, boolean> = {
   diet: false,
   "gain-cause": false,
   "diet-method": false,
+  "diet-food": false,
   exercise: false,
   decade: true,
 };

@@ -127,6 +127,18 @@ const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
    * 대운이 없으면(성별 미지정) 이 유형 자체가 성립하지 않으므로 여기 오지 않지만,
    * 타입이 null 을 허용하니 체질 칩으로 물러선다.
    */
+  /**
+   * 식단 유형 (TASK-63): 곁들일 쪽이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
+   * **식품 이름을 칩에 적지 않는다** — 목록이 길어 카드에 들어가지도 않고, 오행 이름이
+   * 근거를 더 정확히 말한다. 과부족이 없으면 그 사실을 그대로 쓴다.
+   */
+  "diet-food": (chart) => {
+    const short = chart.constitution.deficient[0];
+    return [
+      short ? `${short} 곁들이기` : "오행이 고름",
+      `한열 ${chart.constitution.thermal}`,
+    ];
+  },
   // 운동 유형 (TASK-48): 종목이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
   exercise: (chart) => [chart.constitution.movementPrimary, chart.constitution.movementKind],
   decade: (chart) =>
@@ -153,6 +165,9 @@ const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
   // 칩이 방식·종류를 쓰므로 여기는 그 둘이 어디서 나왔는지를 밝힌다.
   "diet-method": (chart) =>
     `대사 기조 ${chart.constitution.metabolism} · 걸리는 지점 ${chart.constitution.gainSite}`,
+  // 칩이 곁들일 쪽·한열을 쓰므로 여기는 그것이 어디서 나왔는지를 밝힌다.
+  "diet-food": (chart) =>
+    `대사 기조 ${chart.constitution.metabolism} · 살이 붙는 패턴 ${chart.constitution.gainPattern}`,
   // 칩이 종목·종류를 쓰므로 여기는 그 종목이 어디서 나왔는지와 실행 조건(한열)을 밝힌다.
   exercise: (chart) => `${chart.constitution.dietApproach} · 한열 ${chart.constitution.thermal}`,
   // 칩이 간지·작용을 쓰므로 여기는 그 작용이 어디서 나왔는지를 밝힌다. 나이는 넣지 않는다.

@@ -32,6 +32,7 @@ import type { ReadingType } from "@/lib/saju/schema";
  * | `diet` | 오각형 | `OhaengCycle` 의 상생 오각형 (라벨 없이 축소) |
  * | `gain-cause` | 한쪽으로 치우친 막대 셋 | `OhaengBars` |
  * | `diet-method` | 계단 | 접근 순서 — 무엇을 먼저 고정하는가 |
+ * | `diet-food` | 그릇에서 오르는 김 | 재료 범주 + 조리·온도 (`ELEMENT_FOOD`·`THERMAL_GUIDE`) |
  * | `exercise` | 오르는 화살 | 강도의 결 (`MOVEMENT_PLAN`) |
  * | `decade` | 열 칸 눈금 중 한 칸 | 대운 타임라인 (`DaeunTimeline`) |
  * | `general` | 오각형 + 중심점 | 목록에 안 나오지만 `Record` 라 값이 필요하다 |
@@ -85,6 +86,35 @@ const MOTIF: Record<ReadingType, React.ReactNode> = {
       <rect x={9} y={30} width={9} height={9} className="fill-on-brand" />
       <rect x={20} y={23} width={9} height={16} className="fill-on-brand" />
       <rect x={31} y={16} width={9} height={23} className="fill-on-brand" />
+    </>
+  ),
+  /**
+   * 그릇에서 김이 오르는 모양 (TASK-63).
+   *
+   * **특정 식품을 그리지 않는다** — 그러면 `ELEMENT_FOOD` 닫힌 목록을 그림으로 우회하는
+   * 셈이 된다(TASK-50 이 음식 사진을 뺀 이유). 그릇은 식사 도구라 그 경계 밖이고,
+   * 김은 이 유형의 다른 축(조리 방식·음식 온도 = `THERMAL_GUIDE`)을 함께 말한다.
+   *
+   * **두 번 고쳐 그렸다.** 처음에는 반원 그릇 위에 점 셋, 다음에는 반원 그릇 위에 김 두
+   * 줄기였는데 **둘 다 56px 에서 웃는 얼굴로 읽혔다** — 넓은 아래 호가 입이 되고 그 위의
+   * 대칭 도형 둘이 눈이 된다. 지금은 **사다리꼴 그릇 + 김 한 줄기**다. 아래를 직선으로
+   * 끊고 위 도형을 하나만 비대칭으로 두면 얼굴로 보이지 않는다.
+   * **작은 크기에서 대칭은 얼굴을 만든다** — 모티프를 더할 때 이걸 먼저 의심할 것.
+   */
+  "diet-food": (
+    <>
+      <path
+        d="M28 18c-3-3.5 3-5 0-8.5"
+        className="fill-none stroke-on-brand"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 22h24l-3.5 15h-17z"
+        className="fill-none stroke-on-brand"
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+      />
     </>
   ),
   // 오르는 화살 — 강도의 결. 수치가 아니라 방향만 말한다.

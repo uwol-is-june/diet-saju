@@ -50,6 +50,12 @@ export const READING_SECTION_IDS = [
   "movement",
   "execution-window",
   "first-step",
+  // diet-food — 무엇을 먹는가 (TASK-63)
+  "food-why",
+  "food-what",
+  "food-enough",
+  "food-how",
+  "food-start",
   // exercise — 어떤 운동을 어떤 결로 (TASK-48)
   "exercise-pick",
   "exercise-how",
@@ -134,6 +140,23 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
    * 대신 **두 지침이 서로 다른 것을 요구한다**: `diet-method` 는 종류(결)까지,
    * 여기는 종목·강도·시간대·주의까지. `prompt.test.ts` 가 두 지침을 대조한다.
    */
+  /**
+   * 식단 유형 (TASK-63). **`diet-method` 의 `eating` 절을 떼어 오지 않았다** — 방법 유형에서
+   * 먹는 순서를 빼면 "무엇을 어떻게" 가 반쪽이 된다. 대신 다루는 층을 나눈다:
+   * `diet-method` 는 **순서와 시각**, 여기는 **재료 범주·조리·온도**다.
+   *
+   * 제목은 재현하기 쉬운 낱말로 골랐다 (TASK-58 의 `움직-` 어간 교훈).
+   * `무엇이 이미 충분한가` 는 과다 오행 절인데 **"덜어낸다"·"끊는다" 로 쓰지 않는다** —
+   * 알레르기·지병을 모르므로 표현 범위가 "더 늘리지 않기" 까지다.
+   */
+  "diet-food": [
+    { id: "summary", title: "한눈에 보기", emphasis: "summary" },
+    { id: "food-why", title: "왜 이 식단인가" },
+    { id: "food-what", title: "무엇을 곁들일까" },
+    { id: "food-enough", title: "무엇이 이미 충분한가" },
+    { id: "food-how", title: "어떻게 차려 먹을까" },
+    { id: "food-start", title: "이번 주에 바꿀 한 가지" },
+  ],
   exercise: [
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "exercise-pick", title: "왜 이 운동인가" },
@@ -212,6 +235,13 @@ export const SECTION_ICON: Record<ReadingSectionId, string> = {
   eating: "🍽️",
   "execution-window": "🌤️",
   "first-step": "📝",
+
+  // diet-food — 장기·특정 식품 그림을 쓰지 않는다. 도구와 표지로 고른다.
+  "food-why": "🧾",
+  "food-what": "🧺",
+  "food-enough": "🚦",
+  "food-how": "🥄",
+  "food-start": "✏️",
 
   // exercise
   "exercise-pick": "🎯",

@@ -15,9 +15,6 @@ import { VerdictCallout } from "./VerdictCallout";
 
 /* 오행 배지 톤 표는 `charts/OhaengBars.tsx` 로 옮겼다 (TASK-25에서 배지 줄을 막대로 교체). */
 
-/** 카드 공통 — 모바일에서는 안쪽 여백을 줄여 4기둥 칸이 눌리지 않게 한다. */
-const CARD = "rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6";
-
 /**
  * 결과 화면. **위에서부터 판정 한 줄 → 풀이 → 공유 → 근거 도식 순이다** (TASK-61).
  * 사람들이 보러 온 것은 풀이이므로 그것이 맨 위에서 시작하고, 코드가 만든 도식은
@@ -82,13 +79,20 @@ export function ResultView({
 
         제목 줄을 **카드로 감싸지 않는다** — 카드 안에 카드가 되어 여백이 두 겹이 된다.
         묶음에 이름이 있어야 이 카드들이 왜 뒤에 붙어 있는지 읽힌다.
+        TASK-73 에서 원국까지 접어 **셋이 같은 모양**이 됐다.
       */}
       <h2 className="pt-2 text-sm font-bold tracking-wide text-ink-muted">
         이 풀이의 근거
       </h2>
 
-      <section className={CARD}>
-        <h3 className="mb-1 text-lg font-bold">사주 원국</h3>
+      {/*
+        원국 카드도 접는다 (TASK-73). `이 풀이의 근거` 는 이름 그대로 **본문을 읽고 난 뒤에
+        확인하는 자리**인데, 접힌 제목 줄 둘 옆에서 이 카드만 화면 한 뭉치를 차지했다.
+
+        `note` 가 **양력 날짜와 띠**다 — 펴지 않고 알아야 하는 것은 "내가 넣은 값으로
+        계산된 것이 맞는가" 이고, 그 확인이 이 카드가 근거로서 하는 일이다.
+      */}
+      <FoldCard title="사주 원국" note={`양력 ${chart.solarDate} · ${chart.saencho}띠`}>
         <p className="mb-4 text-sm text-ink-muted">
           양력 {chart.solarDate} · 음력 {chart.lunarDate} · {chart.saencho}띠
         </p>
@@ -143,7 +147,7 @@ export function ResultView({
         )}
 
         <CorrectionNote correction={chart.timeCorrection} birthplace={birthplace} />
-      </section>
+      </FoldCard>
 
       <FoldCard title="기운의 관계" note={`상생·상극 · 한열 ${chart.constitution.thermal}`}>
         <p className="mb-4 text-sm text-ink-muted">
@@ -288,20 +292,23 @@ function DaeunTable({
 }
 
 /**
- * 접어 둔 근거 카드 (TASK-52).
+ * 접어 둔 근거 카드 (TASK-52 · 73).
  *
- * 도식은 코드가 만든 **근거**이고 사람들이 보러 온 것은 풀이 본문이다. 도식 카드 셋을
- * 다 펼쳐 두면 본문이 화면 두 개쯤 아래로 밀린다. 그래서 원국(4기둥 표)만 펼쳐 두고
- * 나머지는 접는다 — 원국은 "무엇으로 이 풀이가 나왔는가" 를 한눈에 보여주는 카드라
- * 접으면 결과가 어디서 왔는지 알 수 없다.
+ * 도식은 코드가 만든 **근거**이고 사람들이 보러 온 것은 풀이 본문이다. 근거 카드를
+ * 펼쳐 두면 본문이 화면 두 개쯤 아래로 밀린다.
+ *
+ * **원국 카드도 접는다** (TASK-73). TASK-52 는 원국만 펼쳐 뒀는데 — "무엇으로 이 풀이가
+ * 나왔는가" 가 사라진다는 이유였다 — 그 자리가 이미 **본문 아래**로 내려간 뒤로는
+ * (TASK-61) 그 이유가 약해졌다. 근거는 읽고 난 뒤에 확인하는 것이고, 접힌 줄의 `note` 가
+ * 무엇으로 계산됐는지(양력 날짜·띠)를 펴지 않고도 말한다. **셋 다 같은 모양이다.**
  *
  * **풀이 섹션에 아코디언을 쓰지 않는 것과 모순이 아니다** (`ReadingSections.tsx`).
  * 그쪽은 지금 써지고 있는 글이라 접으면 스트리밍이 보이지 않는다. 도식은 요청 즉시
  * 확정되고 그 뒤로 변하지 않으므로 접어 둬도 놓치는 순간이 없다.
  *
  * `note` 는 **펴지 않아도 알 수 있어야 하는 한 줄**이다. 제목만 있는 접힌 줄은 무엇이
- * 들었는지 알려주지 않아 결국 전부 펴 보게 만든다. 모양·화살표는 `globals.css` 의
- * `.fold` 가 정한다.
+ * 들었는지 알려주지 않아 결국 전부 펴 보게 만든다. `summary` 가 한 줄이라 390px 에서
+ * `truncate` 로 잘리지 않는 길이여야 한다. 모양·화살표는 `globals.css` 의 `.fold` 가 정한다.
  */
 function FoldCard({
   title,
@@ -346,7 +353,7 @@ function FoldCard({
         원국 카드와 같은 단계여야 제목 탐색으로 근거 카드 셋을 훑을 수 있다.
       */}
       <summary className="flex items-center gap-x-3 gap-y-1 p-5 sm:p-6">
-        <h3 className="text-lg font-bold">{title}</h3>
+        <h3 className="title-sm title-bold">{title}</h3>
         <span className="min-w-0 truncate text-sm text-ink-muted">{note}</span>
       </summary>
       <div key={openCount} className="border-t border-line p-5 sm:p-6">

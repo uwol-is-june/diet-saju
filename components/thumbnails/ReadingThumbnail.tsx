@@ -33,7 +33,7 @@ import type { ReadingType } from "@/lib/saju/schema";
  * | `gain-cause` | 한쪽으로 치우친 막대 셋 | `OhaengBars` |
  * | `diet-method` | 계단 | 접근 순서 — 무엇을 먼저 고정하는가 |
  * | `diet-food` | 그릇에서 오르는 김 | 재료 범주 + 조리·온도 (`ELEMENT_FOOD`·`THERMAL_GUIDE`) |
- * | `exercise` | 오르는 화살 | 강도의 결 (`MOVEMENT_PLAN`) |
+ * | `exercise` | 오르는 화살 | 강도의 감각 (`MOVEMENT_PLAN`) |
  * | `decade` | 열 칸 눈금 중 한 칸 | 대운 타임라인 (`DaeunTimeline`) |
  * | `general` | 오각형 + 중심점 | 목록에 안 나오지만 `Record` 라 값이 필요하다 |
  *
@@ -117,7 +117,7 @@ const MOTIF: Record<ReadingType, React.ReactNode> = {
       />
     </>
   ),
-  // 오르는 화살 — 강도의 결. 수치가 아니라 방향만 말한다.
+  // 오르는 화살 — 강도의 감각. 수치가 아니라 방향만 말한다.
   exercise: (
     <>
       <polyline

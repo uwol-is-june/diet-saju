@@ -52,7 +52,7 @@ export const DECADE_EFFECT_NOTE: Record<YearlyEffect, string> = {
 };
 
 /**
- * 직전 구간과 견준 결 — **우리 관례**(위 3단계에서 파생).
+ * 직전 구간과 견준 흐름 — **우리 관례**(위 3단계에서 파생).
  *
  * 새 축이 아니라 두 판정을 견준 것이라 **동점 처리가 새로 필요 없다** — 같으면 `유지`다.
  */
@@ -84,7 +84,7 @@ export interface DecadeAnalysis {
   /** 직전 대운. 첫 대운을 지나는 중이면 null */
   previous: DecadePeriodVerdict | null;
   effectNote: string;
-  /** 직전과 견준 결. `previous` 가 없으면 null */
+  /** 직전과 견준 흐름. `previous` 가 없으면 null */
   shift: DecadeShift | null;
   shiftNote: string | null;
   /** 현재 대운의 십신 (고전) */

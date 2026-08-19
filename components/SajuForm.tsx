@@ -15,6 +15,8 @@ import {
 import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth-time";
 import { BIRTHPLACE_SIDO } from "@/lib/form/birthplaces";
 import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
+import { Button } from "./ui/Button";
+import { FIELD_BASE } from "./ui/field";
 import { useBirthInput } from "./BirthInputProvider";
 import { LikeButton } from "./LikeButton";
 import { OtherReadingLinks } from "./OtherReadingLinks";
@@ -472,13 +474,9 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               <span className="mr-2 text-xs text-ink-muted">입력한 정보</span>
               <strong className="font-medium">{describeBirthInput(input)}</strong>
             </p>
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="min-h-11 rounded-full border border-line-strong px-4 text-sm text-ink-soft transition hover:border-brand"
-            >
+            <Button type="button" variant="outline" size="compact" onClick={() => setEditing(true)}>
               수정
-            </button>
+            </Button>
           </div>
         )}
 
@@ -533,28 +531,24 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
         )}
 
         {streaming ? (
-          <button
-            type="button"
-            onClick={stop}
-            className="w-full rounded-full border border-line-strong px-4 py-3.5 font-semibold text-ink-soft transition hover:bg-surface-inset"
-          >
+          <Button type="button" variant="outline" className="w-full" onClick={stop}>
             생성 중단
-          </button>
+          </Button>
         ) : (
-          <button
+          /*
+            **검정 면 · radius 12px 이다** (TASK-75). TASK-71 은 필 모양 + `brand-solid`
+            였는데, 레퍼런스 실물이 검정 사각 필이고 재보니 흰 글씨 17.46:1 로 통과해
+            그때의 유보 사유(새 토큰과 대비 검증이 필요하다)가 사라졌다.
+            모양·색·비활성 처리는 전부 `components/ui/Button.tsx` 가 정한다.
+          */
+          <Button
             type="submit"
+            className="w-full"
             disabled={loading || !submittable}
             aria-busy={loading}
-            /*
-              필 모양이다 (TASK-71). 레퍼런스의 하단 버튼을 받은 것이고, **색은
-              `brand-solid` 를 유지한다** — 레퍼런스의 검정 필을 쓰려면 새 토큰과 대비
-              검증이 필요한데 이 조합은 이미 5.14:1 로 검증돼 있다.
-              **비활성은 회색으로 채우지 않고 면을 비운다** (중간 밝기 사각지대).
-            */
-            className="w-full rounded-full bg-brand-solid px-4 py-3.5 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
           >
             {loading ? "사주를 계산하고 있습니다…" : "사주 풀이 받기"}
-          </button>
+          </Button>
         )}
 
         {/*
@@ -616,15 +610,11 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
 }
 
 /**
- * `text-base sm:text-sm` 인 이유: iOS Safari 는 글자 크기가 16px 미만인 입력에 포커스가
- * 가면 화면을 확대한다. 확대되면 되돌아오지 않아 이후 입력이 전부 불편해진다.
- * 데스크톱에서는 14px 로 되돌린다.
- *
- * `min-h-11`(44px)은 터치 타깃 최소 크기다. date/time 입력은 iOS 에서 기본 높이가
- * 제각각이라 이 값이 없으면 옆 칸(select)과 밑선이 어긋난다.
+ * 입력 규격은 **`components/ui/field.ts` 가 단일 소스**다 (TASK-75). 높이·radius·여백을
+ * 여기 적어 두면 버튼과 두 벌이 된다 — 폼 안에서 입력과 버튼의 모서리가 어긋난다.
+ * iOS 확대 방지(`text-base sm:text-sm`)와 명시 높이가 필요한 이유도 그 파일에 있다.
  */
-const inputBaseClass =
-  "min-h-11 w-full rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-base transition placeholder:text-ink-placeholder focus:border-brand-hover sm:text-sm";
+const inputBaseClass = FIELD_BASE;
 
 const inputClass = `${inputBaseClass} text-ink`;
 

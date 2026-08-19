@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "./ui/Button";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
@@ -68,13 +69,9 @@ export function FirstVisitNotice() {
         </li>
       </ul>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={dismiss}
-          className="rounded-lg bg-brand-solid px-4 py-2 text-sm font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover"
-        >
+        <Button type="button" size="compact" onClick={dismiss}>
           확인했습니다
-        </button>
+        </Button>
         <Link href="/privacy" className="text-xs text-ink-muted underline hover:text-brand-ink">
           개인정보 처리방침
         </Link>

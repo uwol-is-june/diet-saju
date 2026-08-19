@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  파비콘·앱 아이콘의 원본 — TASK-26.
+  파비콘·앱 아이콘의 원본 — TASK-26 · 76.
 
   결과물 세 개가 커밋되어 있고 Next 가 자동으로 메타 태그를 붙인다.
 
@@ -15,27 +15,57 @@
   이 파일을 수정한 뒤 `scripts/render-icons.mjs` 를 돌린다 (헤드리스 크로미움으로
   렌더해 세 파일을 다시 만든다). 렌더 크기는 스크립트가 정한다.
 
+  ## 문양은 다시(dasii) 로고에서 왔다 (TASK-76)
+
+  예전에는 초록 타일 위에 `사` 글자였다. 지금은 https://web.dasii.kr 의 로고에서
+  **글자(`다시,`)를 뺀 문양만** 쓴다. 팔레트가 원래 그 브랜드에서 온 것이므로
+  (`docs/design-tokens.md`) 마크도 같은 곳을 따르는 것이 맞다.
+
+  **로고 PNG 를 오려 붙이지 않았다.** 원본은 187×55 이고 문양 부분이 55×55 라,
+  512 로 키우면 뭉개진다. 대신 원본 픽셀에서 도형을 역산해 **벡터로 다시 그렸다**:
+  55×55 마스크와 대조해 3,025 화소 중 32 개(1.1%)만 어긋나고 그마저 가장자리
+  안티에일리어싱이다. 아래 좌표는 그 실측값이며 **눈대중으로 고치지 말 것** —
+  다시 맞추려면 원본 로고에서 같은 회귀를 다시 돌려야 한다.
+
+  구조는 셋이다.
+  - 바깥 링 — 반지름 44.18, 굵기 11.45. 오른쪽 아래가 약 45° 열려 있다.
+  - 그 열린 자리의 점 둘 — 링과 같은 반지름 위에 나란히 놓인다.
+  - 안쪽 링 — 반지름 25.45, 굵기 9.20. 왼쪽 위가 약 51° 열려 있다.
+
+  끝을 둥글리는 것(`stroke-linecap: round`)이 계약이다. 각도는 **둥근 마감이 덮는
+  만큼을 빼고** 잰 값이라, 마감을 각지게 바꾸면 열린 각이 양쪽에서 넓어진다.
+
   ## 왜 두 변형인가
 
-  `data-variant="apple"` 는 **모서리를 둥글리지 않고 배경을 꽉 채운다.** iOS 가 홈 화면에서
-  자기 방식대로 모서리를 깎기 때문에, 우리가 미리 둥글리면 모서리가 두 번 깎여 흰 틈이 남는다.
-  브라우저 탭용(`icon`)은 반대로 우리가 둥글려야 사각형으로 보이지 않는다.
+  `data-variant="apple"` 는 **면을 흰색으로 채우고 문양을 작게 쓴다.**
+  - iOS 는 투명을 검정으로 합성하므로 홈 화면 아이콘에 투명을 남길 수 없다.
+  - iOS 가 스스로 모서리를 깎으므로 여백이 넉넉해야 문양이 잘리지 않는다.
+
+  브라우저 탭용(`browser`)은 반대로 **배경이 없다.** 문양만 쓰는 마크라 타일을 두면
+  타일 색이 곧 두 번째 브랜드 색이 되는데, 지금 팔레트에 그 자리에 놓을 색이 없다
+  (초록 타일 위 민트→블루 문양은 서로 싸운다).
 
   ## 색
 
   아래 팔레트는 `app/globals.css` 에서 **복사한 값**이다. 단일 소스는 그쪽이고,
   두 값이 어긋나면 `lib/design/tokens.test.ts` 가 실패한다. 임의로 바꾸지 말 것.
 
-  바탕을 `green-700` 으로 쓰는 이유: 밝은 `green-500` 위 흰 글자는 1.82:1 이라 작은 크기에서
-  뭉개진다. 채운 버튼과 같은 판단이다 (`docs/design-tokens.md` 의 "채운 버튼의 사각지대").
+  그라데이션은 왼쪽 위에서 오른쪽 아래로 흐른다(원본 실측 43.4°, 정사각형 대각선과
+  같다). **시작색은 green500 을 그대로 쓴다** — 원본에서 회귀로 뽑은 시작색이
+  green500 과 채널당 1~2 차이라 눈으로 구별되지 않는다. 끝색만 팔레트에 없어서
+  `--raw-mark-blue` 로 새로 넣었다.
+
+  `stop-color` 를 프레젠테이션 속성이 아니라 **CSS 규칙으로** 준다 — 속성 안의
+  `var()` 는 브라우저마다 치환 여부가 갈린다.
 -->
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
     <style>
       :root {
-        --raw-green-700: #1c7d4a;
         --raw-green-500: #50d88f;
+        --raw-mark-blue: #549ff8;
+        --raw-white-warm: #fdfffb;
       }
       * {
         margin: 0;
@@ -53,51 +83,50 @@
         align-items: center;
         justify-content: center;
       }
-      .mark {
-        width: 100%;
-        height: 100%;
-        /* 512 기준 22% — 어느 크기로 렌더해도 같은 비율이 되도록 vw 로 쓴다 */
-        border-radius: 22%;
-        background: var(--raw-green-700);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
+      /* iOS 는 투명을 검정으로 합성한다 — 이 변형만 면을 채운다 */
+      body[data-variant="apple"] {
+        background: var(--raw-white-warm);
       }
+      /* 문양 자체가 viewBox 를 거의 꽉 채우므로(0.1~99.9) 여백은 여기서 준다 */
+      .mark {
+        display: block;
+        width: 92%;
+        height: 92%;
+      }
+      /* 홈 화면은 OS 가 모서리를 깎는다. 넉넉히 줄여 두지 않으면 점이 잘린다 */
       body[data-variant="apple"] .mark {
-        border-radius: 0;
+        width: 66%;
+        height: 66%;
       }
-      /* 아래쪽 밝은 띠 — og 카드 왼쪽의 green500 바와 같은 역할(브랜드 악센트)이다.
-         16px 로 줄어도 색 덩어리로 남아 초록 정사각형과 구별된다. */
-      .mark::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 12%;
-        background: var(--raw-green-500);
+      .from {
+        stop-color: var(--raw-green-500);
       }
-      .glyph {
-        font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui,
-          "Segoe UI", "Malgun Gothic", "맑은 고딕", sans-serif;
-        font-weight: 700;
-        /* 컨테이너 폭 기준. 더 키우면 글자가 타일 가장자리에 닿아 답답해 보이고,
-           iOS 홈 화면에서 모서리가 깎일 때 획이 잘릴 수 있다. */
-        font-size: 46cqw;
-        line-height: 1;
-        color: #ffffff;
-        /* 아래 띠만큼 위로 올려 시각적 가운데를 맞춘다 */
-        margin-bottom: 8%;
-        -webkit-font-smoothing: antialiased;
-      }
-      .mark {
-        container-type: size;
+      .to {
+        stop-color: var(--raw-mark-blue);
       }
     </style>
   </head>
   <body>
-    <div class="mark"><span class="glyph">사</span></div>
+    <svg class="mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- userSpaceOnUse 여야 링 둘과 점 둘이 **하나의** 그라데이션을 나눠 쓴다.
+             기본값(objectBoundingBox)이면 도형마다 자기 상자에서 다시 흘러 색이 끊긴다. -->
+        <linearGradient id="mark-gradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100">
+          <stop class="from" offset="0" />
+          <stop class="to" offset="1" />
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#mark-gradient)" stroke-linecap="round">
+        <!-- 바깥 링 — 80.06° 에서 시계 방향으로 300.5° (오른쪽 아래가 열린다) -->
+        <path d="M57.63 93.52A44.18 44.18 0 1 1 91.38 65.49" stroke-width="11.45" />
+        <!-- 안쪽 링 — 260.03° 에서 시계 방향으로 288° (왼쪽 위가 열린다) -->
+        <path d="M45.59 24.93A25.45 25.45 0 1 1 24.80 46.44" stroke-width="9.20" />
+      </g>
+      <!-- 바깥 링이 열린 자리를 잇는 점 둘. 링과 같은 반지름 위에 있다 -->
+      <g fill="url(#mark-gradient)">
+        <circle cx="83.23" cy="78.45" r="5.57" />
+        <circle cx="71.14" cy="89.27" r="5.59" />
+      </g>
+    </svg>
   </body>
 </html>

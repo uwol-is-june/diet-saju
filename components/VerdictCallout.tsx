@@ -12,8 +12,8 @@ import type { ReadingType, SajuChart } from "@/lib/saju/schema";
  * ## 라벨만 크게 띄우지 않는다
  *
  * 라벨 밑에 **근거 한 줄**을 함께 둔다. 라벨만 있으면 "당신은 먹는 자리에서 찐다" 는
- * 확정 진술로 읽히는데, 단정해도 되는 것은 **이 사주에서 읽히는 결**이지 몸에서 실제로
- * 일어나는 일이 아니다 (TASK-55 경계). 밑줄이 판정 근거(십신 우세 그룹 · 걸리는 지점)와
+ * 확정 진술로 읽히는데, 단정해도 되는 것은 **이 사주에서 읽어 낸 판정**이지 몸에서
+ * 실제로 일어나는 일이 아니다 (TASK-55 경계). 밑줄이 판정 근거(십신 우세 그룹 · 걸리는 지점)와
  * 그 범위를 함께 말한다.
  *
  * ## `Record` 인 이유
@@ -38,7 +38,7 @@ import type { ReadingType, SajuChart } from "@/lib/saju/schema";
  * ## "본문에서 되풀이하지 말라" 는 `gainLabel` 에만 건다
  *
  * `prompt.ts` 의 판정 블록이 `gainLabel` 한 줄에만 그 지시를 붙인다. 그것이 문장 꼴
- * ("먹는 자리에서 붙는 결")이라 본문에 그대로 들어가면 같은 말이 화면 위아래에 두 번
+ * ("먹는 자리에서 붙는 성향")이라 본문에 그대로 들어가면 같은 말이 화면 위아래에 두 번
  * 나오기 때문이다.
  *
  * **나머지 라벨에는 걸지 않는다.** 대사 기조·접근 순서 같은 낱말 꼴 라벨은
@@ -59,7 +59,7 @@ const CALLOUT: Record<ReadingType, (chart: SajuChart) => Callout | null> = {
   }),
   /**
    * 종합 체질 (TASK-66). **대사 기조를 라벨로 쓴다** — 신강신약에서 1:1 로 나오는 값이고,
-   * 이 유형이 답하는 "몸이 어떤 결인가" 에 가장 가깝다. 한열은 근거 줄로 내린다.
+   * 이 유형이 답하는 "몸이 어떤 쪽인가" 에 가장 가깝다. 한열은 근거 줄로 내린다.
    */
   diet: (chart) => ({
     label: chart.constitution.metabolism,
@@ -67,7 +67,7 @@ const CALLOUT: Record<ReadingType, (chart: SajuChart) => Callout | null> = {
   }),
   "gain-cause": (chart) => ({
     label: chart.constitution.gainLabel,
-    basis: `십신 우세 ${chart.constitution.dominantGroup} · ${chart.constitution.gainSite} 쪽에서 먼저 드러나는 결입니다`,
+    basis: `십신 우세 ${chart.constitution.dominantGroup} · ${chart.constitution.gainSite} 쪽에서 먼저 드러납니다`,
   }),
   // 방법 유형 (TASK-66): 접근 순서가 이 유형이 답하는 질문이다. 2×2 표라 동점이 없다.
   "diet-method": (chart) => ({
@@ -128,7 +128,7 @@ export function VerdictCallout({
 
   return (
     <section className="rounded-2xl border border-brand-border bg-brand-subtle p-5 shadow-sm sm:p-6">
-      <p className="text-xs font-bold tracking-wide text-ink-muted">이 사주에서 읽은 결</p>
+      <p className="text-xs font-bold tracking-wide text-ink-muted">이 사주에서 읽은 한 줄</p>
       <p className="mt-1 text-xl font-bold text-brand-ink sm:text-2xl">{callout.label}</p>
       <p className="mt-2 text-sm text-ink-soft">{callout.basis}</p>
     </section>

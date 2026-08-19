@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BackLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
 import { SajuForm } from "@/components/SajuForm";
 import { ReadingCharacter } from "@/components/ReadingCharacter";
@@ -104,11 +103,16 @@ export default async function ReadingPage({
   const readingType = toReadingType((await params).type);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 py-12">
+    <>
       {/* 조회수는 브라우저가 센다 (TASK-51). 서버 렌더에서 세면 이 페이지의 프리렌더가 죽는다. */}
       <ViewBeacon type={readingType} />
       <header className="mb-8">
-        <BackLink label="다른 풀이 고르기" />
+        {/*
+          `BackLink` 를 뺐다 (TASK-74). 전역 헤더의 로고가 같은 일을 하고, 바로 아래
+          유형 줄이 다른 유형으로 가는 길을 이미 낸다. 두 고지 페이지의 `<BackLink />` 는
+          **긴 문서 상단 링크**라는 별도 이유가 있어 그대로 둔다 — 그쪽은 헤더까지
+          스크롤을 되감아야 하는 길이가 문제였다.
+        */}
 
         {/*
           유형 줄 (TASK-71). 레퍼런스 화면 1 의 가로 아이콘 줄을 여기서 받는다.
@@ -147,7 +151,7 @@ export default async function ReadingPage({
           <ReadingCharacter readingType={readingType} />
         </div>
 
-        <h1 className="mt-5 text-center text-2xl font-bold tracking-tight">
+        <h1 className="title-lg title-extrabold mt-5 text-center">
           {READING_TYPE_LABEL[readingType]}
         </h1>
         {/* 중앙 정렬은 **짧은 글에만** 쓴다 — 본문 문단을 가운데로 놓으면 줄 시작점이 흔들린다. */}
@@ -159,6 +163,6 @@ export default async function ReadingPage({
       {/* 첫 방문 안내는 **정보를 넣기 직전에** 보여야 뜻이 있다 (TASK-30). */}
       <FirstVisitNotice />
       <SajuForm readingType={readingType} />
-    </main>
+    </>
   );
 }

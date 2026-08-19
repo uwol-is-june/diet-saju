@@ -175,7 +175,7 @@ describe("표현 가이드 — 단정적 예언을 하지 않는다", () => {
     expect(userFacing.filter((text) => text.includes(word))).toEqual([]);
   });
 
-  it("주제 라벨은 사건이 아니라 결로 되어 있다", () => {
+  it("주제 라벨은 사건이 아니라 상태로 되어 있다", () => {
     expect(Object.values(THEME_LABEL)).toEqual([
       "경쟁과 독립",
       "표현과 생산",

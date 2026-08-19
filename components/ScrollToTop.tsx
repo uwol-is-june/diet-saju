@@ -72,8 +72,14 @@ export function ScrollToTop() {
             닿았다는 신호라, 서서히 사라지는 편보다 오히려 분명하다.
 
             `bottom` 에 안전 영역을 더해 iOS 홈 인디케이터를 피한다.
+
+            `right` 는 **콘텐츠 열의 오른쪽 끝**이다 (TASK-74). 셸이 생기면서 열이 가운데
+            512px(`max-w-lg`)로 좁아졌는데 `right-5` 그대로 두면 데스크톱에서 이 버튼만
+            **뷰포트 오른쪽 끝**에 홀로 떠 글과 멀어진다. 열이 화면을 꽉 채우는 폭
+            (≤512px)에서는 `max` 가 0 이 되어 예전과 같은 값이다. `fixed` 는 유지한다 —
+            `absolute` 로 바꾸면 스크롤과 함께 밀려 올라간다.
           */
-          className="anim-rise fixed right-5 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-50 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-brand-solid text-on-brand-solid shadow-lg transition hover:bg-brand-solid-hover"
+          className="anim-rise fixed right-[calc(max(0px,50vw-16rem)+1.25rem)] bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-50 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-brand-solid text-on-brand-solid shadow-lg transition hover:bg-brand-solid-hover"
         >
           <svg
             aria-hidden

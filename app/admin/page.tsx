@@ -47,9 +47,9 @@ export default async function AdminPage() {
   const counters = await readCounters();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 py-12">
+    <>
       <header className="mb-8">
-        <h1 className="mb-2 text-2xl font-bold">내부 유형</h1>
+        <h1 className="title-lg title-extrabold mb-2">내부 유형</h1>
         <p className="text-sm leading-relaxed text-ink-muted">
           메인 유형 선택에서 내린 풀이입니다. 다른 사주 서비스와 결과를 대조하는 용도로만
           씁니다.
@@ -85,7 +85,7 @@ export default async function AdminPage() {
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }
 
@@ -103,7 +103,7 @@ export default async function AdminPage() {
 function CounterPanel({ counters }: { counters: Awaited<ReturnType<typeof readCounters>> }) {
   return (
     <section className="mb-8 rounded-2xl border border-line bg-surface p-5 shadow-sm">
-      <h2 className="mb-3 text-lg font-bold">카운터 저장소</h2>
+      <h2 className="title-sm title-bold mb-3">카운터 저장소</h2>
 
       {counters.state === "unconfigured" && (
         <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm leading-relaxed text-ink-muted">

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "./ui/Button";
 import { useState } from "react";
 import { buildShareCardModel } from "@/lib/share/card-model";
 import {
@@ -83,21 +84,12 @@ export function ShareActions({
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={saveImage}
-          disabled={busy}
-          className="min-h-11 flex-1 rounded-xl bg-brand-solid px-4 py-3 font-semibold text-on-brand-solid transition hover:bg-brand-solid-hover disabled:cursor-not-allowed disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled"
-        >
+        <Button type="button" className="flex-1" onClick={saveImage} disabled={busy}>
           {busy ? "이미지를 만들고 있습니다…" : "이미지로 저장"}
-        </button>
-        <button
-          type="button"
-          onClick={copyLink}
-          className="min-h-11 flex-1 rounded-xl border border-line-strong px-4 py-3 font-semibold text-ink-soft transition hover:bg-surface-inset"
-        >
+        </Button>
+        <Button type="button" variant="outline" className="flex-1" onClick={copyLink}>
           링크 복사
-        </button>
+        </Button>
       </div>
 
       {notice && (

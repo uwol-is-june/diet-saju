@@ -131,6 +131,12 @@ export function LikeButton({ type }: { type: ReadingType }) {
         aria-pressed={liked}
         /* 화면에는 "도움이 됐어요" 만 보이지만, 무엇에 대한 것인지가 이름에 있어야 한다. */
         aria-label={`${READING_TYPE_LABEL[type]} 풀이가 도움이 됐어요`}
+        /*
+          **`components/ui/Button` 을 쓰지 않는다** (TASK-75). 이건 버튼이 아니라
+          **켜짐/꺼짐이 있는 칩**이다 — 눌린 상태를 면 색으로 보여야 해서 variant 축이
+          다르고(`aria-pressed`), 필 모양인 것도 `/reading/[type]` 의 유형 줄 칩과
+          같은 계열이라서다. 부품에 네 번째 variant 를 만들면 그 축이 섞인다.
+        */
         className={`flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition ${
           liked
             ? "border-brand-border bg-brand-subtle text-brand-ink"

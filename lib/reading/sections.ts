@@ -35,7 +35,7 @@ export const READING_SECTION_IDS = [
   "relations",
   "current-flow",
   "next-steps",
-  // diet — 몸이 어떤 결인가
+  // diet — 몸이 어떤 쪽인가
   "constitution",
   "gain-pattern",
   "year-flow",
@@ -56,7 +56,7 @@ export const READING_SECTION_IDS = [
   "food-enough",
   "food-how",
   "food-start",
-  // exercise — 어떤 운동을 어떤 결로 (TASK-48)
+  // exercise — 어떤 운동을 어떤 강도로 (TASK-48)
   "exercise-pick",
   "exercise-how",
   "exercise-when",
@@ -94,7 +94,7 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "next-steps", title: "지금 신경 쓰면 좋은 것" },
   ],
   /**
-   * 다이어트 계열 셋은 **묻는 것으로 갈라져 있다** — 결(diet) · 원인(gain-cause) ·
+   * 다이어트 계열 셋은 **묻는 것으로 갈라져 있다** — 쪽(diet) · 원인(gain-cause) ·
    * 방법(diet-method). **섹션 id 를 공유하지 않는다.** `SECTION_INSTRUCTION` 이 id 로
    * 매기므로 id 를 공유하면 맥락이 다른 유형들이 한 지시문을 떠안게 된다.
    */
@@ -120,7 +120,7 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
     { id: "summary", title: "한눈에 보기", emphasis: "summary" },
     { id: "gain-site", title: "어디서부터 붙는가" },
     { id: "gain-trigger", title: "어떤 상황에서 붙는가" },
-    { id: "gain-imbalance", title: "오행이 만드는 결" },
+    { id: "gain-imbalance", title: "오행이 만드는 치우침" },
     { id: "gain-misread", title: "오해하기 쉬운 지점" },
   ],
   "diet-method": [
@@ -137,7 +137,7 @@ export const SECTION_SPECS: Record<ReadingType, readonly ReadingSectionSpec[]> =
    *
    * **`diet-method` 의 `movement` 절을 떼어 오지 않았다** — 방법 유형에서 움직임을 빼면
    * "무엇을 어떻게" 가 반쪽이 된다 (`diet` 에 `gain-pattern` 을 남긴 것과 같은 판단).
-   * 대신 **두 지침이 서로 다른 것을 요구한다**: `diet-method` 는 종류(결)까지,
+   * 대신 **두 지침이 서로 다른 것을 요구한다**: `diet-method` 는 종류까지,
    * 여기는 종목·강도·시간대·주의까지. `prompt.test.ts` 가 두 지침을 대조한다.
    */
   /**

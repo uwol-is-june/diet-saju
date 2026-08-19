@@ -117,6 +117,13 @@ describe("대비비 — 본문 텍스트 (AA 4.5:1)", () => {
     ["에러 텍스트", "--color-danger-ink", "--color-surface"],
     ["에러 텍스트 on subtle", "--color-danger-ink", "--color-danger-subtle"],
     ["경고 텍스트 on subtle", "--color-warning-ink", "--color-warning-subtle"],
+    /*
+      셸 바깥 바닥 (TASK-74). 좌측 패널의 카피·QR 라벨이 이 면 위에 **직접** 얹히므로
+      본문 대비를 실제로 재야 한다 — 카드가 아니라 맨 배경 위의 글자다.
+    */
+    ["본문 on canvas-outer", "--color-ink", "--color-canvas-outer"],
+    ["보조 on canvas-outer", "--color-ink-soft", "--color-canvas-outer"],
+    ["약한 on canvas-outer", "--color-ink-muted", "--color-canvas-outer"],
   ];
 
   it.each(pairs)("%s", (_label, fg, bg) => {
@@ -142,6 +149,46 @@ describe("대비비 — 연한 브랜드 면 (AA 4.5:1)", () => {
     expect(contrast(hex("--color-on-brand"), hex("--color-brand-hover"))).toBeGreaterThanOrEqual(
       4.5,
     );
+  });
+});
+
+/**
+ * 주 액션 버튼 — **검정 면** (TASK-75). dasii 의 `default` variant 를 받았다.
+ * TASK-71 이 green 을 유지한 이유는 "새 토큰과 대비 검증이 필요해서" 였고,
+ * 그 검증이 여기다.
+ */
+describe("대비비 — 검정 채운 버튼 (AA 4.5:1, TASK-75)", () => {
+  it("기본 상태", () => {
+    expect(contrast(hex("--color-on-ink-solid"), hex("--color-ink-solid"))).toBeGreaterThanOrEqual(
+      4.5,
+    );
+  });
+
+  it("hover 상태", () => {
+    expect(
+      contrast(hex("--color-on-ink-solid"), hex("--color-ink-solid-hover")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("hover 가 기본보다 밝다", () => {
+    // 검정 면은 더 어두워질 자리가 없다. 그래서 hover 는 **밝은** 쪽으로 간다 —
+    // 초록 버튼(어두워짐)과 방향이 반대인 것이 의도다.
+    expect(luminance(hex("--color-ink-solid-hover"))).toBeGreaterThan(
+      luminance(hex("--color-ink-solid")),
+    );
+  });
+
+  it("비활성 조합은 초록 버튼과 같은 것을 쓴다", () => {
+    // 면을 비우는 방식이라 면 색이 밝다 — 검정이든 초록이든 비활성 처리는 하나다.
+    expect(
+      contrast(hex("--color-on-brand-solid-disabled"), hex("--color-brand-solid-disabled")),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("비활성이 기본과 밝기로 구분된다", () => {
+    expect(
+      contrast(hex("--color-ink-solid"), hex("--color-brand-solid-disabled")),
+    ).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -324,6 +371,12 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     "components/ReadingSections.tsx",
     "components/ShareActions.tsx",
     "components/SiteFooter.tsx",
+    // 셸 (TASK-74) — 좌측 패널은 인라인 SVG 라 fill/stroke 에 hex 가 새기 쉽다
+    "components/SiteHeader.tsx",
+    "components/AppPanel.tsx",
+    // 부품 (TASK-75) — 규격의 단일 소스라 여기에 hex 가 새면 화면 전체가 새는 것과 같다
+    "components/ui/Button.tsx",
+    "components/ui/field.ts",
     "components/FirstVisitNotice.tsx",
     "components/OtherReadingLinks.tsx",
     "components/ScrollToTop.tsx",

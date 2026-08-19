@@ -96,7 +96,7 @@ export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal">
   exercise: "public",
   /**
    * **`decade` 는 내렸다** (TASK-62 · 2026-08-18). 공개 유형 넷이 전부 다이어트 축으로 몸을
-   * 묻는데 이것만 시간축을 물어 결이 달랐다. `general` 과 같은 이유로 **지우지 않는다** —
+   * 묻는데 이것만 시간축을 물어 묻는 쪽이 달랐다. `general` 과 같은 이유로 **지우지 않는다** —
    * `READING_TYPES` 에서 빼면 섹션 계약 5절과 프롬프트 지침을 되살릴 때 다시 써야 한다.
    * 판정(`lib/saju/decade.ts`)은 계속 계산되고 대운 도식도 화면에 그대로 있다.
    */

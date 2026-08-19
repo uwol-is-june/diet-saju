@@ -128,7 +128,7 @@ export function ReadingSections({
                   **제목에 `.reading` 을 걸면 안 된다.** 그 규칙은 `@layer` 밖이라
                   Tailwind 유틸리티를 이기고, 여기 붙인 크기 클래스가 조용히 무시된다.
                 */}
-                <h2 className="mb-2 text-lg font-bold">
+                <h2 className="title-sm title-bold mb-2">
                   <SectionIcon id={section.id} />
                   {section.title}
                 </h2>

@@ -1,0 +1,240 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>아령 아이콘 화풍 후보</title>
+<style>
+  :root {
+    --ink: #181a1b;
+    --ink-soft: #363a3d;
+    --muted: #6d676c;
+    --green-100: #d5f6e4;
+    --green-500: #50d88f;
+    --green-700: #1c7d4a;
+    --seat: #e6eef4;
+    --bg: #fdfffb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 24px 40px;
+    background: var(--bg);
+    font-family: "Malgun Gothic", system-ui, sans-serif;
+    color: var(--ink);
+  }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 24px; font-size: 13px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px 18px; }
+  .cell { border: 1px solid #e4e6e7; border-radius: 18px; padding: 16px 14px 14px; background: #fff; }
+  .num { font-size: 12px; font-weight: 700; color: var(--green-700); }
+  .name { font-size: 14px; font-weight: 700; margin: 2px 0 2px; }
+  .desc { font-size: 11.5px; line-height: 1.5; color: var(--muted); margin: 0 0 12px; min-height: 34px; }
+  .row { display: flex; align-items: center; gap: 14px; }
+  .seat {
+    width: 118px; height: 118px; border-radius: 999px; background: var(--seat);
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .seat.plain { background: transparent; }
+  .small { width: 56px; height: 56px; border-radius: 14px; background: var(--seat);
+    display: flex; align-items: center; justify-content: center; flex: none; }
+  .small.plain { background: transparent; }
+  .cap { font-size: 10.5px; color: var(--muted); }
+</style>
+<h1>아령 아이콘 — 화풍 후보 여덟</h1>
+<p class="lead">왼쪽은 실제 크기(118px 면 · SVG 96px), 오른쪽은 홈 카드 썸네일 크기(56px). 둘 다 견뎌야 씁니다.</p>
+<div class="grid">
+
+  <div class="cell">
+    <div class="num">01</div>
+    <div class="name">손그림 굵은 선</div>
+    <p class="desc">지금 캐릭터에서 얼굴만 뺀 것. 굵고 둥근 선, 살짝 비대칭.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120" fill="none" stroke="var(--ink)" stroke-width="3.4" stroke-linecap="round">
+        <path d="M40 60h40" />
+        <rect x="22" y="44" width="16" height="32" rx="6" />
+        <rect x="82" y="44" width="16" height="32" rx="6" />
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120" fill="none" stroke="var(--ink)" stroke-width="6" stroke-linecap="round">
+        <path d="M40 60h40" />
+        <rect x="22" y="44" width="16" height="32" rx="6" />
+        <rect x="82" y="44" width="16" height="32" rx="6" />
+      </svg></div>
+      <span class="cap">현행 방식</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">02</div>
+    <div class="name">얇은 라인 (미니멀)</div>
+    <p class="desc">균일한 가는 선. 담백하고 조용하다. 작아지면 흐려진다.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120" fill="none" stroke="var(--ink-soft)" stroke-width="2" stroke-linecap="round">
+        <path d="M38 60h44" />
+        <rect x="20" y="42" width="14" height="36" rx="4" />
+        <rect x="86" y="42" width="14" height="36" rx="4" />
+        <path d="M34 50v20M86 50v20" />
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120" fill="none" stroke="var(--ink-soft)" stroke-width="4" stroke-linecap="round">
+        <path d="M38 60h44" />
+        <rect x="20" y="42" width="14" height="36" rx="4" />
+        <rect x="86" y="42" width="14" height="36" rx="4" />
+      </svg></div>
+      <span class="cap">가늘다</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">03</div>
+    <div class="name">솔리드 실루엣</div>
+    <p class="desc">면으로 채운 한 덩어리. 작을수록 강하다. 무게감이 있다.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120">
+        <g fill="var(--ink)">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120">
+        <g fill="var(--ink)">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+      </svg></div>
+      <span class="cap">묵직</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">04</div>
+    <div class="name">듀오톤 (면 + 선)</div>
+    <p class="desc">브랜드 그린 면 위에 잉크 선. 색이 한 겹 들어가 화면이 밝아진다.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120">
+        <rect x="18" y="40" width="18" height="40" rx="7" fill="var(--green-500)" />
+        <rect x="84" y="40" width="18" height="40" rx="7" fill="var(--green-500)" />
+        <rect x="36" y="53" width="48" height="14" rx="7" fill="var(--green-100)" />
+        <g fill="none" stroke="var(--ink)" stroke-width="3.2" stroke-linecap="round">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <path d="M36 60h48" />
+        </g>
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120">
+        <rect x="18" y="40" width="18" height="40" rx="7" fill="var(--green-500)" />
+        <rect x="84" y="40" width="18" height="40" rx="7" fill="var(--green-500)" />
+        <g fill="none" stroke="var(--ink)" stroke-width="5" stroke-linecap="round">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <path d="M36 60h48" />
+        </g>
+      </svg></div>
+      <span class="cap">색 한 겹</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">05</div>
+    <div class="name">기하 · 각진</div>
+    <p class="desc">직각과 정렬. 도구처럼 반듯하다. 따뜻함은 줄어든다.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120" fill="none" stroke="var(--ink)" stroke-width="3.4">
+        <rect x="18" y="38" width="14" height="44" />
+        <rect x="88" y="38" width="14" height="44" />
+        <rect x="32" y="52" width="56" height="16" />
+        <path d="M46 52v16M74 52v16" stroke-width="2.4" />
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120" fill="none" stroke="var(--ink)" stroke-width="6">
+        <rect x="18" y="38" width="14" height="44" />
+        <rect x="88" y="38" width="14" height="44" />
+        <rect x="32" y="52" width="56" height="16" />
+      </svg></div>
+      <span class="cap">반듯함</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">06</div>
+    <div class="name">오프셋 그림자 (스티커)</div>
+    <p class="desc">잉크 도형 뒤에 그린 사본을 살짝 밀어 둔다. 인쇄물 느낌.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120">
+        <g transform="translate(5,5)" fill="var(--green-500)">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+        <g fill="var(--ink)">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120">
+        <g transform="translate(6,6)" fill="var(--green-500)">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+        <g fill="var(--ink)">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+      </svg></div>
+      <span class="cap">두 겹</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">07</div>
+    <div class="name">스케치 (이중선)</div>
+    <p class="desc">획을 두 번 그은 듯 살짝 어긋나게. 손맛이 가장 세다.</p>
+    <div class="row">
+      <div class="seat"><svg width="96" height="96" viewBox="0 0 120 120" fill="none" stroke="var(--ink)" stroke-linecap="round">
+        <g stroke-width="3">
+          <path d="M40 60h40" />
+          <path d="M22.5 50.5c-.5 8-.5 14 0 20 5 .8 10 .8 15 0 .6-6.5.6-13 0-20-5-.7-10-.7-15 0z" />
+          <path d="M83 50c-.6 8-.6 14 0 20.5 5 .8 10.2.6 15 0 .5-6.6.6-13.4 0-20.4-5-.8-10-.7-15-.1z" />
+        </g>
+        <g stroke-width="1.6" opacity=".55" transform="translate(1.6,1.4) rotate(-1 60 60)">
+          <path d="M41 60h38" />
+          <path d="M22.5 50.5c-.5 8-.5 14 0 20 5 .8 10 .8 15 0 .6-6.5.6-13 0-20-5-.7-10-.7-15 0z" />
+          <path d="M83 50c-.6 8-.6 14 0 20.5 5 .8 10.2.6 15 0 .5-6.6.6-13.4 0-20.4-5-.8-10-.7-15-.1z" />
+        </g>
+      </svg></div>
+      <div class="small"><svg width="34" height="34" viewBox="0 0 120 120" fill="none" stroke="var(--ink)" stroke-linecap="round">
+        <g stroke-width="5.5">
+          <path d="M40 60h40" />
+          <path d="M22.5 50.5c-.5 8-.5 14 0 20 5 .8 10 .8 15 0 .6-6.5.6-13 0-20-5-.7-10-.7-15 0z" />
+          <path d="M83 50c-.6 8-.6 14 0 20.5 5 .8 10.2.6 15 0 .5-6.6.6-13.4 0-20.4-5-.8-10-.7-15-.1z" />
+        </g>
+      </svg></div>
+      <span class="cap">손맛</span>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="num">08</div>
+    <div class="name">뱃지 (면 반전)</div>
+    <p class="desc">면을 그린으로 채우고 도형을 흰색으로 뚫는다. 대비가 가장 세다.</p>
+    <div class="row">
+      <div class="seat plain"><svg width="118" height="118" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="58" fill="var(--green-700)" />
+        <g fill="#fff">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+      </svg></div>
+      <div class="small plain"><svg width="56" height="56" viewBox="0 0 120 120">
+        <rect x="0" y="0" width="120" height="120" rx="30" fill="var(--green-700)" />
+        <g fill="#fff">
+          <rect x="18" y="40" width="18" height="40" rx="7" />
+          <rect x="84" y="40" width="18" height="40" rx="7" />
+          <rect x="36" y="53" width="48" height="14" rx="7" />
+        </g>
+      </svg></div>
+      <span class="cap">반전</span>
+    </div>
+  </div>
+
+</div>

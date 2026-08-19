@@ -8,10 +8,10 @@ export const metadata: Metadata = {
 
 export default function DisclaimerPage() {
   return (
-    <main className="mx-auto min-h-screen w-full max-w-2xl px-5 py-12">
+    <>
       {/* 문서가 길어 푸터까지 스크롤해야 나가는 길이 나온다 (TASK-42) */}
       <BackLink />
-      <h1 className="mb-2 mt-1 text-2xl font-bold">면책 고지</h1>
+      <h1 className="title-lg title-extrabold mt-1 mb-2">면책 고지</h1>
       <p className="mb-8 text-sm text-ink-muted">시행일: 2026년 8월 13일</p>
 
       <div className="reading">
@@ -179,6 +179,6 @@ export default function DisclaimerPage() {
           입력한 정보의 처리 방식은 <a href="/privacy">개인정보 처리방침</a>을 확인해 주세요.
         </p>
       </div>
-    </main>
+    </>
   );
 }

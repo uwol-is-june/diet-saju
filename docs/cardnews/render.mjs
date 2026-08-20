@@ -22,7 +22,15 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const OUT = path.join(HERE, "out");
+
+/**
+ * 사진과 출력물이 놓이는 폴더 — **데이터(json)가 있는 곳**이다.
+ *
+ * 주제가 늘면 폴더로 나눈다(`docs/cardnews_0818/`). 그때 형식(card.css · fonts ·
+ * 로고 · 느낌표)은 HERE 에서 그대로 가져오고 내용물만 새 폴더에 둔다 — 형식을
+ * 복사하면 두 벌이 되어 한쪽만 고쳐진다.
+ */
+let DATA_DIR = HERE;
 
 const WIDTH = 1080;
 const HEIGHT = 1350;
@@ -123,7 +131,7 @@ function photoDiv(card) {
   if (!card.photo) {
     return `<div class="photo is-placeholder" style="${tone}" data-hint="${escape(card.photoHint ?? "사진 자리")}"></div>`;
   }
-  const url = pathToFileURL(path.resolve(HERE, card.photo)).href;
+  const url = pathToFileURL(path.resolve(DATA_DIR, card.photo)).href;
   return `<div class="photo" style="background-image:url('${url}')"></div>`;
 }
 
@@ -266,6 +274,8 @@ async function shoot(browser, htmlPath, pngPath, profileDir) {
 
 async function main() {
   const dataPath = path.resolve(process.argv[2] ?? path.join(HERE, "cards.json"));
+  DATA_DIR = path.dirname(dataPath);
+  const OUT = path.join(DATA_DIR, "out");
   const data = JSON.parse(await readFile(dataPath, "utf8"));
   const browser = findBrowser();
 

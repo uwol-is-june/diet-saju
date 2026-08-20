@@ -21,8 +21,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ASSETS = path.join(HERE, "assets");
-const CANDIDATES = path.join(ASSETS, "candidates");
+
+/* 사진은 **데이터(json)가 있는 폴더** 아래에 놓인다 — 주제마다 폴더를 나눌 수
+ * 있게 하기 위해서다 (render.mjs 의 DATA_DIR 과 같은 규칙). */
+let ASSETS = path.join(HERE, "assets");
+let CANDIDATES = path.join(ASSETS, "candidates");
 
 const API = "https://api.pexels.com/v1/search";
 
@@ -161,6 +164,8 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const apiKey = process.env.PEXELS_API_KEY;
   const dataPath = path.resolve(args.data ?? path.join(HERE, "cards.json"));
+  ASSETS = path.join(path.dirname(dataPath), "assets");
+  CANDIDATES = path.join(ASSETS, "candidates");
   const data = JSON.parse(await readFile(dataPath, "utf8"));
 
   if (args.pick) return pick(args, data, dataPath);

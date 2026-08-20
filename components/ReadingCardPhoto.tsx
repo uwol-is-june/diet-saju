@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { READING_TYPE_PHOTO } from "@/lib/reading/type-photo";
 import type { ReadingType } from "@/lib/saju/schema";
 
 /**
@@ -41,22 +42,12 @@ import type { ReadingType } from "@/lib/saju/schema";
  * `app/privacy/page.tsx` 4·5항("외부 방문자 분석 도구를 전혀 쓰지 않습니다")과 같은
  * 약속이 흔들린다 (`public/dasii/` QR 두 개와 같은 판단). 파일은 저장소에 커밋한다.
  *
- * ## `Record` 여야 한다
+ * ## 경로 표는 이 파일에 없다
  *
- * 배열이면 새 유형이 조용히 남의 사진을 달고 나간다 — `ReadingThumbnail` 이 `Record` 였던
- * 이유가 그대로 적용된다. 유형을 늘리면 여기가 컴파일 오류로 잡히고,
- * `scripts/fetch-card-photos.mjs` 의 검색어 표에 한 줄을 더하면 된다.
+ * `lib/reading/type-photo.ts` 의 `READING_TYPE_PHOTO` 를 읽는다 — `/reading/[type]` 상단
+ * 히어로(`ReadingHeroPhoto`)가 **같은 그림**을 쓰기 때문이다 (TASK-92). 목록을 두 벌로
+ * 두면 사진을 갈아끼울 때 `/` 에서 고른 카드와 들어간 화면의 그림이 달라진다.
  */
-const PHOTO: Record<ReadingType, string> = {
-  // 내부 유형(`/admin` 전용)도 값이 필요하다. 목록에 나오지 않으므로 체질과 같은 그림을 쓴다.
-  general: "/cards/diet.jpg",
-  diet: "/cards/diet.jpg",
-  "gain-cause": "/cards/gain-cause.jpg",
-  "diet-method": "/cards/diet-method.jpg",
-  "diet-food": "/cards/diet-food.jpg",
-  exercise: "/cards/exercise.jpg",
-  decade: "/cards/diet-method.jpg",
-};
 
 /**
  * 슬롯 크기. `sizes` 를 주지 않으면 `next/image` 가 뷰포트 폭을 기준으로 큰 후보를
@@ -85,7 +76,7 @@ export function ReadingCardPhoto({
 }) {
   return (
     <Image
-      src={PHOTO[readingType]}
+      src={READING_TYPE_PHOTO[readingType]}
       alt=""
       width={SLOT}
       height={SLOT}

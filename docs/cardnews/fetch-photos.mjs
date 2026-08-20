@@ -34,6 +34,14 @@ const ORIENTATION = {
   cover: "portrait",
   stack: "landscape",
   split: "portrait",
+
+  /* B_style 은 다섯 레이아웃 전부가 카드를 통째로 덮는 4:5 슬롯이라 세로다.
+   * 가로 사진을 넣으면 위아래가 잘려 피사체가 화면 밖으로 나간다. */
+  "b-cover": "portrait",
+  "b-intro": "portrait",
+  "b-type": "portrait",
+  "b-summary": "portrait",
+  "b-outro": "portrait",
 };
 
 function parseArgs(argv) {

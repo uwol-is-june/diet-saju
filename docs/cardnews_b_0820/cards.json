@@ -1,0 +1,139 @@
+{
+  "slug": "caffeine",
+  "style": "b",
+  "topic": "커피 마감 시간",
+  "note": "B_style 편이다 (레퍼런스 docs/card_ref/card_3/). 형식(card-b.css·fonts·로고)은 ../cardnews/ 것을 그대로 쓴다 — 렌더는 node docs/cardnews/render.mjs docs/cardnews_b_0820/cards.json. 표기 규칙 — 본문의 **별표**는 굵은 강조. A_style 과 달리 clauseBreaks 가 없으므로 **줄바꿈은 전부 \\n 으로 손으로 넣는다**: 본문 한 줄은 28자, 팁은 26자, tri 의 head 는 8자가 상한이다(글 칸 928px · 32px 기준). 문구를 고치면 렌더 결과를 눈으로 확인할 것. 사진은 일곱 장 모두 카드를 통째로 덮으므로 **어두운 정물**이어야 한다 — 밝은 사진을 고르면 흰 글씨가 읽히지 않는다.",
+  "thesis": "논지: 커피를 끊는 것이 아니라 마지막 잔의 시각을 정한다. 그 시각은 시계가 아니라 내가 눕는 시각에서 거꾸로 센다. 흐름 — ① 표지(커피에도 마감이 있나) → ② 반감기 다섯 시간과 못 잔 다음 날의 식욕 → ③④⑤ 눕는 시각별 마감 시각 세 유형 → ⑥ 끊는 것이 아니라 양과 시각을 겹치지 않게 → ⑦ 마무리. 각 카드는 앞 카드의 숫자나 말을 받아서 연다 — ②의 '거꾸로 센다'를 ③④⑤가 시각으로 바꾸고, ⑤의 '짧은 잠'을 ⑥이 받는다. 표현 원칙 — 비유로 때우지 않고 완충 어미를 겹치지 않는다. 줄표(—)는 카드에 쓰지 않는다. 수면은 식욕 호르몬까지만 말하고 질환·처방으로 넘어가지 않는다.",
+  "hashtags": [
+    "커피",
+    "카페인",
+    "수면",
+    "다이어트",
+    "식욕조절"
+  ],
+  "captionNote": "인스타그램 본문. 카드를 요약하는 자리이지 카드 내용을 옮겨 적는 자리가 아니다 — 유형별 마감 시각 같은 카드 안의 세부는 넣지 않는다. 양식과 길이는 README 의 '양식과 길이' 표를 따른다: 다섯 덩어리 · 10~12줄. 마지막 사인오프는 자리·길이·꼴·이모지만 고정하고 문장은 편마다 새로 쓴다.",
+  "caption": "저녁엔 안 마셨는데 왜 잠이 얕을까ㅠㅠ 👀\n\n마신 지 한참 지나도 몸에 남아 있는 카페인 🌿\n\n마신 양의 절반이 사라지는 데 평균 다섯 시간!\n오후 세 시의 한 잔은 밤 여덟 시에도 절반이 남아 있어요.\n\n잠이 얕아진 다음 날에는 식욕 호르몬이 흔들려 더 먹게 돼요.\n그래서 마감 시간은 시계가 아니라 눕는 시각에서 거꾸로 셉니다.\n\n커피, 마지막 잔 시각만 정해도 밤이 달라져요. 💡",
+  "cards": [
+    {
+      "layout": "b-cover",
+      "title": "커피에도\n마감 시간이 있다?",
+      "photo": "assets/caffeine-01.jpg",
+      "photoHint": "검은 커피 한 잔 · 어두운 나무 테이블",
+      "photoQuery": "black coffee cup dark table moody still life",
+      "tone": [
+        "#2a2320",
+        "#12100f"
+      ],
+      "photoCredit": "사진: Pexels / hello aesthe",
+      "photoPosition": "center 0%"
+    },
+    {
+      "layout": "b-intro",
+      "title": "카페인은\n언제까지 남을까?",
+      "body": "마신 카페인의 절반이 몸에서 사라지는 데\n평균 다섯 시간쯤 걸립니다.\n오후 세 시의 한 잔은 밤 여덟 시에도\n절반이 남아 있습니다.\n\n잠이 얕아진 다음 날에는 식욕 호르몬이 흔들립니다.\n그래서 마감 시간은 **몇 시에 눕는지**에서 거꾸로 셉니다.",
+      "columns": [
+        {
+          "head": "밤 11시 전",
+          "name": "일찍형"
+        },
+        {
+          "head": "자정 무렵",
+          "name": "자정형"
+        },
+        {
+          "head": "새벽 1시 이후",
+          "name": "새벽형"
+        }
+      ],
+      "source": "식품의약품안전처 카페인 정보 · Spiegel 등(2004) 수면 부족과 식욕 호르몬",
+      "photo": "assets/caffeine-02.jpg",
+      "photoHint": "원두 한 무더기 · 어두운 바탕",
+      "photoQuery": "coffee beans dark background still life",
+      "tone": [
+        "#2b2521",
+        "#11100e"
+      ],
+      "photoCredit": "사진: Pexels / mike murray"
+    },
+    {
+      "layout": "b-type",
+      "eyebrow": "밤 11시 전에 눕는 사람",
+      "title": "일찍형이라면?",
+      "label": "커피 마감",
+      "value": "오후 3시 이전",
+      "body": "밤 11시에 눕는다면 오후 세 시가\n마지막 잔이 됩니다.\n그 뒤에 마신 커피는 잠자리에 들 때까지\n절반 넘게 몸에 남아 있습니다.\n오후에는 디카페인으로 바꾸는 편이 낫습니다.",
+      "tip": "졸릴 때 한 잔 더 마시는 대신\n밖에 나가 빛을 십 분쯤 쬐어 보세요.",
+      "source": "Drake 등(2013) 취침 전 카페인과 수면",
+      "photo": "assets/caffeine-03.jpg",
+      "photoHint": "에스프레소 잔 · 아침 창가 · 긴 그림자",
+      "photoQuery": "espresso cup morning window shadow dark",
+      "tone": [
+        "#312a24",
+        "#14120f"
+      ],
+      "photoCredit": "사진: Pexels / connor scott mcmanus"
+    },
+    {
+      "layout": "b-type",
+      "eyebrow": "자정 무렵에 눕는 사람",
+      "title": "자정형이라면?",
+      "label": "커피 마감",
+      "value": "오후 4시 이전",
+      "body": "자정에 눕는다면 오후 네 시가 마감입니다.\n점심 뒤 한 잔까지는 여유가 있습니다.\n다만 이 선을 가장 자주 넘게 만드는 것은\n저녁 자리에서 따라오는 커피 한 잔입니다.\n그 자리에서는 따뜻한 물이나 보리차로 바꿉니다.",
+      "tip": "카페인은 커피에만 있지 않습니다.\n녹차와 콜라, 초콜릿에도 들어 있습니다.",
+      "source": "식품의약품안전처 카페인 함량 조사",
+      "photo": "assets/caffeine-04.jpg",
+      "photoHint": "어두운 방 · 램프 아래 커피 잔 · 나무 테이블",
+      "photoQuery": "dark wooden table coffee mug evening low light",
+      "tone": [
+        "#2d2b28",
+        "#131211"
+      ],
+      "photoCredit": "사진: Pexels / nazar kharin",
+      "photoPosition": "center 0%"
+    },
+    {
+      "layout": "b-type",
+      "eyebrow": "새벽 1시 이후에 눕는 사람",
+      "title": "새벽형이라면?",
+      "label": "커피 마감",
+      "value": "오후 6시 이전",
+      "body": "새벽 한 시에 눕는다면 저녁 여섯 시까지는\n커피를 마실 수 있습니다.\n다만 늦게 눕는 만큼 자는 시간이 짧아지고,\n짧은 잠은 그 자체로 다음 날 식욕을 키웁니다.\n마감 시간보다 눕는 시간을 먼저 당겨 보세요.",
+      "tip": "성인 하루 카페인 권고량은 400mg,\n아메리카노로는 석 잔 남짓입니다.",
+      "source": "식품의약품안전처 하루 카페인 섭취 권고 · Spiegel 등(2004)",
+      "photo": "assets/caffeine-05.jpg",
+      "photoHint": "밤 조명 아래 커피 잔 · 어두운 방",
+      "photoQuery": "coffee cup night lamp dark mood",
+      "tone": [
+        "#2a231d",
+        "#100f0e"
+      ],
+      "photoCredit": "사진: Pexels / wallace chuck"
+    },
+    {
+      "layout": "b-summary",
+      "title": "결국 커피를\n끊어야 할까?",
+      "body": "연구를 종합하면 카페인 자체가 문제라고 보기는\n어렵습니다. 문제가 되는 것은 양과 시각이\n겹칠 때입니다. 중요한 것은 **1. 하루 총량**\n**2. 마지막 잔 시각 3. 내가 눕는 시각**입니다.\n\n그러니 ‘커피를 줄일까’ 고민보다 먼저\n‘마지막 잔을 몇 시에 둘까’를 정해 보세요.",
+      "source": "식품의약품안전처 하루 카페인 섭취 권고(성인 400mg) · Drake 등(2013)",
+      "photo": "assets/caffeine-06.jpg",
+      "photoHint": "드립 도구 · 주전자 · 어두운 바탕",
+      "photoQuery": "pour over coffee dripper dark kitchen",
+      "tone": [
+        "#2c2825",
+        "#121110"
+      ],
+      "photoCredit": "사진: Pexels / ana gonzalez"
+    },
+    {
+      "layout": "b-outro",
+      "photo": "assets/caffeine-07.jpg",
+      "photoHint": "빈 커피 잔과 받침 · 어두운 테이블",
+      "photoQuery": "empty coffee cup saucer dark table",
+      "tone": [
+        "#241f1c",
+        "#0f0e0d"
+      ],
+      "photoCredit": "사진: Pexels / leticia alvares"
+    }
+  ]
+}

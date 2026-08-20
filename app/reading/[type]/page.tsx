@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackIconLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
+import { ReadingHeroPhoto } from "@/components/ReadingHeroPhoto";
 import { SajuForm } from "@/components/SajuForm";
-import { ReadingCharacter } from "@/components/ReadingCharacter";
 import { ViewBeacon } from "@/components/ViewBeacon";
 import {
-  PUBLIC_READING_TYPES,
   READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
   READING_TYPE_META,
-  READING_TYPE_SHORT,
   READING_TYPE_VISIBILITY,
   type ReadingType,
 } from "@/lib/saju/schema";
@@ -108,50 +106,34 @@ export default async function ReadingPage({
       <ViewBeacon type={readingType} />
       <header className="mb-8">
         {/*
-          `BackLink` 를 뺐다 (TASK-74). 전역 헤더의 로고가 같은 일을 하고, 바로 아래
-          유형 줄이 다른 유형으로 가는 길을 이미 낸다. 두 고지 페이지의 `<BackLink />` 는
-          **긴 문서 상단 링크**라는 별도 이유가 있어 그대로 둔다 — 그쪽은 헤더까지
-          스크롤을 되감아야 하는 길이가 문제였다.
+          뒤로가기 (TASK-93). **전역 헤더를 없애고(TASK-91) 유형 줄을 없애면서** 이 자리가
+          이 화면의 유일한 홈 동선이 된다 — 그 둘이 TASK-74 가 `BackLink` 를 뺀 근거였다.
+
+          `history.back()` 이 아니라 `/` 로 가는 링크다. 근거는 `components/BackLink.tsx`.
+
+          **유형 줄을 없앴다** (TASK-71 을 되돌린다). 레퍼런스의 가로 아이콘 줄을 받은
+          것이었는데, 다섯 칸이 제목 바로 위에서 같은 굵기로 늘어서 **지금 고른 유형이
+          무엇인지가 오히려 흐려졌다.** 결과 전에 다른 유형으로 가는 길은 `<` → `/` →
+          카드 다섯이 맡는다 — 카드에는 사진·묻는 것·설명이 함께 있어 고르는 데 필요한
+          것이 그 화면에서 끝난다. 결과 뒤 동선은 `OtherReadingLinks` 가 그대로 들고 있다.
+
+          **유형 선택 컨트롤을 폼 안에 두지 않는다는 경계는 그대로다** — 이 줄이 없어져도
+          `birth-input.test.ts` 가 폼 안을 계속 본다.
         */}
+        <BackIconLink />
 
         {/*
-          유형 줄 (TASK-71). 레퍼런스 화면 1 의 가로 아이콘 줄을 여기서 받는다.
-          **`/` 가 아니라 여기인 이유**: `/` 에는 "선택된 유형" 이 없고(선택이 곧 이동이다)
-          상태를 들면 클라이언트 컴포넌트가 되어 `/` 를 정적으로 두는 성질이 깨진다.
-          이 화면은 세그먼트로 현재 유형을 **서버가** 알므로 클라이언트 JS 없이 강조된다.
+          히어로 사진 (TASK-92). **`/` 에서 고른 카드와 같은 그림이다** — 눌린 카드가
+          무엇이었는지가 이어진다. 캐릭터(TASK-70)를 여기서 되돌렸고 근거는
+          `components/ReadingHeroPhoto.tsx` 에 있다.
 
-          **링크이지 컨트롤이 아니다.** `/reading/*` 에 유형 선택 *컨트롤* 을 두지 않는다는
-          경계는 그대로이고 `birth-input.test.ts` 가 폼 안을 본다. 이 줄은 폼 밖이다.
+          **글자를 이 위에 얹지 않는다** — 사진 안의 색은 팔레트 검사가 닿지 않는다.
         */}
-        <nav aria-label="풀이 유형" className="mt-3">
-          <ul className="flex flex-wrap justify-center gap-1.5">
-            {PUBLIC_READING_TYPES.map((type) => {
-              const current = type === readingType;
-              return (
-                <li key={type}>
-                  <Link
-                    href={`/reading/${type}`}
-                    aria-current={current ? "page" : undefined}
-                    className={
-                      current
-                        ? "block rounded-full bg-brand-subtle px-3.5 py-1.5 text-sm font-bold text-brand-ink ring-1 ring-brand-border"
-                        : "block rounded-full px-3.5 py-1.5 text-sm text-ink-muted hover:text-brand-ink"
-                    }
-                  >
-                    {READING_TYPE_SHORT[type]}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* 유형별 캐릭터 (TASK-70). 면 색만 유형 톤이고 화면 배경은 그대로다. */}
-        <div className="mt-6">
-          <ReadingCharacter readingType={readingType} />
+        <div className="mt-4">
+          <ReadingHeroPhoto readingType={readingType} />
         </div>
 
-        <h1 className="title-lg title-extrabold mt-5 text-center">
+        <h1 className="title-lg title-extrabold mt-1 text-center">
           {READING_TYPE_LABEL[readingType]}
         </h1>
         {/* 중앙 정렬은 **짧은 글에만** 쓴다 — 본문 문단을 가운데로 놓으면 줄 시작점이 흔들린다. */}

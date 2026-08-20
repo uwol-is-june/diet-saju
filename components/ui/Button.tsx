@@ -32,8 +32,8 @@ import type { ButtonHTMLAttributes } from "react";
  * "누를 수 없음" 이 색상으로만 전달된다.
  */
 
-type Variant = "primary" | "outline" | "ghost";
-type Size = "default" | "compact" | "icon";
+export type ButtonVariant = "primary" | "outline" | "ghost";
+export type ButtonSize = "default" | "compact" | "icon";
 
 /**
  * 높이·여백·글자 크기 — dasii 실측값이다.
@@ -43,7 +43,7 @@ type Size = "default" | "compact" | "icon";
  * 두 유틸리티는 특정도가 같아 **스타일시트에 늦게 나오는 쪽이 이긴다** — 클래스 문자열
  * 순서로는 정해지지 않는다. 그래서 버튼 하나에 radius 클래스가 **언제나 하나만** 붙게 한다.
  */
-const SIZE: Record<Size, string> = {
+const SIZE: Record<ButtonSize, string> = {
   // 48px. 저쪽 주 버튼과 같다.
   default: "h-12 rounded-xl px-4 text-base",
   // 40px. 폼 안의 보조 동작처럼 줄 안에 얹히는 버튼.
@@ -60,7 +60,7 @@ const SIZE: Record<Size, string> = {
   icon: "size-11 rounded-full",
 };
 
-const VARIANT: Record<Variant, string> = {
+const VARIANT: Record<ButtonVariant, string> = {
   primary:
     "bg-ink-solid text-on-ink-solid hover:bg-ink-solid-hover " +
     "disabled:bg-brand-solid-disabled disabled:text-on-brand-solid-disabled",
@@ -70,23 +70,43 @@ const VARIANT: Record<Variant, string> = {
   ghost: "text-ink-soft hover:bg-surface-inset disabled:text-ink-placeholder",
 };
 
+/**
+ * 규격 문자열을 만드는 단일 소스 (TASK-93).
+ *
+ * **`<button>` 이 아닌 요소도 이 규격을 써야 하기 때문에 갈라 뒀다.** `/reading/[type]`
+ * 맨 위의 뒤로가기는 **`<a>` 여야 하고**(새 탭·가운데 클릭·크롤러) `Button` 은
+ * `ButtonHTMLAttributes` 를 받는 `<button>` 이라 쓸 수 없다. 그때 44px 원형을 호출부에서
+ * 다시 스타일링하면 **규격이 두 벌이 된다** — 한쪽만 고쳐지는 자리다.
+ *
+ * `disabled:*` 도 그대로 둔다. 링크에는 걸릴 일이 없고, 빼면 이 함수와 `Button` 이
+ * 서로 다른 문자열을 만들어 "단일 소스" 가 아니게 된다.
+ *
+ * `active:translate-y-px` 는 dasii 에서 받았다. **`prefers-reduced-motion` 규칙 대상이
+ * 아니다** — 키프레임이 아니라 transition 이라 `motion.test.ts` 가 보는 `anim-*` 계약과
+ * 무관하다. 누른 순간의 상태 변화이지 재생되는 동작이 아니다.
+ *
+ * 포커스 링을 여기서 그리지 않는다 — 전역 `:focus-visible` 이 이미 건다.
+ */
+export function buttonClass({
+  variant = "primary",
+  size = "default",
+  className = "",
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return `inline-flex items-center justify-center font-semibold transition active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${SIZE[size]} ${VARIANT[variant]} ${className}`;
+}
+
 export function Button({
   variant = "primary",
   size = "default",
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
-  return (
-    <button
-      /*
-        `active:translate-y-px` 는 저쪽에서 받았다. **`prefers-reduced-motion` 규칙 대상이
-        아니다** — 키프레임이 아니라 transition 이라 `motion.test.ts` 가 보는 `anim-*`
-        계약과 무관하다. 누른 순간의 상태 변화이지 재생되는 동작이 아니다.
-
-        포커스 링을 여기서 그리지 않는다 — 전역 `:focus-visible` 이 이미 건다.
-      */
-      className={`inline-flex items-center justify-center font-semibold transition active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${SIZE[size]} ${VARIANT[variant]} ${className}`}
-      {...props}
-    />
-  );
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}) {
+  return <button className={buttonClass({ variant, size, className })} {...props} />;
 }

@@ -92,9 +92,6 @@ describe("토큰 정의", () => {
       "--color-ohaeng-to", "--color-ohaeng-to-ink",
       "--color-ohaeng-geum", "--color-ohaeng-geum-ink",
       "--color-ohaeng-su", "--color-ohaeng-su-ink",
-      "--color-seat-peach", "--color-seat-mist", "--color-seat-rose",
-      "--color-seat-sand", "--color-seat-sage",
-      "--color-character-ink", "--color-character-blush",
     ];
     for (const token of expected) {
       expect(tokens[token], `${token} 미해석`).toMatch(/^#[0-9a-fA-F]{6}$/);
@@ -247,32 +244,12 @@ describe("대비비 — 오행 배지 (AA 4.5:1)", () => {
   });
 });
 
-/**
- * 캐릭터 면 (TASK-70).
- *
- * **글자가 올라가지 않는 면이라 4.5:1 을 요구하지 않는다.** 필요한 것은 캐릭터 선이 면 위에서
- * 도형으로 구분되는 정도이며, 그 기준은 비텍스트 대비(WCAG 1.4.11)의 3:1 이다. 전면 배경으로
- * 갔다면 다섯 면 × 본문·보조 텍스트 조합을 전부 여기 넣어야 했다 — 그래서 면만 칠한다.
+/*
+ * 캐릭터 면(`--color-seat-*` · `--color-character-*`) 검사는 **지웠다** (TASK-92).
+ * 캐릭터가 히어로 사진으로 바뀌어 토큰 자체가 없어졌다 — 남겨 두면 없는 토큰을 재는
+ * 검사가 된다. 사진 안의 색은 이 파일이 닿지 않는 자리이고(감수한 값 · TASK-86)
+ * 대신 **글자를 사진 위에 얹지 않는다**가 그 자리를 지킨다.
  */
-describe("대비비 — 캐릭터 면 (비텍스트 3:1)", () => {
-  const SEATS = ["peach", "mist", "rose", "sand", "sage"];
-
-  it.each(SEATS)("%s 면 위에서 캐릭터 선이 구분된다", (seat) => {
-    expect(contrast(hex("--color-character-ink"), hex(`--color-seat-${seat}`))).toBeGreaterThanOrEqual(3);
-  });
-
-  it("다섯 면이 서로 구분된다", () => {
-    expect(new Set(SEATS.map((s) => hex(`--color-seat-${s}`))).size).toBe(5);
-  });
-
-  it("오행 배경을 그대로 끌어 쓰지 않는다", () => {
-    // 오행 색은 **인코딩하는 값**이다. 장식이 같은 색을 쓰면 "이 카드는 목(木)인가" 로 읽힌다.
-    const ohaeng = new Set(["mok", "hwa", "to", "geum", "su"].map((e) => hex(`--color-ohaeng-${e}`)));
-    for (const seat of SEATS) {
-      expect(ohaeng.has(hex(`--color-seat-${seat}`)), `${seat} 가 오행 색과 같다`).toBe(false);
-    }
-  });
-});
 
 describe("대비비 — UI 경계 (1.4.11, 3:1)", () => {
   it("폼 컨트롤 테두리는 3:1 을 넘는다", () => {
@@ -372,13 +349,15 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     "components/ShareActions.tsx",
     "components/SiteFooter.tsx",
     // 셸 (TASK-74) — 좌측 패널은 인라인 SVG 라 fill/stroke 에 hex 가 새기 쉽다
-    "components/SiteHeader.tsx",
     "components/AppPanel.tsx",
     // 부품 (TASK-75) — 규격의 단일 소스라 여기에 hex 가 새면 화면 전체가 새는 것과 같다
     "components/ui/Button.tsx",
     "components/ui/field.ts",
     "components/ui/ChoiceChips.tsx",
     "components/FirstVisitNotice.tsx",
+    /* 뒤로가기 (TASK-93) — 인라인 SVG 라 stroke 에 hex 가 새기 쉽다.
+       색은 `currentColor` 여야 variant 를 따른다 */
+    "components/BackLink.tsx",
     "components/OtherReadingLinks.tsx",
     "components/ScrollToTop.tsx",
     "components/LikeButton.tsx",
@@ -391,6 +370,9 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     /* 유형 리스트 카드의 사진 (TASK-86) — 사진 안의 색은 이 검사가 닿지 않지만
        카드 면·글자·화살표는 여전히 토큰에서만 온다 */
     "components/ReadingCardPhoto.tsx",
+    /* 히어로 사진 (TASK-92) — 마스크는 `globals.css` 의 `.hero-photo` 가 걸고
+       이 파일에는 색이 없어야 한다 */
+    "components/ReadingHeroPhoto.tsx",
     // 캔버스 카드도 색을 CSS 토큰에서 읽는다. hex 를 박으면 단일 소스가 깨진다.
     "lib/share/draw-card.ts",
   ];

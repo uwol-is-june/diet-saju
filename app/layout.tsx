@@ -3,7 +3,6 @@ import { AppPanel } from "@/components/AppPanel";
 import { BirthInputProvider } from "@/components/BirthInputProvider";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
 const TITLE = "다이어트 사주 | 사주로 읽는 나의 기질";
@@ -68,7 +67,6 @@ export default function RootLayout({
           (CLAUDE.md "모바일이 기본값이다").
         */}
         <div className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-canvas shadow-sm">
-          <SiteHeader />
           {/*
             입력값을 **루트 레이아웃의 메모리에** 둔다 (TASK-30). 레이아웃은 이동에서
             다시 렌더되지 않으므로 `/` ↔ `/reading/*` 사이에 값이 남는다.

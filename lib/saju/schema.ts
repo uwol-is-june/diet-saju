@@ -54,27 +54,6 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
 };
 
 /**
- * 유형 줄(`/reading/[type]` 상단)에 쓰는 **짧은 이름** (TASK-71).
- *
- * 전체 라벨(`나에게 맞는 다이어트 방법`)로 줄을 만들면 390px 에서 가로로 넘치고,
- * **현재 유형이 화면 밖으로 밀려난다** — 지금 어디에 있는지 보여주려고 만든 줄인데 그것을
- * 못 보여주면 뜻이 없다. 가로 스크롤로 두면 클라이언트 JS 로 현재 칸을 끌어와야 하고,
- * 그 순간 이 화면이 서버 컴포넌트인 이유가 사라진다.
- *
- * **제목이 아니라 이름표다.** 큰 제목은 그 아래 `h1` 이 맡으므로 여기는 한두 낱말이면 된다.
- * `Record` 라 유형이 늘면 컴파일 오류로 잡힌다.
- */
-export const READING_TYPE_SHORT: Record<ReadingType, string> = {
-  general: "종합",
-  diet: "체질",
-  "gain-cause": "원인",
-  "diet-method": "방법",
-  "diet-food": "식단",
-  exercise: "운동",
-  decade: "10년",
-};
-
-/**
  * 유형 카드의 **묻는 것 한 줄** (TASK-86).
  *
  * `/` 가 리스트 카드로 바뀌면서(레퍼런스 `docs/ui_ref/list_reference.jpg`) 제목 위에

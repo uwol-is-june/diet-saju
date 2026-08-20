@@ -145,3 +145,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# 카드뉴스 레퍼런스 캡처 — **커밋하지 않는다** (2026-08-20 사용자 확정).
+# 인스타 화면 캡처 7장이 30MB 라 저장소 히스토리가 두 배 이상 커진다. 여기서 뽑아낸
+# 것(B_style 치수·서술 규칙)은 이미 docs/cardnews/README.md 의 실측표로 옮겨 적혀 있어서
+# 원본 해상도를 다시 볼 일이 없다. 필요하면 같은 자리에 다시 받아 두고 쓴다.
+docs/card_ref/card_3/

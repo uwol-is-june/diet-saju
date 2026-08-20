@@ -4,6 +4,11 @@
  *   node docs/cardnews/render.mjs
  *   node docs/cardnews/render.mjs docs/cardnews/other.json
  *
+ * 형식은 두 벌이다 — cards.json 의 `style` 이 고른다 (없으면 "a").
+ *   "a" (기본)  흰 바탕 + 사진 한 조각        · card.css   · layout: cover|stack|split|plain|notice
+ *   "b"         전면 사진 + 흰 글씨          · card-b.css · layout: b-cover|b-intro|b-type|b-summary|b-outro
+ * 레이아웃 이름이 서로 겹치지 않으므로 어느 쪽인지 데이터만 봐도 안다.
+ *
  * 브라우저는 시스템의 Edge 를 헤드리스로 쓴다 — playwright 를 의존성으로
  * 들이지 않기 위해서다 (scripts/render-icons.mjs 와 같은 이유).
  * 다른 크로미움을 쓰려면 EDGE_PATH 로 넘긴다.
@@ -88,6 +93,33 @@ function richText(raw) {
     .join("");
 }
 
+/**
+ * B_style 본문. richText 와 하나만 다르다 — **clauseBreaks 를 쓰지 않는다.**
+ *
+ * A_style 은 줄을 코드가 만들지만(마침표·쉼표 뒤), B_style 레퍼런스는 절 중간에서도
+ * 끊는다 ("연구를 종합하면 특정 시간대의 운동이 / 모든 사람에게 압도적으로…").
+ * 자동 규칙으로는 그 자리를 못 맞추므로 줄은 cards.json 의 `\n` 이 정한다.
+ * 대신 문구를 고칠 때마다 줄을 다시 봐야 한다 — 렌더 결과를 눈으로 확인할 것.
+ */
+function richTextB(raw) {
+  return escape(raw)
+    .split(/\n\s*\n/)
+    .map((block) => {
+      const html = block
+        .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+        .replaceAll("\n", "<br>");
+      return `<p>${html}</p>`;
+    })
+    .join("");
+}
+
+/** 한 줄짜리 값(제목·눈썹·팁)에는 문단이 필요 없다. 굵게와 줄바꿈만 받는다. */
+function richLineB(raw) {
+  return escape(raw)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replaceAll("\n", "<br>");
+}
+
 /** `제목{뒷부분}` → 뒷부분만 어두운 잉크로 */
 function richTitle(raw) {
   return escape(raw)
@@ -102,7 +134,9 @@ function richTitle(raw) {
  * 다시 그리면 그 순간 변형이 되므로 도형으로 흉내내지 않는다.
  */
 const assetUrl = (name) => pathToFileURL(path.join(HERE, "assets", name)).href;
-const LOGO = `<div class="logo"><img src="${assetUrl("logo.png")}" alt="다시,"></div>`;
+const logoDiv = (variant = "") =>
+  `<div class="logo${variant ? ` ${variant}` : ""}"><img src="${assetUrl("logo.png")}" alt="다시,"></div>`;
+const LOGO = logoDiv();
 /** 장식이므로 대체 텍스트를 비운다 — 뜻은 제목과 목록이 이미 전한다. */
 const BANG = `<div class="bang"><img src="${assetUrl("bang.png")}" alt=""></div>`;
 
@@ -132,7 +166,12 @@ function photoDiv(card) {
     return `<div class="photo is-placeholder" style="${tone}" data-hint="${escape(card.photoHint ?? "사진 자리")}"></div>`;
   }
   const url = pathToFileURL(path.resolve(DATA_DIR, card.photo)).href;
-  return `<div class="photo" style="background-image:url('${url}')"></div>`;
+  /* 사진을 어디를 보여줄지 카드마다 정할 수 있다 (`photoPosition`, 기본 center).
+   * B_style 은 글이 사진 위에 얹히므로 **피사체가 글자 자리에 걸리면 사진을
+   * 옮기는 것이 사진을 바꾸는 것보다 먼저다** — `center 20%` 처럼 위쪽을 더
+   * 보여주면 피사체가 아래로 내려간다. 값은 CSS background-position 그대로다. */
+  const pos = card.photoPosition ? `background-position:${card.photoPosition};` : "";
+  return `<div class="photo" style="background-image:url('${url}');${pos}"></div>`;
 }
 
 /* ── 레이아웃 ─────────────────────────────────────────── */
@@ -194,20 +233,116 @@ const LAYOUTS = {
     ${BANG}`,
 };
 
-function buildHtml(card, css) {
-  const layout = LAYOUTS[card.layout];
+/* ── B_style 레이아웃 ──────────────────────────────────
+ * 사진이 카드를 통째로 덮고 그 위에 흰 글씨가 얹힌다. 그래서 다섯 레이아웃이
+ * 모두 `photoDiv + scrim` 으로 시작한다 — 스크림 없이 글을 얹으면 사진 밝기에
+ * 따라 읽히거나 안 읽힌다.
+ *
+ * 조각 이름은 A_style 과 겹치지 않게 `b-` 를 붙였다. 한 폴더 안에 두 형식이
+ * 있으므로 이름이 겹치면 CSS 가 서로를 덮는다.                              */
+
+const bBase = (c) => `${photoDiv(c)}<div class="scrim"></div>`;
+
+const LAYOUTS_B = {
+  /** 표지 — 가운데 두 줄 + 아래 마크. 근거를 대는 장이 아니라 source 를 받지 않는다. */
+  "b-cover": (c) => `
+    ${bBase(c)}
+    <div class="copy">
+      <h1 class="cover-title">${richLineB(c.title)}</h1>
+    </div>
+    ${logoDiv("is-middle")}`,
+
+  /** 도입 — 개념 한 덩어리 + 아래 세 칸(유형 미리보기). */
+  "b-intro": (c) => `
+    ${bBase(c)}
+    ${logoDiv("is-corner")}
+    <div class="copy">
+      <h2 class="title">${richLineB(c.title)}</h2>
+      <div class="body">${richTextB(c.body)}</div>
+    </div>
+    <div class="tri">
+      ${(c.columns ?? [])
+        .map(
+          (col) =>
+            `<div class="col"><b>${richLineB(col.head)}</b><span>${escape(col.name)}</span></div>`,
+        )
+        // 칸 사이의 세로선은 칸의 테두리가 아니라 **칸 사이에 놓이는 조각**이다.
+        // 테두리로 하면 남는 폭이 칸 사이로 몰릴 때 선이 오른쪽 칸에 붙어 보인다
+        // (레퍼런스는 선이 두 칸 사이 가운데에 있다 — card-b.css 의 .tri 참고).
+        .join("<i></i>")}
+    </div>
+    ${sourceLine(c)}`,
+
+  /** 유형 카드 — 눈썹·제목(위) · 라벨·값·본문(가운데) · 팁(아래). */
+  "b-type": (c) => `
+    ${bBase(c)}
+    ${logoDiv("is-corner")}
+    <div class="head">
+      <p class="eyebrow">${richLineB(c.eyebrow)}</p>
+      <h2 class="title">${richLineB(c.title)}</h2>
+    </div>
+    <div class="mid">
+      ${c.label ? `<p class="label">${escape(c.label)}</p>` : ""}
+      ${c.value ? `<p class="value">${escape(c.value)}</p>` : ""}
+      <div class="body">${richTextB(c.body)}</div>
+    </div>
+    ${
+      c.tip
+        ? `<div class="tip"><span class="k">${escape(c.tipLabel ?? "팁")}</span><span>${richLineB(c.tip)}</span></div>`
+        : ""
+    }
+    ${sourceLine(c)}`,
+
+  /** 마무리 — 제목 + 본문, 세로 가운데. */
+  "b-summary": (c) => `
+    ${bBase(c)}
+    ${logoDiv("is-corner")}
+    <div class="copy">
+      <h2 class="title">${richLineB(c.title)}</h2>
+      <div class="body">${richTextB(c.body)}</div>
+    </div>
+    ${sourceLine(c)}`,
+
+  /** 마지막 장 — 사진 + 가운데 마크. 글자를 얹지 않는다. */
+  "b-outro": (c) => `
+    ${bBase(c)}
+    ${logoDiv("is-middle")}`,
+};
+
+/** cards.json 의 style → 스타일시트. 없으면 A_style 이다 (기존 편들이 그렇다). */
+const STYLES = {
+  a: { css: "card.css", layouts: LAYOUTS },
+  b: { css: "card-b.css", layouts: LAYOUTS_B },
+};
+
+function pickStyle(data) {
+  const key = data.style ?? "a";
+  const style = STYLES[key];
+  if (!style) {
+    throw new Error(
+      `알 수 없는 style: ${key} (가능한 값: ${Object.keys(STYLES).join(", ")})`,
+    );
+  }
+  return style;
+}
+
+function buildHtml(card, css, layouts) {
+  const layout = layouts[card.layout];
   if (!layout) {
     throw new Error(
-      `알 수 없는 layout: ${card.layout} (가능한 값: ${Object.keys(LAYOUTS).join(", ")})`,
+      `알 수 없는 layout: ${card.layout} (가능한 값: ${Object.keys(layouts).join(", ")})`,
     );
   }
   // 사진 출처는 카드에 찍지 않는다 — Pexels 라이선스가 표기를 요구하지 않고,
   // 다섯 장마다 같은 줄이 들어가면 읽는 데 방해가 된다. 대신 out/caption.txt 로
   // 모아서 인스타그램 본문에 한 번 붙인다 (buildCaption).
   // 반대로 **정보 출처**(card.source)는 카드에 찍는다 — sourceLine 참고.
+  // 출처 한 줄이 있으면 카드에 표시를 남긴다 — B_style 이 팁 덩어리를 그만큼
+  // 올리는 데 쓴다. 레이아웃 안에서 형제 선택자로는 알 수 없는 정보다.
+  const flags = card.source ? " is-has-source" : "";
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><style>${css}</style></head>
-<body><div class="card is-${card.layout}">${layout(card)}</div></body></html>`;
+<body><div class="card is-${card.layout}${flags}">${layout(card)}</div></body></html>`;
 }
 
 /**
@@ -220,7 +355,7 @@ function buildHtml(card, css) {
  */
 function buildCaption(data) {
   const lines = [];
-  const cover = data.cards.find((c) => c.layout === "cover");
+  const cover = data.cards.find((c) => c.layout === "cover" || c.layout === "b-cover");
   const lede = data.caption?.trim() || cover?.title.replaceAll("\n", " ");
   if (lede) lines.push(lede, "");
 
@@ -278,10 +413,11 @@ async function main() {
   const OUT = path.join(DATA_DIR, "out");
   const data = JSON.parse(await readFile(dataPath, "utf8"));
   const browser = findBrowser();
+  const style = pickStyle(data);
 
   // HTML 은 임시 폴더에 쓰이므로 CSS 안의 상대 경로가 깨진다.
   // 폰트 폴더만 절대 경로로 바꿔 넣는다.
-  const css = (await readFile(path.join(HERE, "card.css"), "utf8")).replaceAll(
+  const css = (await readFile(path.join(HERE, style.css), "utf8")).replaceAll(
     "%FONTS%",
     pathToFileURL(path.join(HERE, "fonts")).href,
   );
@@ -296,7 +432,7 @@ async function main() {
       const htmlPath = path.join(work, `${no}.html`);
       const pngPath = path.join(OUT, `${no}-${card.layout}.png`);
 
-      await writeFile(htmlPath, buildHtml(card, css), "utf8");
+      await writeFile(htmlPath, buildHtml(card, css, style.layouts), "utf8");
       await shoot(browser, htmlPath, pngPath, path.join(work, `p${no}`));
       console.log(`  ${path.relative(process.cwd(), pngPath)}`);
     }

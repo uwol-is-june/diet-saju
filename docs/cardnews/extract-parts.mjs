@@ -48,7 +48,7 @@ const EDGE_CANDIDATES = [
 ].filter(Boolean);
 
 async function crop(browser, name, { ref, box }) {
-  const source = path.join(HERE, "..", "card_ref", ref);
+  const source = path.join(HERE, "..", "card_ref", "ref_origin", ref);
   if (!existsSync(source)) {
     throw new Error(`레퍼런스를 찾지 못했습니다: ${source}`);
   }
@@ -92,7 +92,7 @@ async function crop(browser, name, { ref, box }) {
   }
 
   if (!existsSync(dest)) throw new Error(`${name} 을 만들지 못했습니다.`);
-  console.log(`assets/${name}.png  (${box.w}×${box.h})  ← card_ref/${ref}`);
+  console.log(`assets/${name}.png  (${box.w}×${box.h})  ← card_ref/ref_origin/${ref}`);
 }
 
 async function main() {

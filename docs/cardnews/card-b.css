@@ -1,0 +1,443 @@
+/*
+ * 카드뉴스 B_style — docs/card_ref/card_3/*.png (인스타 7장 캡처) 를 CSS 로 옮긴 것.
+ * A_style(card.css) 과 나란히 있는 **두 번째 형식**이고, 고르는 것은 cards.json 의 `style` 이다.
+ *
+ * 캔버스는 A_style 과 같은 1080×1350 (인스타 4:5). 치수는 전부 이 좌표계의 px 다.
+ *
+ * ── A_style 과 무엇이 다른가 ────────────────────────────────────
+ * A_style 은 **흰 바탕에 사진을 한 조각 얹는** 형식이고, B_style 은 **일곱 장 전부가
+ * 사진을 통째로 깔고 그 위에 흰 글씨를 얹는** 형식이다. 그래서 갈리는 것들:
+ *
+ * 1. **글자색이 흰색 하나다.** A_style 의 초록 제목·회색 본문 위계가 여기서는
+ *    무게(400/800)와 크기로만 만들어진다. 사진 위에서 색을 쓰면 사진마다 대비가
+ *    달라져 읽히지 않는다.
+ * 2. **본문이 32px 다** (A_style 은 44px). 레퍼런스 실측값이고, 이 형식은 한 장에
+ *    제목·본문·팁까지 담으므로 44px 로는 들어가지 않는다. **대신 사진을 어둡게
+ *    깐다** — 대비가 크기의 부족을 메운다. 밝은 사진을 고르면 이 형식은 무너진다.
+ * 3. **줄바꿈을 코드가 만들지 않는다.** A_style 은 마침표·쉼표 뒤에서 자동으로
+ *    끊지만(clauseBreaks), B_style 레퍼런스는 절 중간에서도 끊는다. 그래서 줄은
+ *    cards.json 의 `\n` 이 정한다 — render.mjs 의 richTextB 참고.
+ *
+ * ── 글자 크기의 근거 ────────────────────────────────────────────
+ * 아래 값은 레퍼런스 캡처(1179×2556 스마트폰 · 카드 영역 y 570~2043)를 1080 좌표계로
+ * 환산해 잉크 높이와 줄 간격을 잰 것이다. **눈대중으로 고치지 말 것** — 고칠 때는
+ * docs/cardnews/README.md 의 "B_style 실측표" 를 함께 갱신한다.
+ */
+
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-bRg.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-cBd.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-dEb.woff2") format("woff2");
+  font-weight: 800;
+  font-display: block;
+}
+@font-face {
+  font-family: "NanumSquareNeo";
+  src: url("%FONTS%/NanumSquareNeoTTF-eHv.woff2") format("woff2");
+  font-weight: 900;
+  font-display: block;
+}
+
+:root {
+  --w: 1080px;
+  --h: 1350px;
+
+  --pad: 76px; /* 좌우 안전 여백 — 레퍼런스 실측 */
+  --indent: 100px; /* 유형 카드의 가운데 묶음만 한 단 들어간다 (레퍼런스 실측) */
+
+  /* 사진 위 흰 글씨 한 벌. 투명도로만 위계를 만든다. */
+  --fg: #ffffff;
+  --fg-dim: rgba(255, 255, 255, 0.9);
+  --fg-mute: rgba(255, 255, 255, 0.62);
+  --rule: rgba(255, 255, 255, 0.45);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+}
+
+body {
+  font-family: "NanumSquareNeo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+
+  /* 한국어는 어절 단위로 끊는다 — A_style 과 같은 이유(고아 음절). 여기서는 줄을
+   * 손으로 넣으므로 대개 걸리지 않지만, 넘칠 때 음절이 갈라지지 않게 남겨 둔다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.card {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  background: #14161a;
+  overflow: hidden;
+  color: var(--fg);
+}
+
+/* ── 사진 · 스크림 ────────────────────────────────────
+ * 사진은 일곱 장 전부 카드를 통째로 덮는다. 그 위에 **평평한 어둠 + 위아래
+ * 그라데이션**을 얹는다. 둘 다 필요하다 — 평평한 것만으로는 밝은 피사체가
+ * 글자 자리에 걸릴 때 모자라고, 그라데이션만으로는 가운데 묶음(유형 카드의
+ * 추천 시각)이 사진 밝기에 그대로 노출된다.                              */
+
+.photo {
+  position: absolute;
+  inset: 0;
+  background-color: #14161a;
+  background-size: cover;
+  background-position: center;
+}
+.photo.is-placeholder {
+  background-image:
+    radial-gradient(
+      circle at 32% 26%,
+      rgba(255, 255, 255, 0.22),
+      transparent 58%
+    ),
+    linear-gradient(150deg, var(--tone-a, #2b3138), var(--tone-b, #14161a));
+}
+.photo.is-placeholder::after {
+  content: attr(data-hint);
+  position: absolute;
+  /* 사진이 없을 때만 보이는 안내다. 카드 밑변에 붙이면 출처 한 줄과 겹쳐서
+   * 초안을 볼 때 둘 다 못 읽는다 — 비어 있는 위쪽 띠에 둔다. */
+  inset: 250px 0 auto 0;
+  padding: 22px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.42) 0%,
+      rgba(0, 0, 0, 0.1) 22%,
+      rgba(0, 0, 0, 0.16) 50%,
+      rgba(0, 0, 0, 0.1) 74%,
+      rgba(0, 0, 0, 0.42) 100%
+    ),
+    rgba(0, 0, 0, 0.32);
+}
+/* 표지·마지막 장은 글이 한 덩어리뿐이라 사진을 덜 덮는다 — 사진이 주인공이다. */
+.is-b-cover .scrim,
+.is-b-outro .scrim {
+  background:
+    radial-gradient(
+      ellipse 78% 54% at 50% 52%,
+      rgba(0, 0, 0, 0.52) 0%,
+      rgba(0, 0, 0, 0) 100%
+    ),
+    rgba(0, 0, 0, 0.2);
+}
+
+/* ── 브랜드 마크 ──────────────────────────────────────
+ * 레퍼런스는 안쪽 장에서 우상단에 마크 하나, 표지·마지막 장에서는 가운데에 둔다.
+ * 그림은 A_style 과 같은 잘라낸 로고를 쓴다 — 브랜드가 둘이 되면 안 된다.
+ * 흰 글씨 위계에 맞춰 뒤집어 밝게 쓴다 (A_style 표지와 같은 방식).        */
+
+.logo {
+  position: absolute;
+  width: 124px;
+  height: 40px;
+}
+.logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: invert(1) brightness(2.6);
+  mix-blend-mode: screen;
+}
+/* 오른쪽 끝을 글 칸의 오른쪽 끝(--pad)에 맞춘다. 로고만 더 나가 있으면
+ * 카드마다 오른쪽 정렬선이 둘로 보인다. */
+.logo.is-corner {
+  top: 62px;
+  right: var(--pad);
+}
+/* **transform 으로 가운데 맞추지 말 것.** transform 은 스태킹 컨텍스트를 만들고,
+ * 그러면 위 img 의 mix-blend-mode 가 이 상자 안에서만 합성된다 — 상자 배경이
+ * 비어 있으므로 뒤집힌 검정 사각형이 그대로 남는다 (card.css 가 z-index 를
+ * 주지 말라고 적어 둔 것과 같은 함정이다). 좌우를 0 으로 펴고 img 를 auto
+ * 마진으로 가운데 놓으면 스태킹 컨텍스트가 생기지 않는다. */
+.logo.is-middle {
+  left: 0;
+  right: 0;
+  width: auto;
+}
+.logo.is-middle img {
+  width: 124px;
+  height: 40px;
+  margin: 0 auto;
+}
+
+/* ── 공통 타이포 ───────────────────────────────────────
+ * 잉크 높이(실측) → 폰트 크기는 나눔스퀘어 네오에서 거의 1:1 이다. 한글 음절이
+ * em 을 거의 채우기 때문이다. 그래서 아래 크기는 레퍼런스 잉크 높이와 같다.  */
+
+.title {
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.32;
+  letter-spacing: -0.045em;
+  color: var(--fg);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* 제목 위 한 줄. 이 유형이 누구 이야기인지를 먼저 말한다. */
+.eyebrow {
+  font-size: 29px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.035em;
+  color: var(--fg-dim);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.body {
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.94;
+  letter-spacing: -0.025em;
+  color: var(--fg-dim);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+/* 사진 위에서는 색을 바꿀 수 없으므로 강조는 무게로만 한다. */
+.body b {
+  font-weight: 800;
+  color: var(--fg);
+}
+.body p + p {
+  margin-top: 36px;
+}
+
+/* ── 정보 출처 한 줄 ──────────────────────────────────
+ * **레퍼런스에는 없는 줄이다.** 그런데도 두는 이유는 카드뉴스 규칙(CLAUDE.md)이
+ * "수치·식품 이름을 쓰는 대신 카드마다 source 로 근거를 단다" 이기 때문이다.
+ * 카드만 캡처해 퍼가는 경우 캡션에 적은 근거는 떨어져 나간다.
+ *
+ * 그래서 레이아웃을 흔들지 않는 크기·자리로 넣었다 — 24px, 카드 밑변에서 30px.
+ * 표지와 마지막 장에는 붙이지 않는다 (주장이 없는 장이다).                */
+.source {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  bottom: 26px;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+  color: var(--fg-mute);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* ── 1 · 표지 ─────────────────────────────────────────
+ * 가운데 정렬 두 줄 + 아래 마크. 레퍼런스에서 유일하게 가운데 정렬인 장이다 —
+ * 한 덩어리뿐이라 줄 시작점이 흔들릴 일이 없다. 본문 카드의 문단을 가운데로
+ * 놓으면 읽기가 나빠진다 (앱 결과 화면과 같은 판단).                      */
+
+.is-b-cover .copy {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  top: 490px;
+  text-align: center;
+}
+.is-b-cover .cover-title {
+  font-size: 78px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+  color: var(--fg);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
+}
+.is-b-cover .logo.is-middle {
+  top: 771px;
+}
+
+/* ── 2 · 도입 (제목 + 본문 + 아래 3칸) ────────────────── */
+
+.is-b-intro .copy {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  top: 322px;
+}
+.is-b-intro .body {
+  margin-top: 66px;
+}
+
+/* 세 칸을 세로선으로 나눈다. **칸 너비는 글 길이가 정하고(auto) 남는 폭은 칸
+ * 사이에 똑같이 나눈다(1fr).** 레퍼런스의 선 위치가 균등 3분할이 아니었고
+ * (첫 선 334px · 둘째 695px) 선 좌우 여백이 46/41px 로 거의 같았다 — 즉
+ * "칸은 글 길이만큼, 선은 두 칸 사이 가운데" 다.
+ *
+ * **선을 칸의 테두리로 만들면 안 된다.** 남는 폭이 칸 사이로 몰리는 순간
+ * 선이 오른쪽 칸에 붙어 버린다. 그래서 선은 render.mjs 가 칸 사이에 끼워 넣는
+ * <i> 조각이고, 1fr 칸 안에서 가운데 정렬된다.
+ *
+ * 선 높이(96px)는 글 높이가 아니라 고정값이다. 두 줄 높이에 맞추면 아래 유형
+ * 이름의 아랫부분까지 선이 내려와 칸이 표처럼 닫혀 보인다. */
+.tri {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  top: 1167px;
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto;
+  align-items: start;
+}
+.tri .col {
+  text-align: center;
+}
+.tri i {
+  justify-self: center;
+  width: 2px;
+  height: 96px;
+  background: var(--rule);
+}
+.tri .col b {
+  display: block;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+  color: var(--fg);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.tri .col span {
+  display: block;
+  margin-top: 26px;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  color: var(--fg-dim);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* ── 3 · 유형 카드 ────────────────────────────────────
+ * 위(눈썹 + 제목) · 가운데(라벨 + 값 + 본문) · 아래(팁) 세 덩어리.
+ *
+ * 가운데 묶음은 **카드 높이 가운데**에 놓는다 — 레퍼런스 세 장의 본문 줄 수가
+ * 4·4·5 로 다른데 묶음의 중심이 675±8px 로 일정했다. 위에 붙이면 줄 수에 따라
+ * 아래 여백이 들쭉날쭉해지고, 아래에 붙이면 제목과의 간격이 그렇게 된다.     */
+
+.is-b-type .head {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  top: 69px;
+}
+.is-b-type .head .title {
+  margin-top: 21px;
+}
+
+.is-b-type .mid {
+  position: absolute;
+  left: var(--indent);
+  right: var(--pad);
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mid .label {
+  font-size: 29px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  color: var(--fg-dim);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.mid .value {
+  margin-top: 22px;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
+}
+.mid .body {
+  margin-top: 42px;
+}
+
+/* 아래 팁. 라벨이 본문 왼쪽에 걸리는 매달린 형태다 — 레퍼런스 실측(라벨 76px,
+ * 글 139px)을 그대로 옮겼다. 줄 간격은 본문(1.94)보다 좁다(1.55): 본문이 아니라
+ * 덧붙이는 말이라 한 덩어리로 보여야 한다. */
+.tip {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  bottom: 67px;
+  display: grid;
+  grid-template-columns: 63px 1fr;
+  align-items: start;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: -0.025em;
+  color: var(--fg-dim);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.tip .k {
+  font-weight: 800;
+  color: var(--fg);
+}
+
+/* ── 4 · 마무리 (제목 + 본문) ──────────────────────────
+ * 유형 카드의 가운데 묶음과 같은 이유로 세로 가운데에 놓는다 (레퍼런스 실측
+ * 중심 674px = 카드 가운데).                                            */
+
+.is-b-summary .copy {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.is-b-summary .body {
+  margin-top: 76px;
+}
+
+/* ── 5 · 마지막 장 ───────────────────────────────────── */
+
+.is-b-outro .logo.is-middle {
+  top: 655px;
+  height: 60px;
+}
+.is-b-outro .logo.is-middle img {
+  width: 186px;
+  height: 60px;
+}

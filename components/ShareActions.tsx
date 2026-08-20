@@ -93,11 +93,11 @@ export function ShareActions({
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
-      <h2 className="mb-1 text-base font-bold">공유하기</h2>
-      <p className="mb-4 text-sm text-ink-muted">
-        이미지는 브라우저에서 만들어지고 서버로 전송되지 않습니다. 사주팔자와 오행이 담기므로
-        공개된 곳에 올릴 때 참고해 주세요.
-      </p>
+      {/*
+        설명 줄은 없앴다 (TASK-100). 여백은 옆 카드(`OtherReadingLinks`)의
+        `mb-1` + `mb-4` 를 합친 값이라 제목과 내용 사이 거리가 그쪽과 같다.
+      */}
+      <h2 className="mb-4 text-base font-bold">공유하기</h2>
 
       <div className="grid grid-cols-2 gap-2">
         <Button

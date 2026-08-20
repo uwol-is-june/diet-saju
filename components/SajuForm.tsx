@@ -293,21 +293,15 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                 options={GENDER_CHIPS}
               />
               {/*
-                **미선택의 대가를 그 자리에 적는다** (TASK-85). 성별을 안 고르면
-                `lib/saju/pillars.ts` 가 `daeun` 을 `null` 로 두고, 그러면 `대운 · 세운`
-                근거 카드가 통째로 사라지고 공유 카드의 대운 칩도 빠진다. 예전에는 그
-                사실을 폼이 말하는 곳이 `decade`(내부 유형) 하나뿐이라 공개 유형에서는
-                **아무 말 없이 결과가 줄어들었다.**
+                **미선택의 대가를 적던 줄은 지웠다** (TASK-98 이 TASK-85 를 되돌린다).
+                성별을 안 고르면 `대운 · 세운` 근거 카드와 공유 카드 칩이 빠지는 것은
+                그대로이고, 그 줄이 없어져도 **막아야 하는 자리는 그대로 막힌다** —
+                `decade` 는 `missingForType` 이 버튼 위에 `role="alert"` 로 이유를 낸다.
 
-                고른 뒤에는 감춘다 — 이미 치른 값을 계속 설명할 이유가 없다.
-                `missingForType` 의 **제출을 막는 문구와 섞지 말 것** (그쪽은 `role="alert"`
-                이고 버튼 위에 뜬다). 이건 막지 않고 알려주기만 한다.
+                지운 이유는 폼 길이다. 보조 설명 셋(성별·시각·지역)이 컨트롤마다 한 줄씩
+                붙어 있었고, 셋 다 **지금 당장 할 일을 말하지 않는 문장**이었다.
+                되살리려면 그 값을 어떻게 치를지 먼저 답할 것.
               */}
-              {input.gender === "unspecified" && (
-                <p className="mt-1.5 text-xs text-ink-muted">
-                  고르면 10년 단위 흐름(대운)까지 함께 봅니다.
-                </p>
-              )}
             </Field>
 
             <Field label="생년월일" htmlFor={fieldId("birth-date")}>
@@ -411,14 +405,15 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                   시각을 모릅니다 (시주 제외)
                 </label>
               </div>
-              {timeIncomplete ? (
+              {/*
+                **제출을 막는 문구만 남긴다** (TASK-98). `분까지 고를수록 정확합니다…`
+                는 지웠다 — 분 드롭다운이 이미 1분 단위로 열려 있어 그 문장이 시키는
+                일이 따로 없었다. 여기 남은 것은 **반쪽 입력을 막는 알림**이고,
+                그쪽은 지우면 왜 버튼이 꺼져 있는지 알 수 없어진다.
+              */}
+              {timeIncomplete && (
                 <p role="alert" className="mt-1.5 text-xs text-danger-ink">
                   시와 분을 모두 골라 주세요. 시각을 모르면 옆의 체크박스를 눌러 주세요.
-                </p>
-              ) : (
-                <p className="mt-1.5 text-xs text-ink-muted">
-                  분까지 고를수록 정확합니다. 경도 보정(약 −32분) 때문에 시주(時柱) 경계가
-                  정시가 아닌 시각에 놓입니다.
                 </p>
               )}
             </fieldset>
@@ -474,11 +469,17 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                   </SelectShell>
                 )}
               </div>
-              <p className="mt-1.5 text-xs text-ink-muted">
-                {!placeApplies
-                  ? "출생시각을 모르거나 시각 보정을 끄면 지역이 결과에 반영되지 않습니다."
-                  : "고르지 않으면 서울 기준으로 계산합니다. 서울에서 멀수록 시주(時柱)가 달라질 수 있습니다 (부산 약 8분 차이)."}
-              </p>
+              {/*
+                **컨트롤이 잠긴 이유만 남긴다** (TASK-98). `고르지 않으면 서울 기준으로
+                계산합니다…` 는 조용히 적용되는 기본값을 글로 알리던 줄인데,
+                `EMPTY_BIRTH_INPUT` 이 **서울로 열리면서** 화면이 그것을 직접 말한다.
+                이쪽 가지는 다르다 — 왜 못 누르는지는 컨트롤을 봐서는 알 수 없다.
+              */}
+              {!placeApplies && (
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  출생시각을 모르거나 시각 보정을 끄면 지역이 결과에 반영되지 않습니다.
+                </p>
+              )}
             </fieldset>
           </div>
         ) : (

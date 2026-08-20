@@ -25,7 +25,10 @@ export interface BirthInput {
   /**
    * 출생지 (TASK-37). **시/도와 시/군 두 값으로 든다** — 이름만으로는 유일하지 않다
    * (`고성군` 이 강원과 경남에 하나씩 있다). 둘 다 빈 문자열이면 미선택이고,
-   * 그때는 서울 기본값으로 계산된다(지금까지와 같은 결과).
+   * 그때는 서버가 서울 기본값으로 계산한다.
+   *
+   * **폼의 기본값은 미선택이 아니라 서울이다** (TASK-98) — 아래 `EMPTY_BIRTH_INPUT`.
+   * 미선택 상태 자체는 남는다(시/도를 도로 비울 수 있다).
    */
   birthplaceSido: string;
   birthplaceName: string;
@@ -36,6 +39,22 @@ export interface BirthInput {
 /**
  * 기본값은 `sajuInputSchema` 의 기본값과 같아야 한다 — 어긋나면 화면과 서버가
  * 다른 것을 본다. `schema.test.ts` 가 둘을 대조한다.
+ *
+ * ## 출생지는 미선택이 아니라 서울로 연다 (TASK-98)
+ *
+ * 예전에는 둘 다 빈 문자열이었고, 그래서 **"고르지 않으면 서울 기준으로 계산합니다"**
+ * 라는 설명 줄이 드롭다운 아래에 필요했다. 조용히 적용되는 기본값을 글로 알리는 셈이라,
+ * **기본값을 눈에 보이게 하고 그 줄을 지웠다** — 화면이 이미 말하는 것을 문장으로
+ * 되풀이하지 않는다.
+ *
+ * - **경도는 같다.** 표의 서울(126.99)과 서버 기본값(`SEOUL_LONGITUDE` 126.9784)은
+ *   분 단위로 반올림되는 보정에서 같은 −32분이 된다. 달라지는 것은 경도가 요청에
+ *   **명시적으로 실린다**는 것뿐이고 원국은 그대로다 (`birth-input.test.ts` 가 잰다).
+ * - **서울은 시/군이 하나뿐이라 두 번째 드롭다운이 뜨지 않는다.** `chooseSido` 가
+ *   광역시에서 만드는 상태와 같은 모양을 처음부터 만드는 것이다 — 하나뿐인 시/도
+ *   목록을 여기에 새로 적지 않는다.
+ * - **접힌 요약과 결과 화면에 `서울` 이 늘 붙는다.** 계산에 실제로 쓰이는 값이라
+ *   보이는 편이 맞다 (`describeBirthInput` 주석의 판단 그대로다).
  */
 export const EMPTY_BIRTH_INPUT: BirthInput = {
   name: "",
@@ -46,8 +65,8 @@ export const EMPTY_BIRTH_INPUT: BirthInput = {
   calendar: "solar",
   isLeapMonth: false,
   gender: "unspecified",
-  birthplaceSido: "",
-  birthplaceName: "",
+  birthplaceSido: "서울",
+  birthplaceName: "서울",
   solarTimeMode: "longitude",
   dayBoundary: "yajasi",
 };

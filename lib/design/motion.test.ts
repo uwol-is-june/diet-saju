@@ -162,3 +162,115 @@ describe("스트리밍 중 등장이 다시 재생되지 않는다", () => {
     expect(READING_SECTIONS).not.toMatch(/useState[^\n]*[Aa]nimat/);
   });
 });
+
+/**
+ * 화면 사이 좌우 밀림 전환 (TASK-96).
+ *
+ * 이 전환은 **세 곳이 같은 문자열을 써야** 산다 — 링크의 `transitionTypes`,
+ * `PageTransition` 의 유형 표, `globals.css` 의 `::view-transition-*(.…)` 선택자.
+ * 한쪽만 고치면 오류가 나지 않고 **그냥 아무 일도 일어나지 않는다.** 눈으로 잡기도
+ * 어렵다 — 전환은 이동하는 찰나에만 보이고 스크린샷에 남지 않는다.
+ */
+describe("화면 전환 (TASK-96)", () => {
+  const read = (path: string) =>
+    readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+
+  const PAGE_TRANSITION = read("components/PageTransition.tsx");
+  const HOME = read("app/page.tsx");
+  const READING = read("app/reading/[type]/page.tsx");
+  const BACK_LINK = read("components/BackLink.tsx");
+
+  /** `PageTransition` 이 내보내는 전환 유형 문자열. 여기가 단일 소스다. */
+  const types = [...PAGE_TRANSITION.matchAll(/export const NAV_\w+ = "([\w-]+)"/g)].map(
+    (match) => match[1]!,
+  );
+
+  /**
+   * `::view-transition-old(.nav-back)` 같은 규칙에서 미는 거리를 읽는다.
+   * 선택자에 괄호·점이 섞여 있어 정규식으로 찾으면 이스케이프가 두 겹이 된다 —
+   * 문자열로 찾고 다음 닫는 중괄호까지 자른다.
+   */
+  function slideOffset(pseudo: "old" | "new", type: string): number {
+    const selector = `::view-transition-${pseudo}(.${type})`;
+    const start = CSS.indexOf(selector);
+    expect(start, `${selector} 규칙이 없다`).toBeGreaterThan(-1);
+    const rule = CSS.slice(start, CSS.indexOf("}", start));
+    const value = rule.match(/--vt-slide:\s*(-?\d+)px/);
+    expect(value, `${selector} 에 --vt-slide 가 없다`).not.toBeNull();
+    return Number(value![1]);
+  }
+
+  it("전환 유형 둘이 CSS 규칙을 가지고 있다", () => {
+    expect(types).toEqual(["nav-forward", "nav-back"]);
+    // 규칙 자체가 사라지면 위 헬퍼가 -1 에서 걸린다.
+    for (const type of types) {
+      expect(slideOffset("old", type)).not.toBe(0);
+      expect(slideOffset("new", type)).not.toBe(0);
+    }
+  });
+
+  it("앞뒤가 서로 반대 방향이다", () => {
+    // 같은 방향이면 전환이 앞뒤를 구분해 주지 못한다 — 이 태스크의 핵심 요구다.
+    expect(Math.sign(slideOffset("old", "nav-forward"))).toBe(
+      -Math.sign(slideOffset("old", "nav-back")),
+    );
+    expect(Math.sign(slideOffset("new", "nav-forward"))).toBe(
+      -Math.sign(slideOffset("new", "nav-back")),
+    );
+    // 나가는 쪽과 들어오는 쪽은 같은 방향으로 흘러야 한 덩어리로 읽힌다.
+    expect(Math.sign(slideOffset("old", "nav-forward"))).toBe(
+      -Math.sign(slideOffset("new", "nav-forward")),
+    );
+  });
+
+  it("참여하는 두 페이지가 모두 감싸여 있다", () => {
+    // 한쪽만 감싸면 나가거나 들어오는 것 중 하나만 움직이는 절반짜리 전환이 된다.
+    for (const [path, code] of [
+      ["app/page.tsx", HOME],
+      ["app/reading/[type]/page.tsx", READING],
+    ] as const) {
+      expect(code, path).toContain("<PageTransition>");
+      expect(code, path).toContain("</PageTransition>");
+    }
+  });
+
+  it("링크가 전환 유형 문자열을 직접 적지 않는다", () => {
+    // 문자열을 베끼면 CSS 클래스와 갈린 것을 아무도 모른다.
+    expect(HOME).toContain("transitionTypes={[NAV_FORWARD]}");
+    expect(BACK_LINK).toContain("transitionTypes={[NAV_BACK]}");
+    for (const code of [HOME, BACK_LINK]) {
+      expect(code).not.toMatch(/transitionTypes=\{\["/);
+    }
+  });
+
+  it("전환을 넣느라 `/` 가 클라이언트 컴포넌트가 되지 않았다", () => {
+    // 라우터 전환에 JS 상태를 들면 `/` 가 동적이 되어 통째로 정적인 성질이 깨진다.
+    for (const [path, code] of [
+      ["app/page.tsx", HOME],
+      ["components/PageTransition.tsx", PAGE_TRANSITION],
+    ] as const) {
+      expect(code, path).not.toContain("use client");
+      expect(code, path).not.toContain("useState");
+      expect(code, path).not.toContain("useRouter");
+    }
+  });
+
+  it("모션 최소화 규칙이 전환 겹장까지 덮는다", () => {
+    /**
+     * `::view-transition-*` 는 문서 안의 요소가 아니라 브라우저가 전환 중에만 만드는
+     * 가짜 요소다 — 위쪽 `*` 규칙에 잡히지 않으므로 따로 적어야 한다. 화면을 가로지르는
+     * 미끄러짐은 모션 민감성에서 가장 흔한 방아쇠라 빠뜨리면 안 된다.
+     */
+    const block = CSS.slice(CSS.indexOf("prefers-reduced-motion"));
+    expect(block).toContain("::view-transition-old(*)");
+    expect(block).toContain("::view-transition-new(*)");
+    expect(block).toContain("::view-transition-group(*)");
+    expect(block).toContain("animation-delay: 0s");
+  });
+
+  it("셸은 전환에서 움직이지 않는다", () => {
+    // 이름 없는 것은 전부 `root` 한 장으로 찍힌다. 그것까지 크로스페이드하면 화면
+    // 전체가 흔들려 무엇이 움직였는지 읽히지 않는다.
+    expect(CSS).toMatch(/::view-transition-group\(root\)\s*\{\s*animation: none;/);
+  });
+});

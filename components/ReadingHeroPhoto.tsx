@@ -24,13 +24,24 @@ import type { ReadingType } from "@/lib/saju/schema";
  * 보증할 수 없는 면 위에 글을 올리는 것은 `/` 카드에서 이미 막아 둔 규칙이고, 사진이
  * 144px 원에서 열 폭짜리 띠로 커진 만큼 더 엄하게 지킨다.
  *
+ * **예외는 뒤로가기 버튼 하나다** (TASK-97). 사진이 열 맨 위까지 올라오면서 그 자리를
+ * 덮으므로, 그 버튼만 사진 위에 얹힌다 — 대신 `surface` variant 로 **자기 면을 들고
+ * 간다.** 아이콘이 놓이는 면이 사진이 아니라 `canvas` 라 대비가 다시 토큰으로
+ * 보증된다. **글자에는 이 예외를 넓히지 말 것** (근거는 `components/ui/Button.tsx`).
+ *
  * 풀려 들어가는 면은 콘텐츠 열의 `canvas` 이고, 마스크의 검정은 팔레트 값이 아니라
  * **알파 마스크**다 (`.card-photo` 와 같다).
  *
- * ## 열 폭까지 펼친다
+ * ## 펼치는 것은 호출부가 한다
  *
- * `-mx-5` 로 `main` 의 좌우 여백을 되돌려 **콘텐츠 열 끝까지** 닿게 한다 — 본문 폭에만
- * 걸치면 잘린 사각형으로 보인다 (`/` 머리 그라데이션 띠와 같은 판단).
+ * `-mx-5 -mt-10` 으로 `main` 의 여백을 되돌려 **콘텐츠 열 끝과 맨 위까지** 닿게 하는데,
+ * 그 음수 여백은 `app/reading/[type]/page.tsx` 에 있다 (TASK-97). 뒤로가기 버튼이 사진
+ * 위에 얹히려면 **위치 기준(`relative`)과 음수 여백이 같은 요소**에 있어야 하기
+ * 때문이다. 여기서 다시 펼치면 두 겹이 되어 사진이 열 밖으로 나간다.
+ *
+ * 본문 폭에만 걸치면 잘린 사각형으로 보이고, 위쪽 여백을 남기면 **얹힌 띠**가 된다 —
+ * 예전에는 마스크가 위쪽을 불투명하게 두는 값이라 사진 맨 위에 직선 경계가 하나
+ * 그어져 있었다. 지금은 그 직선이 곧 화면의 끝이라 경계로 읽히지 않는다.
  *
  * ## 장식이다
  *
@@ -45,6 +56,11 @@ import type { ReadingType } from "@/lib/saju/schema";
  * **`/` 카드의 `SLOT`(240)을 그대로 베끼면 안 된다** — 그쪽은 42% 폭 장식이다.
  *
  * ## 원본을 더 크게 받지 않았다 (실측 · 2026-08-20)
+ *
+ * **높이는 TASK-97 에서도 그대로 200 이다.** 사진이 열 맨 위로 올라간 것은 **자리**가
+ * 바뀐 것이지 슬롯이 커진 것이 아니다 — 크기가 같으므로 아래 크롭(`object-position`)과
+ * 마스크를 다시 잴 필요가 없고, 원본 480 유지 판단과 LCP 기준선도 그대로 선다.
+ * 화면에서 달라지는 것은 **그 아래 전부가 100px(= `py-10` + 버튼 줄) 위로 올라오는 것**이다.
  *
  * 이 슬롯은 390px 열을 꽉 채우므로 DPR 2 에서 780 · DPR 3 에서 1,170 디바이스 픽셀이
  * 필요한데 원본은 480 이다. 눈으로 재보니 **DPR 2 는 멀쩡하고 DPR 3 에서 `diet-food`
@@ -76,7 +92,7 @@ const HEIGHT = 200;
  */
 export function ReadingHeroPhoto({ readingType }: { readingType: ReadingType }) {
   return (
-    <div aria-hidden className="-mx-5 overflow-hidden" style={{ height: HEIGHT }}>
+    <div aria-hidden className="overflow-hidden" style={{ height: HEIGHT }}>
       <Image
         src={READING_TYPE_PHOTO[readingType]}
         alt=""

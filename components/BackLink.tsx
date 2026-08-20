@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NAV_BACK } from "@/components/PageTransition";
 import { buttonClass } from "@/components/ui/Button";
 
 /**
@@ -36,6 +37,17 @@ export function BackLink({ label = "다이어트 사주" }: { label?: string }) 
 /**
  * 아이콘 꼴 뒤로가기 (TASK-93). `/reading/[type]` 맨 위 왼쪽에 놓인다.
  *
+ * ## 사진 위에 얹힌다 (TASK-97)
+ *
+ * 히어로 사진이 열 맨 위까지 올라오면서 이 버튼이 **사진 위**에 놓인다. 사진 안의
+ * 색은 `tokens.test.ts` 가 닿지 않는 자리라, `ghost`(면 없음)로 두면 아이콘이 어떤
+ * 사진 위에 놓일지에 따라 보이거나 안 보인다. 그래서 `surface` — 자기 면을 들고 가는
+ * variant 다 (근거는 `components/ui/Button.tsx`).
+ *
+ * **자리(`absolute`)는 호출부가 정한다.** 음수 여백으로 사진을 열 끝까지 펼치는 것과
+ * 같은 요소에 위치 기준이 있어야 해서 `app/reading/[type]/page.tsx` 가 그 둘을 함께
+ * 든다 — 여기서 위치까지 박으면 사진 배치를 고칠 때 두 파일을 맞춰야 한다.
+ *
  * ## `history.back()` 이 아니다
  *
  * 브라우저 이력에 기대면 클라이언트 JS 가 필요하고, **검색·공유 링크로 바로 들어온
@@ -55,13 +67,20 @@ export function BackLink({ label = "다이어트 사주" }: { label?: string }) 
  *
  * **두 고지 페이지는 이걸 쓰지 않는다.** 그쪽은 문서가 길어서 어디로 가는지가 글자로
  * 읽혀야 하고, 아이콘만 남기면 목적지가 사라진다 — 위 `BackLink` 가 그 자리를 맡는다.
+ *
+ * ## 전환은 카드를 누를 때와 반대 방향이다 (TASK-96)
+ *
+ * `transitionTypes={[NAV_BACK]}` 가 그 방향을 정한다. **위 `BackLink` 에는 붙이지
+ * 않는다** — 두 고지 페이지는 `PageTransition` 으로 감싸지 않았고, 한쪽만 방향을 달면
+ * 나가는 화면은 가만히 있는데 들어오는 화면만 미끄러지는 절반짜리 전환이 된다.
  */
 export function BackIconLink({ label = "처음으로" }: { label?: string }) {
   return (
     <Link
       href="/"
       aria-label={label}
-      className={buttonClass({ variant: "ghost", size: "icon", className: "-ml-2.5" })}
+      transitionTypes={[NAV_BACK]}
+      className={buttonClass({ variant: "surface", size: "icon" })}
     >
       {/* 색은 `currentColor` 라 variant 를 그대로 따른다. 값을 박으면 `tokens.test.ts` 가
           이 파일에서 원시 색상을 찾아낸다. 굵기·둥근 끝은 다른 아이콘들과 같은 규격이다. */}

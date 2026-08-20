@@ -15,6 +15,7 @@ import {
 import { BIRTHPLACES, BIRTHPLACE_SIDO } from "./birthplaces";
 import { birthInputSignature, keyMatchesInput, readingCacheKey } from "./reading-cache";
 import { READING_TYPES } from "../saju/schema";
+import { SEOUL_LONGITUDE, resolveBirthInstant } from "../saju/time-correction";
 
 function make(patch: Partial<BirthInput> = {}): BirthInput {
   return { ...EMPTY_BIRTH_INPUT, ...patch };
@@ -70,6 +71,10 @@ describe("제출 가능 여부", () => {
 });
 
 describe("접힌 폼의 요약 한 줄", () => {
+  /*
+    출생지 기본값이 `서울` 이라(TASK-98) 아래 요약에 `· 서울` 이 늘 붙는다. 계산에 실제로
+    쓰이는 값이므로 보이는 편이 맞다 — 반영되지 않는 상태(시각 미상 등)에서만 빠진다.
+  */
   it("생년월일 · 시각 · 성별 순으로 적는다", () => {
     const summary = describeBirthInput(
       make({
@@ -79,7 +84,7 @@ describe("접힌 폼의 요약 한 줄", () => {
         gender: "female",
       }),
     );
-    expect(summary).toBe("1999-12-09 · 22:12 · 여성");
+    expect(summary).toBe("1999-12-09 · 22:12 · 여성 · 서울");
   });
 
   it("시각을 모르면 그렇게 적는다", () => {
@@ -91,17 +96,17 @@ describe("접힌 폼의 요약 한 줄", () => {
 
   it("시각을 안 골랐어도 미상으로 적는다", () => {
     const summary = describeBirthInput(make({ birthDate: "1999-12-09" }));
-    expect(summary).toBe("1999-12-09 · 시각 미상 · 성별 미지정");
+    expect(summary).toBe("1999-12-09 · 시각 미상 · 성별 미지정 · 서울");
   });
 
   it("음력이면 앞에 밝힌다", () => {
     // 양력으로 착각하면 원국이 통째로 달라진다.
     expect(describeBirthInput(make({ birthDate: "1999-12-09", calendar: "lunar" }))).toBe(
-      "음력 · 1999-12-09 · 시각 미상 · 성별 미지정",
+      "음력 · 1999-12-09 · 시각 미상 · 성별 미지정 · 서울",
     );
     expect(
       describeBirthInput(make({ birthDate: "1999-12-09", calendar: "lunar", isLeapMonth: true })),
-    ).toBe("음력 윤달 · 1999-12-09 · 시각 미상 · 성별 미지정");
+    ).toBe("음력 윤달 · 1999-12-09 · 시각 미상 · 성별 미지정 · 서울");
   });
 
   it("양력이면 달력 표기를 붙이지 않는다", () => {
@@ -243,8 +248,33 @@ describe("출생지 조회와 적용 조건", () => {
     expect(describeBirthplace(input)).toBe("강원 고성군");
   });
 
-  it("미선택이면 경도를 보내지 않는다 (서울 기본값 유지)", () => {
-    expect(birthplaceLongitude(make({ birthDate: "1999-12-09" }))).toBeUndefined();
+  /**
+   * 폼은 **서울로 열린다** (TASK-98). 예전에는 미선택으로 열려 경도가 아예 안 실리고
+   * 서버가 제 기본값을 썼는데, 그 조용한 기본값을 설명하려고 드롭다운 아래에 한 줄이
+   * 필요했다. 기본값을 눈에 보이게 하는 대신 **원국이 바뀌지 않아야 한다.**
+   */
+  it("기본값이 서울이고 표에 있는 조합이다", () => {
+    expect(describeBirthplace(EMPTY_BIRTH_INPUT)).toBe("서울");
+  });
+
+  it("기본값 서울이 서버 기본 경도와 같은 보정을 낸다", () => {
+    // 표의 126.99 와 `SEOUL_LONGITUDE`(126.9784)는 분 단위 반올림에서 같은 값이 된다.
+    // 어긋나면 이 변경이 조용히 시주를 바꾼다.
+    const clock = { year: 1999, month: 12, day: 9, hour: 22, minute: 12 };
+    const withDefault = resolveBirthInstant(clock, { mode: "longitude" });
+    const withSeoul = resolveBirthInstant(clock, {
+      mode: "longitude",
+      longitude: birthplaceLongitude(make({ birthDate: "1999-12-09" }))!,
+    });
+    expect(withSeoul.correctionMinutes).toBe(withDefault.correctionMinutes);
+    expect(withSeoul.localClock).toEqual(withDefault.localClock);
+    expect(SEOUL_LONGITUDE).toBeGreaterThan(0);
+  });
+
+  it("시/도를 비우면 경도를 보내지 않는다 (서버 기본값으로 돌아간다)", () => {
+    expect(
+      birthplaceLongitude(make({ birthDate: "1999-12-09", birthplaceSido: "", birthplaceName: "" })),
+    ).toBeUndefined();
   });
 
   it("고르면 그 경도를 보낸다", () => {
@@ -435,13 +465,23 @@ describe("출생지 드롭다운", () => {
   });
 
   /**
-   * 성별을 안 고르면 대운이 `null` 이 되어 근거 카드와 공유 카드 칩이 조용히 사라진다.
-   * **폼이 그 대가를 말해야 한다** (TASK-85) — 예전에는 `decade`(내부 유형)에서만 말했다.
+   * 컨트롤마다 붙어 있던 보조 설명 셋을 걷어냈다 (TASK-98 이 TASK-85 의 성별 줄을
+   * 되돌린다). 셋 다 **지금 당장 할 일을 말하지 않는 문장**이었고 폼만 길게 했다.
+   *
+   * **막는 문구 둘은 그대로 남는다** — 반쪽 시각(`role="alert"`)과 지역이 잠긴 이유.
+   * 그쪽을 지우면 왜 버튼이 꺼져 있는지 · 왜 못 누르는지 알 수 없어진다.
    */
-  it("성별 미선택의 대가가 폼에 적혀 있다", () => {
+  it("보조 설명 세 줄이 없다", () => {
     const form = readCode("components/SajuForm.tsx");
-    expect(form).toMatch(/gender === "unspecified" &&/);
-    expect(form).toContain("대운");
+    expect(form).not.toMatch(/gender === "unspecified" &&/);
+    expect(form).not.toContain("분까지 고를수록");
+    expect(form).not.toContain("고르지 않으면 서울 기준으로");
+  });
+
+  it("제출을 막는 문구 둘은 남는다", () => {
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).toContain("시와 분을 모두 골라 주세요");
+    expect(form).toContain("출생시각을 모르거나 시각 보정을 끄면");
   });
 
   /**
@@ -495,6 +535,23 @@ describe("홈으로 돌아가는 동선", () => {
     const footer = readCode("components/SiteFooter.tsx");
     expect(footer).toContain("처음으로");
     expect(footer).not.toMatch(/>\s*사주 풀이\s*</);
+  });
+
+  /**
+   * 히어로 사진이 열 맨 위까지 올라오면서 이 버튼이 **사진 위**에 놓인다 (TASK-97).
+   * 사진 안의 색은 `tokens.test.ts` 가 닿지 않으므로, 면 없는 꼴로 되돌아가면 어떤
+   * 사진 위에서는 아이콘이 안 보인다. 눈으로는 다섯 유형을 다 열어 봐야 걸린다.
+   */
+  it("사진 위 뒤로가기가 자기 면을 들고 간다", () => {
+    expect(readCode("components/BackLink.tsx")).toContain('variant: "surface"');
+    expect(readCode("components/ui/Button.tsx")).toMatch(/surface: "bg-canvas/);
+  });
+
+  it("사진을 펼치는 음수 여백이 한 곳에만 있다", () => {
+    // 두 곳에 있으면 두 겹이 되어 사진이 콘텐츠 열 밖으로 나간다. 위치 기준(`relative`)이
+    // 그 여백과 같은 요소에 있어야 버튼이 사진 좌상단에 맞는다.
+    expect(readCode("app/reading/[type]/page.tsx")).toContain('"relative -mx-5 -mt-10"');
+    expect(readCode("components/ReadingHeroPhoto.tsx")).not.toContain("-mx-5");
   });
 
   it("고지 페이지와 푸터가 서버 컴포넌트로 남는다", () => {

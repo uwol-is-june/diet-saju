@@ -6,6 +6,7 @@ import {
   READING_TYPE_LABEL,
   READING_TYPE_QUESTION,
 } from "@/lib/saju/schema";
+import { NAV_FORWARD, PageTransition } from "@/components/PageTransition";
 import { ReadingCardPhoto } from "@/components/ReadingCardPhoto";
 
 /**
@@ -70,7 +71,11 @@ export default async function HomePage() {
   const counts = counters.state === "ok" ? counters.counts : null;
 
   return (
-    <>
+    /*
+      카드를 누르면 이 화면이 왼쪽으로 밀려 나간다 (TASK-96). 감싸는 자리가 레이아웃이
+      아니라 **페이지**여야 나가는 동작(`exit`)이 일어난다 — 근거는 `PageTransition`.
+    */
+    <PageTransition>
       {/*
         머리 부분은 레퍼런스를 그대로 받는다 — **강조색 윗줄 + 큰 두 줄 제목**, 그리고
         위쪽에서 옅게 시작해 본문 흰 면으로 풀리는 배경.
@@ -94,6 +99,12 @@ export default async function HomePage() {
           <li key={type}>
             <Link
               href={`/reading/${type}`}
+              /*
+                이 이동이 "앞으로" 임을 알린다 (TASK-96). 값이 없으면 방향이 정해지지
+                않아 전환이 그냥 바뀌는 것으로 떨어진다. 문자열은 `PageTransition` 이
+                들고 있다 — 여기에 직접 적으면 CSS 클래스 이름과 세 곳이 갈린다.
+              */
+              transitionTypes={[NAV_FORWARD]}
               className="relative flex min-h-40 flex-col overflow-hidden rounded-3xl bg-surface-muted p-5 transition hover:bg-brand-subtle"
             >
               {/*
@@ -160,6 +171,6 @@ export default async function HomePage() {
           </li>
         ))}
       </ul>
-    </>
+    </PageTransition>
   );
 }

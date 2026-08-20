@@ -32,7 +32,7 @@ import type { ButtonHTMLAttributes } from "react";
  * "누를 수 없음" 이 색상으로만 전달된다.
  */
 
-export type ButtonVariant = "primary" | "outline" | "ghost";
+export type ButtonVariant = "primary" | "outline" | "ghost" | "surface";
 export type ButtonSize = "default" | "compact" | "icon";
 
 /**
@@ -68,6 +68,20 @@ const VARIANT: Record<ButtonVariant, string> = {
     "border border-line-strong text-ink-soft hover:bg-surface-inset " +
     "disabled:text-ink-placeholder",
   ghost: "text-ink-soft hover:bg-surface-inset disabled:text-ink-placeholder",
+  /*
+    **대비를 보증할 수 없는 면 위에 얹히는 꼴** (TASK-97). 지금 쓰는 곳은
+    `/reading/[type]` 맨 위의 뒤로가기 하나이고, 그 자리는 히어로 사진 위다.
+
+    사진 안의 색은 `tokens.test.ts` 가 닿지 않는다(감수한 값 · TASK-86). 그래서 이
+    variant 는 **자기 면을 들고 간다** — 아이콘이 사진이 아니라 `canvas` 위에 놓이므로
+    대비가 다시 토큰으로 보증된다. 사진 위쪽에 스크림을 까는 안은 버렸다: 어느 사진
+    위에서도 통하려면 스크림이 진해야 하고, 그러면 띠 위쪽에 직선 경계가 하나 생겨
+    **"얹힌 띠"** 가 된다 — 사진을 히어로로 쓰면서 피하려던 바로 그 모습이다.
+
+    `shadow-sm` 은 밝은 사진 위에서 면의 가장자리를 세운다. 색이 아니라 알파라
+    팔레트에 값이 늘지 않는다 (콘텐츠 열이 쓰는 것과 같은 그림자다).
+  */
+  surface: "bg-canvas text-ink-soft shadow-sm hover:bg-surface-inset disabled:text-ink-placeholder",
 };
 
 /**

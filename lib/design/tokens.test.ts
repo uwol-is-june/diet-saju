@@ -104,6 +104,12 @@ describe("대비비 — 본문 텍스트 (AA 4.5:1)", () => {
     ["본문", "--color-ink", "--color-surface"],
     ["본문 on canvas", "--color-ink", "--color-canvas"],
     ["보조 텍스트", "--color-ink-soft", "--color-surface"],
+    /*
+      사진 위에 얹히는 뒤로가기 버튼 (TASK-97 · `Button` 의 `surface` variant). 그 꼴은
+      **자기 면(`canvas`)을 들고 가므로** 아이콘이 놓이는 면이 사진이 아니다 — 그래서
+      대비를 여기서 잴 수 있다. 이 조합이 깨지면 사진 위의 아이콘부터 안 보인다.
+    */
+    ["보조 on canvas", "--color-ink-soft", "--color-canvas"],
     ["약한 텍스트", "--color-ink-muted", "--color-surface"],
     ["보조 on muted 배경", "--color-ink-soft", "--color-surface-muted"],
     ["약한 on inset 배경", "--color-ink-muted", "--color-surface-inset"],

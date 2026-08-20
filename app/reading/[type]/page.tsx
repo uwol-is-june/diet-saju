@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackIconLink } from "@/components/BackLink";
 import { FirstVisitNotice } from "@/components/FirstVisitNotice";
+import { PageTransition } from "@/components/PageTransition";
 import { ReadingHeroPhoto } from "@/components/ReadingHeroPhoto";
 import { SajuForm } from "@/components/SajuForm";
 import { ViewBeacon } from "@/components/ViewBeacon";
@@ -101,36 +102,55 @@ export default async function ReadingPage({
   const readingType = toReadingType((await params).type);
 
   return (
-    <>
+    /*
+      `/` 에서 카드를 누르면 이 화면이 오른쪽에서 밀려 들어오고, 맨 위 `<` 로 나가면
+      반대로 빠진다 (TASK-96). 근거와 제약은 `components/PageTransition.tsx`.
+    */
+    <PageTransition>
       {/* 조회수는 브라우저가 센다 (TASK-51). 서버 렌더에서 세면 이 페이지의 프리렌더가 죽는다. */}
       <ViewBeacon type={readingType} />
       <header className="mb-8">
         {/*
-          뒤로가기 (TASK-93). **전역 헤더를 없애고(TASK-91) 유형 줄을 없애면서** 이 자리가
-          이 화면의 유일한 홈 동선이 된다 — 그 둘이 TASK-74 가 `BackLink` 를 뺀 근거였다.
+          히어로 사진과 뒤로가기가 **한 상자 안에 있다** (TASK-97).
 
-          `history.back()` 이 아니라 `/` 로 가는 링크다. 근거는 `components/BackLink.tsx`.
+          `-mx-5 -mt-10` 이 `main` 의 여백(`px-5 py-10`)을 되돌려 사진을 **콘텐츠 열의
+          맨 위·양 끝까지** 펼친다. 뷰포트 폭이 아니라 열 폭이다 — 데스크톱 3열 셸에서
+          사진이 열을 넘지 않는다. 예전에는 사진이 버튼 아래에서 `mt-4` 만큼 떨어져
+          시작해 **열 안에 얹힌 띠**로 보였고, `/` 카드에서 이어져 온 그림이 거기서
+          한 번 끊겼다.
 
-          **유형 줄을 없앴다** (TASK-71 을 되돌린다). 레퍼런스의 가로 아이콘 줄을 받은
-          것이었는데, 다섯 칸이 제목 바로 위에서 같은 굵기로 늘어서 **지금 고른 유형이
-          무엇인지가 오히려 흐려졌다.** 결과 전에 다른 유형으로 가는 길은 `<` → `/` →
-          카드 다섯이 맡는다 — 카드에는 사진·묻는 것·설명이 함께 있어 고르는 데 필요한
-          것이 그 화면에서 끝난다. 결과 뒤 동선은 `OtherReadingLinks` 가 그대로 들고 있다.
-
-          **유형 선택 컨트롤을 폼 안에 두지 않는다는 경계는 그대로다** — 이 줄이 없어져도
-          `birth-input.test.ts` 가 폼 안을 계속 본다.
+          **음수 여백과 `relative` 가 같은 요소에 있어야 한다** — 버튼을 사진의 좌상단에
+          맞추려면 위치 기준이 사진과 같은 상자여야 한다. 그래서 이 둘을 여기서 함께
+          들고, `ReadingHeroPhoto` 는 슬롯 높이와 마스크만 맡는다.
         */}
-        <BackIconLink />
+        <div className="relative -mx-5 -mt-10">
+          {/*
+            히어로 사진 (TASK-92). **`/` 에서 고른 카드와 같은 그림이다** — 눌린 카드가
+            무엇이었는지가 이어진다. 캐릭터(TASK-70)를 여기서 되돌렸고 근거는
+            `components/ReadingHeroPhoto.tsx` 에 있다.
 
-        {/*
-          히어로 사진 (TASK-92). **`/` 에서 고른 카드와 같은 그림이다** — 눌린 카드가
-          무엇이었는지가 이어진다. 캐릭터(TASK-70)를 여기서 되돌렸고 근거는
-          `components/ReadingHeroPhoto.tsx` 에 있다.
-
-          **글자를 이 위에 얹지 않는다** — 사진 안의 색은 팔레트 검사가 닿지 않는다.
-        */}
-        <div className="mt-4">
+            **글자를 이 위에 얹지 않는다** — 사진 안의 색은 팔레트 검사가 닿지 않는다.
+            아래 버튼만 예외이고, 그것도 `surface` variant 로 자기 면을 들고 간다.
+          */}
           <ReadingHeroPhoto readingType={readingType} />
+
+          {/*
+            뒤로가기 (TASK-93 · 97). **전역 헤더를 없애고(TASK-91) 유형 줄을 없애면서**
+            이 자리가 이 화면의 유일한 홈 동선이 된다 — 그 둘이 TASK-74 가 `BackLink` 를
+            뺀 근거였다. `history.back()` 이 아니라 `/` 로 가는 링크이고 근거는
+            `components/BackLink.tsx` 에 있다.
+
+            `left-5` 는 `main` 의 좌측 여백과 같은 값이다 — 면을 든 버튼이라 원의
+            **왼쪽 끝**이 본문 시작선과 맞는다(글자가 없는 `ghost` 였을 때는 광학 정렬로
+            `-ml-2.5` 만큼 당겼다). `top-3` 은 사진 위쪽 여백이고, 44px 원이 사진의
+            불투명한 구간 안에 온전히 들어온다.
+
+            **유형 선택 컨트롤을 폼 안에 두지 않는다는 경계는 그대로다** —
+            `birth-input.test.ts` 가 폼 안을 계속 본다.
+          */}
+          <div className="absolute left-5 top-3">
+            <BackIconLink />
+          </div>
         </div>
 
         <h1 className="title-lg title-extrabold mt-1 text-center">
@@ -145,6 +165,6 @@ export default async function ReadingPage({
       {/* 첫 방문 안내는 **정보를 넣기 직전에** 보여야 뜻이 있다 (TASK-30). */}
       <FirstVisitNotice />
       <SajuForm readingType={readingType} />
-    </>
+    </PageTransition>
   );
 }

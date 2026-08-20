@@ -272,6 +272,83 @@
   animation: chart-rise 0.35s ease-out both;
 }
 
+/* ============================================================================
+   화면 사이 좌우 밀림 전환 (TASK-96)
+   ----------------------------------------------------------------------------
+   `/` 의 카드를 누르면 상세가 오른쪽에서 밀려 들어오고, 뒤로가기는 반대로 나간다.
+   이름표는 `components/PageTransition.tsx` 가 붙이고 **움직임은 전부 여기 있다** —
+   그쪽에 JS 상태를 들면 `/` 가 동적이 되어 "유형 선택 화면은 통째로 정적" 이 깨진다.
+
+   `.nav-forward` · `.nav-back` 은 클래스 이름이지만 `anim-*` 과 달리 **요소에 붙이지
+   않는다.** 브라우저가 전환 중에만 만드는 가짜 요소(`::view-transition-*`)에 걸리는
+   이름이고, 그 값은 `PageTransition` 의 전환 유형 표에서 온다. 셋(링크 · 표 · 여기)이
+   같은 문자열이어야 하므로 한쪽만 고치지 말 것.
+
+   **키프레임은 여기서도 `from` 만 쓴다.** 나가는 쪽은 `reverse` 로 돌려 쉬는 상태에서
+   출발시킨다 — 그래야 아래 모션 최소화 규칙이 재생을 없애도 들어온 화면이 최종 모습에
+   남는다 (`to` 로 최종값을 적으면 빈 화면에 갇힌다).
+   ========================================================================== */
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-slide);
+  }
+}
+
+/* 앞으로 갈 때 — 나가는 화면은 왼쪽으로, 들어오는 화면은 오른쪽에서.
+   60px 은 방향을 알리기에 충분하고 눈이 쫓아갈 만큼 멀지는 않은 거리다.
+   사라지는 쪽은 빨리(150ms) 비켜 주고 들어오는 쪽은 그 뒤에 천천히 드러난다. */
+::view-transition-old(.nav-forward) {
+  --vt-slide: -60px;
+  animation:
+    150ms ease-in both vt-fade reverse,
+    400ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --vt-slide: 60px;
+  animation:
+    210ms ease-out 150ms both vt-fade,
+    400ms ease-in-out both vt-slide;
+}
+
+/* 뒤로 갈 때 — 부호만 뒤집는다. **같은 방향이면 앞뒤 구분이 사라진다.** */
+::view-transition-old(.nav-back) {
+  --vt-slide: 60px;
+  animation:
+    150ms ease-in both vt-fade reverse,
+    400ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --vt-slide: -60px;
+  animation:
+    210ms ease-out 150ms both vt-fade,
+    400ms ease-in-out both vt-slide;
+}
+
+/* 셸(좌측 패널 · 푸터 · 열의 흰 면)은 움직이지 않는다. 이름이 붙지 않은 것은 전부
+   `root` 한 장으로 찍히는데, 그것까지 크로스페이드하면 **화면 전체가 흔들려** 무엇이
+   움직였는지 읽히지 않는다 — 움직이는 것은 콘텐츠뿐이어야 한다. 옛 장을 지우는 것은
+   두 장이 겹쳐 비치는 순간을 없애기 위함이다. */
+::view-transition-group(root) {
+  animation: none;
+}
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* 전환 중에도 화면을 누를 수 있어야 한다. 전환 겹장은 기본적으로 포인터를 가로채므로
+   그동안의 클릭이 통째로 사라진다. */
+::view-transition {
+  pointer-events: none;
+}
+
 /* 모션 최소화 설정을 존중한다. 스트리밍 커서의 pulse 는 마지막 키프레임(불투명)에서
    멈추므로 "생성 중" 표시 자체는 남는다. 자동 스크롤은 JS 에서 따로 판단한다
    (`behavior: "smooth"` 를 명시하면 CSS scroll-behavior 가 무시되기 때문). */
@@ -283,6 +360,17 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* 전환 겹장은 `*` 로 잡히지 않는다 — 문서 안의 요소가 아니라 브라우저가 전환 중에만
+     만드는 가짜 요소라서, 여기 따로 적지 않으면 위 규칙을 비켜 간다. 화면을 가로질러
+     미끄러지는 움직임이 모션 민감성에서 가장 흔한 방아쇠이므로 특히 빠뜨리면 안 된다.
+     지연(`animation-delay`)도 함께 지운다 — 들어오는 화면이 150ms 늦게 나타난다. */
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
   }
 }
 

@@ -431,9 +431,9 @@ describe("출생지 드롭다운", () => {
 
   it("화살표 색을 컴포넌트에 적지 않는다", () => {
     // `lib/design/tokens.test.ts` 가 raw 색상을 막는다. 색은 globals.css 의 토큰이 정한다.
-    const form = readCode("components/SajuForm.tsx");
-    expect(form).toContain("select-shell");
-    expect(form).not.toContain("clip-path");
+    // 껍데기는 TASK-101 에서 부품으로 나갔다 — 폼과 결과 화면 둘이 쓰기 때문이다.
+    expect(readCode("components/ui/SelectShell.tsx")).toContain("select-shell");
+    expect(readCode("components/SajuForm.tsx")).not.toContain("clip-path");
 
     const css = readCode("app/globals.css");
     expect(css).toContain(".select-shell");
@@ -481,7 +481,10 @@ describe("출생지 드롭다운", () => {
   it("제출을 막는 문구 둘은 남는다", () => {
     const form = readCode("components/SajuForm.tsx");
     expect(form).toContain("시와 분을 모두 골라 주세요");
-    expect(form).toContain("출생시각을 모르거나 시각 보정을 끄면");
+    // 보정 컨트롤이 결과 화면으로 갔으므로(TASK-101) 이 줄은 **어디서 풀 수 있는지**까지
+    // 말해야 한다. 잠긴 이유만 남기면 컨트롤을 찾을 수 없다.
+    expect(form).toContain("지역이 결과에 반영되지 않습니다");
+    expect(form).toContain("계산 기준에서 시각 보정을 껐기 때문에");
   });
 
   /**
@@ -500,13 +503,54 @@ describe("출생지 드롭다운", () => {
   });
 
   it("모든 select 가 같은 껍데기를 쓴다", () => {
-    // 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아 폼에 화살표가 두 종류가 된다.
+    // 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아 화면에 화살표가 두 종류가 된다.
     // **개수를 대조하므로** 나중에 select 를 추가하면서 껍데기를 빠뜨리면 여기서 걸린다.
+    //
+    // **검사 범위가 파일 둘이다** (TASK-101). 계산 기준 select 둘이 결과 화면으로
+    // 옮겨 갔는데 폼만 읽으면 그쪽이 통째로 검사 밖이 된다 — 새 파일에서 select 를
+    // 그리기 시작하면 여기 더할 것.
+    const files = ["components/SajuForm.tsx", "components/CalculationBasis.tsx"];
+    let total = 0;
+    for (const file of files) {
+      const code = readCode(file);
+      const selects = code.match(/<select\b/g) ?? [];
+      const shells = code.match(/<SelectShell>/g) ?? [];
+      expect(shells, file).toHaveLength(selects.length);
+      total += selects.length;
+    }
+    expect(total).toBeGreaterThan(0);
+  });
+
+  /**
+   * 계산 기준은 **폼이 아니라 결과 화면**에 있다 (TASK-101). 되돌리면 이 설정이 다시
+   * 읽기 전에 앞을 막고 서게 된다 — 만지고 싶어지는 순간은 결과를 보고 다른 곳과 다를
+   * 때다. **`고급` 이라는 낱말도 함께 없앴다**: 열면 안 되는 것처럼 읽히는데 23시대
+   * 출생자에게는 필수 항목이다.
+   */
+  it("계산 기준이 폼에 없다", () => {
     const form = readCode("components/SajuForm.tsx");
-    const selects = form.match(/<select\b/g) ?? [];
-    const shells = form.match(/<SelectShell>/g) ?? [];
-    expect(selects.length).toBeGreaterThan(0);
-    expect(shells).toHaveLength(selects.length);
+    expect(form).not.toContain("고급");
+    // 컨트롤이 없다는 뜻이지 값을 안 보낸다는 뜻이 아니다 — 요청 본문에는 그대로 실린다.
+    expect(form).not.toContain("출생시각 보정");
+    expect(form).not.toContain("자시(子時) 기준");
+    expect(form).toContain("solarTimeMode: input.solarTimeMode");
+    const card = readCode("components/CalculationBasis.tsx");
+    expect(card).toContain("solarTimeMode");
+    expect(card).toContain("dayBoundary");
+    expect(card).not.toContain("고급");
+  });
+
+  /**
+   * 값을 바꾸면 화면의 풀이·원국이 **옛 기준으로 계산된 것**이 된다. 조용히 값만 바뀌게
+   * 두지 않는다. 자동 재제출이 아니라 버튼인 이유는 둘을 함께 바꿀 때 요청이 두 번
+   * 나가기 때문이다 — 무료 등급의 병목은 요청 수(500 RPD)다.
+   */
+  it("기준이 바뀌면 다시 보기를 낸다", () => {
+    const card = readCode("components/CalculationBasis.tsx");
+    expect(card).toContain("이 기준으로 다시 보기");
+    expect(card).toContain("이전 기준으로 계산된 것입니다");
+    // 실제로 쓰인 값과 대조해야 한다 — 시각 미상이면 고른 값과 쓰인 값이 다르다.
+    expect(card).toContain('timeUnknown ? "standard" : input.solarTimeMode');
   });
 });
 

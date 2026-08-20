@@ -17,6 +17,8 @@ import { BIRTHPLACE_SIDO } from "@/lib/form/birthplaces";
 import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
 import { Button } from "./ui/Button";
 import { ChoiceChips } from "./ui/ChoiceChips";
+import { Field, LABEL_CLASS } from "./ui/FormField";
+import { SelectShell } from "./ui/SelectShell";
 import { FIELD_BASE } from "./ui/field";
 import { useBirthInput } from "./BirthInputProvider";
 import { OtherReadingLinks } from "./OtherReadingLinks";
@@ -139,8 +141,12 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
    * 응답은 NDJSON 스트림이다. 원국(chart)이 먼저 오고 풀이가 조각(delta)으로 이어진다.
    * 스트림이 시작된 뒤의 실패는 error 이벤트로 오며, 그때까지 받은 풀이는 그대로 둔다.
    */
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  /**
+   * `event` 가 없는 호출은 결과 화면 `계산 기준` 카드의 **다시 보기**다 (TASK-101).
+   * 폼 제출과 같은 경로를 타야 캐시·스크롤·중단 처리가 한 벌로 남는다.
+   */
+  async function handleSubmit(event?: React.FormEvent) {
+    event?.preventDefault();
     setError(null);
     setChart(null);
     setReading("");
@@ -357,7 +363,7 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                 (`legend` 하나가 두 컨트롤을 아우르고, 개별 구분은 `aria-label` 이 한다).
                 `min-w-0` 은 fieldset 이 내용보다 좁아지지 못하는 기본 동작을 푼다. */}
             <fieldset className="min-w-0 sm:col-span-2">
-              <legend className={labelClass}>태어난 시각</legend>
+              <legend className={LABEL_CLASS}>태어난 시각</legend>
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
                 <div className="grid grid-cols-2 gap-2">
                   <SelectShell>
@@ -423,7 +429,7 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                 경도 보정이 쓰이지 않는 상태(시각 미상·보정 없음)에서는 잠근다.
                 고를 수 있게 두면 반영되는 줄 안다. */}
             <fieldset className="min-w-0 sm:col-span-2" disabled={!placeApplies}>
-              <legend className={labelClass}>태어난 지역 (선택)</legend>
+              <legend className={LABEL_CLASS}>태어난 지역 (선택)</legend>
               <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 <SelectShell>
                   <select
@@ -475,9 +481,17 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                 `EMPTY_BIRTH_INPUT` 이 **서울로 열리면서** 화면이 그것을 직접 말한다.
                 이쪽 가지는 다르다 — 왜 못 누르는지는 컨트롤을 봐서는 알 수 없다.
               */}
+              {/*
+                **컨트롤이 어디 있는지까지 말한다** (TASK-101). 시각 보정은 이제 이 폼이
+                아니라 결과 화면 `계산 기준` 카드에 있어서, 잠긴 이유만 적으면 **어디서
+                풀 수 있는지 알 수 없다.** 잠금 자체를 푸는 쪽은 택하지 않았다 —
+                고를 수 있게 두면 반영되는 줄 안다 (TASK-37 의 판단).
+              */}
               {!placeApplies && (
                 <p className="mt-1.5 text-xs text-ink-muted">
-                  출생시각을 모르거나 시각 보정을 끄면 지역이 결과에 반영되지 않습니다.
+                  {input.timeUnknown
+                    ? "출생시각을 모르면 보정할 시각이 없어 지역이 결과에 반영되지 않습니다."
+                    : "결과 화면 아래 계산 기준에서 시각 보정을 껐기 때문에 지역이 결과에 반영되지 않습니다."}
                 </p>
               )}
             </fieldset>
@@ -520,55 +534,6 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
           </div>
         )}
 
-        {editing && (
-          <details className="rounded-xl border border-line-strong bg-surface-muted px-4 py-3">
-            <summary className="cursor-pointer text-sm font-medium text-ink-soft">
-              만세력 고급 설정
-            </summary>
-            <div className="mt-4 space-y-4">
-              <Field label="출생시각 보정" htmlFor={fieldId("solar-time")}>
-                <SelectShell>
-                  <select
-                    id={fieldId("solar-time")}
-                    value={input.solarTimeMode}
-                    onChange={(e) =>
-                      set("solarTimeMode")(e.target.value as BirthInput["solarTimeMode"])
-                    }
-                    aria-describedby={fieldId("solar-time-hint")}
-                    className={inputClass}
-                  >
-                    <option value="longitude">경도 보정 (권장 · 한국 만세력 관행)</option>
-                    <option value="true">진태양시 (경도 + 균시차)</option>
-                    <option value="standard">보정 없음 (시계시 그대로)</option>
-                  </select>
-                </SelectShell>
-                <p id={fieldId("solar-time-hint")} className="mt-1.5 text-xs text-ink-muted">
-                  한국 표준시는 동경 135° 기준이라 서울(127°)의 실제 태양시보다 약 32분
-                  빠릅니다. 서머타임·표준시 변경 시기는 자동으로 함께 보정됩니다.
-                </p>
-              </Field>
-
-              <Field label="자시(子時) 기준" htmlFor={fieldId("day-boundary")}>
-                <SelectShell>
-                  <select
-                    id={fieldId("day-boundary")}
-                    value={input.dayBoundary}
-                    onChange={(e) => set("dayBoundary")(e.target.value as BirthInput["dayBoundary"])}
-                    aria-describedby={fieldId("day-boundary-hint")}
-                    className={inputClass}
-                  >
-                    <option value="yajasi">야자시·조자시 구분 (권장 · 자정에 날짜 변경)</option>
-                    <option value="jasi">자시파 (23시부터 다음날)</option>
-                  </select>
-                </SelectShell>
-                <p id={fieldId("day-boundary-hint")} className="mt-1.5 text-xs text-ink-muted">
-                  23:00~23:59(오후 11시대) 출생자의 일주(日柱)를 어느 날로 볼지에 대한 학파
-                  차이입니다. 그 시간대가 아니면 결과가 같습니다.
-                </p>
-              </Field>
-            </div>
-          </details>
-        )}
 
         {streaming ? (
           <Button type="button" variant="outline" className="w-full" onClick={stop}>
@@ -633,6 +598,9 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               /* 지역 **이름**은 서버로 보내지 않는다 — 계산에 필요한 것은 경도뿐이다.
                  화면 표시는 폼이 들고 있는 값으로 한다. */
               birthplace={placeApplies ? describeBirthplace(input) : null}
+              /* 계산 기준 카드가 값을 바꾼 뒤 같은 제출 경로로 다시 요청한다 (TASK-101). */
+              onReapply={() => void handleSubmit()}
+              busy={loading}
             />
             {/*
                 생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하면 지금
@@ -678,23 +646,6 @@ const selectTimeClass = (value: string) =>
 
 
 /**
- * 드롭다운 화살표를 직접 그리기 위한 껍데기 (TASK-38).
- *
- * **`select` 에는 `::after` 를 붙일 수 없어서** 감싸는 요소가 필요하다. 모양과 색은
- * `globals.css` 의 `.select-shell` 이 정한다 — 색을 이 파일에 적으면
- * `lib/design/tokens.test.ts` 의 raw 색상 검사에 걸린다.
- *
- * **폼의 모든 `select` 가 이걸 쓴다.** 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아
- * 폼 안에 화살표가 두 종류가 된다 (실제로 넷만 감쌌을 때 그렇게 됐다).
- * `lib/form/birth-input.test.ts` 가 `<select` 개수와 껍데기 개수를 대조한다.
- */
-function SelectShell({ children }: { children: React.ReactNode }) {
-  return <span className="select-shell">{children}</span>;
-}
-
-const labelClass = "mb-1.5 block text-sm font-medium text-ink-soft";
-
-/**
  * 칩 목록 (TASK-85). **`선택 안 함` 이 없다** — 성별은 둘 다 비선택인 상태가 곧
  * `unspecified` 다. 값은 `BirthInput` 의 것을 그대로 쓴다 (API 계약이라 바꾸지 않는다).
  */
@@ -713,39 +664,6 @@ const checkboxLabelClass =
   "flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-soft";
 const checkboxClass = "size-5 shrink-0 accent-brand-hover";
 
-/**
- * 라벨 + 컨트롤 한 칸.
- *
- * **컨트롤이 하나면 `htmlFor`, 라디오 그룹이면 `labelId` 다** (TASK-85). 후자는 `label`
- * 요소로 감쌀 대상이 없어서(그룹 전체가 대상이다) `aria-labelledby` 로 잇는다 —
- * `htmlFor` 를 아무 칩에 걸면 그 칩 하나의 이름이 되어 그룹 이름이 사라진다.
- */
-function Field({
-  label,
-  htmlFor,
-  labelId,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  labelId?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className={labelClass}>
-          {label}
-        </label>
-      ) : (
-        <span id={labelId} className={labelClass}>
-          {label}
-        </span>
-      )}
-      {children}
-    </div>
-  );
-}
 
 /**
  * 연필 아이콘 (TASK-89). `aria-hidden` 장식이고 버튼 이름은 `aria-label` 이 만든다.

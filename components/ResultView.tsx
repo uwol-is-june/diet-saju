@@ -13,6 +13,7 @@ import { LikeButton } from "./LikeButton";
 import { ReadingSections } from "./ReadingSections";
 import { ShareActions } from "./ShareActions";
 import { VerdictCallout } from "./VerdictCallout";
+import { CalculationBasis, describeCalculationBasis } from "./CalculationBasis";
 
 /* 오행 배지 톤 표는 `charts/OhaengBars.tsx` 로 옮겼다 (TASK-25에서 배지 줄을 막대로 교체). */
 
@@ -30,6 +31,8 @@ export function ResultView({
   readingType,
   streaming = false,
   birthplace = null,
+  onReapply,
+  busy = false,
 }: {
   chart: SajuChart;
   reading: string;
@@ -41,6 +44,14 @@ export function ResultView({
    * 경도뿐이라 지역 이름은 서버로 보내지 않고, 폼이 들고 있는 값을 그대로 받는다.
    */
   birthplace?: string | null;
+  /**
+   * `계산 기준` 카드에서 값을 바꾼 뒤 다시 요청하는 길 (TASK-101). 제출은 `SajuForm` 이
+   * 들고 있으므로 여기서는 부르기만 한다. **없으면 그 카드를 내지 않는다** — 값을 바꿔도
+   * 다시 볼 수 없는 카드가 되기 때문이다.
+   */
+  onReapply?: () => void;
+  /** 요청이 나가 있는 동안(원국을 기다리는 중) 다시 보기 버튼을 잠근다. */
+  busy?: boolean;
 }) {
   const pillars: { label: string; pillar: Pillar | null }[] = [
     { label: "연주", pillar: chart.year },
@@ -188,6 +199,27 @@ export function ResultView({
       </FoldCard>
 
       {chart.daeun && <DaeunTable daeun={chart.daeun} seun={chart.seun} />}
+
+      {/*
+        네 번째 근거 카드 — 계산 기준 (TASK-101). 폼에 있던 `만세력 고급 설정` 을 여기로
+        내렸다. **앞의 셋과 같은 `FoldCard` 모양이어야 한다** (TASK-73 이 셋을 모두 접어
+        맞춰 둔 값이다). `note` 는 고른 값이 아니라 **실제로 적용된 보정량**이다 —
+        폼에서는 계산 전이라 보여줄 수 없던 것이고, 이 카드를 열 이유가 있는지를
+        펴지 않고 판단하게 해 준다.
+
+        **접는 판단 기준에도 맞는다** — 접지 않는 것은 스트리밍으로 채워지는 것뿐이고
+        (`ReadingSections`), 이 값은 요청 시점에 확정돼 그 뒤로 변하지 않는다.
+      */}
+      {onReapply && (
+        <FoldCard title="계산 기준" note={describeCalculationBasis(chart.timeCorrection)}>
+          <CalculationBasis
+            correction={chart.timeCorrection}
+            timeUnknown={chart.timeUnknown}
+            onReapply={onReapply}
+            busy={streaming || busy}
+          />
+        </FoldCard>
+      )}
 
       {/*
         전문가 상담 권유가 **본문이 아니라 여기 있다** (TASK-57 · 2026-08-18).

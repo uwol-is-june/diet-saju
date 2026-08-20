@@ -86,11 +86,7 @@ export default async function HomePage() {
       */}
       <header className="-mx-5 -mt-10 mb-7 bg-gradient-to-b from-brand-subtle to-canvas px-5 pt-12 pb-8 text-center">
         <p className="text-sm font-bold text-brand-ink">생년월일시로 계산한 사주 원국에서</p>
-        <h1 className="title-lg title-extrabold mt-2">
-          나의 기질과 몸을
-          <br />
-          읽어드립니다
-        </h1>
+        <h1 className="title-lg title-extrabold mt-2">나의 기질과 몸을 읽어드립니다</h1>
       </header>
 
       {/* 내부 유형은 목록에 내지 않는다 (TASK-41). `/admin` 에서만 들어간다. */}

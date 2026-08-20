@@ -118,8 +118,15 @@ export default async function HomePage() {
                 글은 사진 위에 온다(`relative`). 폭을 사진과 겹치지 않게 잡아야 흐려지는
                 구간에 글자가 얹히지 않는다 — 사진 색은 팔레트 검사 밖이라 그 위에 글자를
                 올리면 대비를 보증할 수 없다.
+
+                **폭은 `100% - 사진 42%` 다** (TASK-99). 예전 `62%` 는 합이 104% 라
+                설계상 겹쳐 있었고, 설명 줄이 실제로 사진 위로 4~12px 넘어갔다
+                (390 · 360 · 1280px 셋 다). 여기서 %는 카드 **콘텐츠 폭**(패딩 안쪽)
+                기준이고 사진 %는 **카드 폭** 기준이라, 58% 로 두면 왼쪽 패딩 20px 과
+                58% 의 차이만큼인 **3.2px 가 어느 폭에서나 일정하게** 남는다.
+                **62% 로 되돌리지 말 것** — 카드가 넓어질수록 겹침이 커진다.
               */}
-              <div className="relative w-[62%] break-keep">
+              <div className="relative w-[58%] break-keep">
                 <span className="block text-xs font-bold text-brand-ink">
                   {READING_TYPE_QUESTION[type]}
                 </span>

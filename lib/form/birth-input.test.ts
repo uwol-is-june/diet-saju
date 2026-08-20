@@ -608,6 +608,29 @@ describe("유형은 라우트가 정한다", () => {
     expect(home).not.toContain("입력한 정보는 저장하지 않습니다");
   });
 
+  it("카드 글 폭과 사진 폭이 겹치지 않는다 (TASK-99)", () => {
+    // 예전에는 글 62% + 사진 42% = 104% 라 **설계상 겹쳐** 있었고, 설명 줄이 실제로
+    // 사진 위로 4~12px 넘어갔다 (390 · 360 · 1280px 셋 다). 눈으로는 잘 안 잡힌다 —
+    // 사진이 글 쪽으로 흐려지므로 겹친 자리가 흐린 면 위에 얹혀 "조금 붙은" 것처럼 보인다.
+    const width = (code: string) => {
+      const found = code.match(/w-\[(\d+)%\]/);
+      if (!found) throw new Error("w-[NN%] 를 찾지 못했습니다");
+      return Number(found[1]);
+    };
+    const text = width(readCode("app/page.tsx"));
+    const photo = width(readCode("components/ReadingCardPhoto.tsx"));
+    expect(text + photo).toBeLessThanOrEqual(100);
+  });
+
+  it("카드 설명의 잘림이 살아 있다 (TASK-64 · 99)", () => {
+    // `line-clamp` 은 `display: -webkit-box` 로 동작한다 — 같은 요소에 `block` 을
+    // 덧대면 잘림이 통째로 죽어 네 번째 줄이 카드 밖으로 나간다.
+    const home = readCode("app/page.tsx");
+    const clamped = home.match(/className="[^"]*line-clamp-3[^"]*"/g) ?? [];
+    expect(clamped.length).toBeGreaterThan(0);
+    for (const className of clamped) expect(className).not.toMatch(/\bblock\b/);
+  });
+
   it("목록의 접근 가능한 이름은 남아 있다", () => {
     // 화면에서 제목만 지우면 스크린리더 사용자는 이 목록이 무엇인지 알 수 없다.
     expect(readCode("app/page.tsx")).toMatch(/<ul[^>]*aria-label=/);

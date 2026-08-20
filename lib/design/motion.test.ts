@@ -17,6 +17,7 @@ const READING_SECTIONS = readFileSync(
   "utf8",
 );
 
+/** `anim-*` 을 쓰는 파일 전부. 도식에서 시작했지만 지금은 `/` 목록도 들어 있다. */
 const CHART_SOURCES = [
   "components/charts/OhaengBars.tsx",
   "components/charts/OhaengCycle.tsx",
@@ -24,6 +25,8 @@ const CHART_SOURCES = [
   "components/charts/DaeunTimeline.tsx",
   "components/ReadingSections.tsx",
   "components/ScrollToTop.tsx",
+  // `/` 도 `anim-*` 을 쓴다 (TASK-104). 목록에 없으면 이 화면만 오타·미사용 검사 밖이 된다.
+  "app/page.tsx",
 ].map((path) => ({
   path,
   code: readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"),
@@ -61,6 +64,37 @@ describe("모션 최소화에서 최종 모습이 남는다", () => {
     const block = CSS.slice(CSS.indexOf("prefers-reduced-motion"));
     expect(block).toContain("animation-duration: 0.01ms");
     expect(block).toContain("transition-duration: 0.01ms");
+  });
+
+  /**
+   * **재생 시간만 줄이면 지연이 남는다** (TASK-104). `both` 라 지연 동안 `from`(투명)에
+   * 갇히므로, 지연을 지우지 않으면 모션 최소화 설정에서도 `/` 카드 다섯이 **여전히
+   * 시차를 두고 튀어나온다.** 이 규칙이 없으면 화면이 조용히 잘못 동작한다.
+   */
+  /**
+   * **등장 애니메이션이 `opacity` 로 시작하면 LCP 가 무너진다** (TASK-104 실측).
+   *
+   * 크롬은 요소가 **처음 그려질 때** LCP 후보로 등록하는데, 그때 투명하면 그 요소는
+   * 후보에서 빠지고 다시 들어오지 않는다. `/` 의 LCP 요소는 카드 사진이라, 카드에
+   * `opacity: 0` 에서 출발하는 애니메이션을 걸면 다섯 장이 통째로 후보에서 빠지고
+   * **LCP 가 웹폰트를 기다리는 `h1` 으로 떨어진다** — 0.72초 → **2.48초**로 쟀다.
+   *
+   * 그래서 이 키프레임은 **`transform` 만** 쓴다. 눈으로는 절대 안 잡히는 종류의 회귀다.
+   */
+  it("`/` 등장 키프레임이 opacity 를 건드리지 않는다", () => {
+    const body = keyframes["card-rise"];
+    expect(body, "card-rise 키프레임이 없다").toBeDefined();
+    expect(body).toContain("transform");
+    expect(body, "opacity 로 시작하면 카드 사진이 LCP 후보에서 빠진다").not.toContain(
+      "opacity",
+    );
+  });
+
+  it("모션 최소화 규칙이 지연도 지운다", () => {
+    const start = CSS.indexOf("prefers-reduced-motion");
+    // 첫 규칙(`*`)만 본다 — 뒤의 전환 겹장 규칙은 별개다.
+    const starRule = CSS.slice(start, CSS.indexOf("}", CSS.indexOf("{", start) + 1));
+    expect(starRule).toContain("animation-delay: 0s !important");
   });
 });
 

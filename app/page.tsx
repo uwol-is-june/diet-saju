@@ -61,6 +61,15 @@ import { ReadingCardPhoto } from "@/components/ReadingCardPhoto";
  */
 export const revalidate = 300;
 
+/**
+ * 카드 사이 등장 간격(ms) — 다섯 장이라 마지막이 300ms 뒤에 시작한다 (TASK-104).
+ *
+ * 도식들의 관례(45~70ms)와 같은 자리에 둔다. **목록 전체가 다 뜨는 시간**을 기준으로
+ * 잡은 값이다 — 카드당 지연이 쌓이므로 100ms 로 올리면 마지막 카드가 0.5초 뒤에
+ * 시작해 스크롤로 내려간 사람이 빈 자리를 본다.
+ */
+const CARD_STAGGER = 60;
+
 export default async function HomePage() {
   /**
    * 저장소가 없거나 죽어도 화면은 그대로다 — 숫자 자리만 사라진다. 여기서 `null` 이면
@@ -84,7 +93,16 @@ export default async function HomePage() {
         면을 펼친다. 안 그러면 띠가 본문 폭에만 걸려 잘린 사각형으로 보인다.
         색은 시맨틱 토큰이고 유형별로 갈지 않는다 (확정 결정: 테마를 유형별로 두지 않는다).
       */}
-      <header className="-mx-5 -mt-10 mb-7 bg-gradient-to-b from-brand-subtle to-canvas px-5 pt-12 pb-8 text-center">
+      {/*
+        머리 띠부터 카드 다섯까지 **위에서부터 차례로** 떠오른다 (TASK-104). 목록을 훑는
+        방향(위 → 아래)과 같은 방향이라 순서가 그대로 읽힌다.
+
+        **라이브러리를 넣지 않는다.** 이 화면은 통째로 정적이고 클라이언트 컴포넌트가
+        하나도 없다 — 등장 효과 하나 때문에 그 성질을 내주지 않는다. 서버 컴포넌트가
+        인라인 `style` 로 지연만 박아 내보내면 정적 HTML 그대로다(도식 넷이 이미 그
+        방식이다). 움직임은 전부 `globals.css` 의 `.anim-card-rise` 가 정한다.
+      */}
+      <header className="anim-card-rise -mx-5 -mt-10 mb-7 bg-gradient-to-b from-brand-subtle to-canvas px-5 pt-12 pb-8 text-center">
         <p className="text-sm font-bold text-brand-ink">생년월일시로 계산한 사주 원국에서</p>
         <h1 className="title-lg title-extrabold mt-2">나의 기질과 몸을 읽어드립니다</h1>
       </header>
@@ -92,7 +110,17 @@ export default async function HomePage() {
       {/* 내부 유형은 목록에 내지 않는다 (TASK-41). `/admin` 에서만 들어간다. */}
       <ul aria-label="풀이 유형" className="flex flex-col gap-3">
         {PUBLIC_READING_TYPES.map((type, index) => (
-          <li key={type}>
+          /*
+            카드마다 `CARD_STAGGER` 만큼 늦게 시작한다. 머리 띠가 0 이고 카드가 그 뒤를
+            따르므로 마지막 카드는 300ms 뒤다 — 390px 에서 접힌 자리 아래라 기다리는
+            느낌이 나지 않는다. **모션 최소화에서는 이 지연이 통째로 0 이 된다**
+            (`globals.css` 의 `prefers-reduced-motion` 블록이 `animation-delay` 도 지운다).
+          */
+          <li
+            key={type}
+            className="anim-card-rise"
+            style={{ animationDelay: `${(index + 1) * CARD_STAGGER}ms` }}
+          >
             <Link
               href={`/reading/${type}`}
               /*
@@ -108,7 +136,7 @@ export default async function HomePage() {
                 **첫 장만 `priority`** — 그것이 이 화면의 LCP 요소다 (TASK-87 실측:
                 LCP 1.02 → 0.72초). 다섯 장 전부에 주면 preload 가 서로를 밀어낸다.
               */}
-              <ReadingCardPhoto readingType={type} priority={index === 0} />
+              <ReadingCardPhoto readingType={type} priority={index < 3} />
 
               {/*
                 글은 사진 위에 온다(`relative`). 폭을 사진과 겹치지 않게 잡아야 흐려지는

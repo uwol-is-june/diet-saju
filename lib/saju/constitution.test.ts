@@ -194,6 +194,26 @@ describe("재료 범주 (TASK-27)", () => {
     }
   });
 
+  /**
+   * 화면에 크게 뜨는 짧은 이름 (TASK-102). 콜아웃 라벨과 공유 칩이 함께 쓴다.
+   *
+   * **맛을 올리지 않는다** — 한열이 `열` 인 사람 화면에서 `THERMAL_GUIDE.열` 의
+   * "맵고 뜨거운 음식과 술을 줄이기" 와 정면으로 부딪힌다. 재료는 오행, 조리·온도는
+   * 한열이라는 층 구분이 라벨에서 무너지는 자리다.
+   */
+  it("오행마다 읽히는 짧은 이름이 있다", () => {
+    for (const element of OHAENG_LIST) {
+      const short = ELEMENT_FOOD[element].short;
+      expect(short.length).toBeGreaterThan(0);
+      // 오행 이름 한 글자를 그대로 쓰면 예전(`금 계열`)으로 되돌아간 것이다.
+      expect(short).not.toBe(element);
+      expect(short).not.toContain("계열");
+      for (const flavor of ["신맛", "쓴맛", "단맛", "매운맛", "짠맛"]) {
+        expect(short, `${element} 짧은 이름에 ${flavor}`).not.toContain(flavor);
+      }
+    }
+  });
+
   it("오미·오색 배속(고전)을 근거로 적는다", () => {
     // 배속 자체는 고전이고 재료 선택만 우리 관례다. 근거 문구가 그것을 밝혀야 한다.
     const flavor: Record<Ohaeng, string> = {
@@ -228,7 +248,11 @@ describe("재료 범주 (TASK-27)", () => {
   });
 
   it("재료 목록에 상표·보조식품·수치가 없다", () => {
-    const groups = OHAENG_LIST.flatMap((element) => [...ELEMENT_FOOD[element].groups]);
+    // `short` 도 사용자에게 그대로 나가는 문자열이다 — 같은 검사를 받아야 한다 (TASK-102).
+    const groups = OHAENG_LIST.flatMap((element) => [
+      ...ELEMENT_FOOD[element].groups,
+      ELEMENT_FOOD[element].short,
+    ]);
     for (const group of groups) {
       expect(group).not.toMatch(/\d/);
       for (const word of ["영양제", "보조", "제품", "즙", "환", "추출"]) {
@@ -242,6 +266,7 @@ describe("재료 범주 (TASK-27)", () => {
     // 조리·온도는 생활어(THERMAL_GUIDE)로 말하고 이 표에는 성질 용어를 넣지 않는다.
     const all = OHAENG_LIST.flatMap((element) => [
       ELEMENT_FOOD[element].basis,
+      ELEMENT_FOOD[element].short,
       ...ELEMENT_FOOD[element].groups,
     ]);
     for (const word of ["온성", "냉성", "평성", "성질이 따뜻", "성질이 차", "기운을 보"]) {

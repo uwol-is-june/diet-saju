@@ -1,3 +1,4 @@
+import { ELEMENT_FOOD } from "../saju/constitution";
 import { findCurrentDaeun } from "../saju/decade";
 import { READING_TYPE_LABEL, type ReadingType, type SajuChart } from "../saju/schema";
 
@@ -128,14 +129,20 @@ const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
    * 타입이 null 을 허용하니 체질 칩으로 물러선다.
    */
   /**
-   * 식단 유형 (TASK-63): 곁들일 쪽이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
-   * **식품 이름을 칩에 적지 않는다** — 목록이 길어 카드에 들어가지도 않고, 오행 이름이
-   * 근거를 더 정확히 말한다. 과부족이 없으면 그 사실을 그대로 쓴다.
+   * 식단 유형 (TASK-63 · 102): 곁들일 쪽이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
+   *
+   * **재료 이름을 쓴다.** TASK-63 은 "식품 이름을 칩에 적지 않는다" 였고 이유는 목록이
+   * 길어 카드에 들어가지 않는다는 것이었는데, 그건 `groups` 셋을 다 적을 때의 이야기다.
+   * `ELEMENT_FOOD.short` 는 한 덩어리라 그 이유에 걸리지 않는다. 오행 이름만 적던
+   * 옛 칩(`금 곁들이기`)은 **카드를 받아 든 사람이 읽을 수 없었다.**
+   *
+   * 화면 콜아웃과 **같은 값에서 나온다** — 한쪽만 바꾸면 화면과 카드가 다른 말을 한다.
+   * 과부족이 없으면 그 사실을 그대로 쓴다.
    */
   "diet-food": (chart) => {
-    const short = chart.constitution.deficient[0];
+    const element = chart.constitution.deficient[0];
     return [
-      short ? `${short} 곁들이기` : "오행이 고름",
+      element ? `${ELEMENT_FOOD[element].short} 곁들이기` : "오행이 고름",
       `한열 ${chart.constitution.thermal}`,
     ];
   },

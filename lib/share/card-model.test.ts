@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ELEMENT_FOOD } from "../saju/constitution";
 import { calculateSajuChart } from "../saju/pillars";
 import {
   READING_TYPES,
@@ -181,6 +182,35 @@ describe("유형별 판정 칩", () => {
       `${chart.ohaeng.strongest} 기운이 강함`,
       chart.strength.verdict,
     ]);
+  });
+
+  /**
+   * 식단 칩은 **재료 이름**이다 (TASK-102). 오행 이름만 적으면(`금 곁들이기`) 카드를 받아
+   * 든 사람이 읽을 수 없다 — 공유 카드는 사주를 모르는 사람에게 가는 물건이다.
+   * 화면 콜아웃과 **같은 값**(`ELEMENT_FOOD.short`)에서 나와야 둘이 다른 말을 하지 않는다.
+   */
+  it("diet-food 는 오행 이름이 아니라 재료 이름을 쓴다", () => {
+    const model = buildShareCardModel(chart, "diet-food");
+    const element = chart.constitution.deficient[0];
+    const expected = element ? `${ELEMENT_FOOD[element].short} 곁들이기` : "오행이 고름";
+    expect(model.chips[0]).toBe(expected);
+    if (element) {
+      expect(model.chips[0]).not.toBe(`${element} 곁들이기`);
+      expect(model.chips[0]).toContain(ELEMENT_FOOD[element].short);
+    }
+  });
+
+  /**
+   * 칩은 **줄바꿈이 없다** — `draw-card.ts` 가 두 칩을 한 줄에 이어 그린다. 넘치면 카드
+   * 밖으로 나가고 지금 코드에 넘침 처리가 없다. 쓸 수 있는 폭은 `1080 − PAD*2 − 20 = 916`,
+   * 칩당 좌우 여백이 72 이므로 글자에 남는 것이 772px 이고, 두 번째 칩(`한열 ○○`)이
+   * 40px × 5자쯤이라 첫 칩 글자는 **약 570px(한글 14자)** 까지다.
+   */
+  it("가장 긴 식단 칩도 한 줄에 들어갈 길이다", () => {
+    const longest = Math.max(
+      ...Object.values(ELEMENT_FOOD).map((food) => `${food.short} 곁들이기`.length),
+    );
+    expect(longest).toBeLessThanOrEqual(14);
   });
 
   /**

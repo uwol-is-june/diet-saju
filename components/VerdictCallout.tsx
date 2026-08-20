@@ -1,5 +1,10 @@
 import Image from "next/image";
-import type { DietApproach, GainPattern, MetabolismTendency } from "@/lib/saju/constitution";
+import {
+  ELEMENT_FOOD,
+  type DietApproach,
+  type GainPattern,
+  type MetabolismTendency,
+} from "@/lib/saju/constitution";
 import type { Ohaeng } from "@/lib/saju/ganji";
 import type { ReadingType, SajuChart } from "@/lib/saju/schema";
 
@@ -159,13 +164,29 @@ const CALLOUT: Record<ReadingType, (chart: SajuChart) => Callout | null> = {
    * 대신 근거 줄이 한열을 들어 "그래도 조리와 온도는 정해진다" 를 말한다.
    */
   "diet-food": (chart) => {
-    const short = chart.constitution.deficient[0];
+    const element = chart.constitution.deficient[0];
+    if (!element) {
+      return {
+        label: "오행이 고르게 퍼진 편",
+        basis: `한쪽으로 쏠린 계열이 없고, 한열 ${chart.constitution.thermal}이 조리와 온도를 정합니다`,
+        photo: ELEMENT_EVEN_PHOTO,
+      };
+    }
+    const food = ELEMENT_FOOD[element];
     return {
-      label: short ? `${short} 계열을 곁들이기` : "곁들일 계열이 따로 없음",
-      basis: short
-        ? `오행 ${short}이 부족한 쪽이고, 한열 ${chart.constitution.thermal}이 조리와 온도를 정합니다`
-        : `오행이 한쪽으로 쏠리지 않았고, 한열 ${chart.constitution.thermal}이 조리와 온도를 정합니다`,
-      photo: short ? ELEMENT_PHOTO[short] : ELEMENT_EVEN_PHOTO,
+      /**
+       * **오행 이름이 아니라 재료 이름이 뜬다** (TASK-102). `금 계열을 곁들이기` 는
+       * 오행을 아는 사람만 읽을 수 있었고, 실제 재료는 본문이 도착해야 나왔다 —
+       * 이 카드가 메우려는 1초 동안 아무것도 전달하지 못했다는 뜻이다.
+       */
+      label: `${food.short}${objectParticle(food.short)} 곁들이기`,
+      /**
+       * 근거 줄이 **오행 이름과 나머지 재료를 함께** 받는다. 오행을 빼면 판정의 출처가
+       * 사라지고(근거 카드 `사주 원국` 과 같은 낱말이어야 이어진다), 나머지 재료를 빼면
+       * 라벨의 두 가지가 **그것만 먹으라는 말**로 읽힌다.
+       */
+      basis: `오행 ${element}이 부족한 쪽이라 ${food.groups.join(" · ")} 계열이고, 한열 ${chart.constitution.thermal}이 조리와 온도를 정합니다`,
+      photo: ELEMENT_PHOTO[element],
     };
   },
   /**
@@ -251,6 +272,18 @@ function VerdictPhoto({ slug }: { slug: string }) {
       className="card-photo pointer-events-none absolute inset-y-0 right-0 h-full w-[42%] object-cover"
     />
   );
+}
+
+/**
+ * 목적격 조사 — 받침이 있으면 `을`, 없으면 `를` (TASK-102).
+ *
+ * `무와 버섯을` · `초록 잎채소를` 처럼 라벨이 다섯 가지라 손으로 적으면 표가 하나 더
+ * 생긴다. 한글 음절은 `(코드 − 0xAC00) % 28` 이 종성 인덱스라 규칙 하나로 끝난다.
+ */
+function objectParticle(word: string): string {
+  const last = word.codePointAt(word.length - 1) ?? 0;
+  if (last < 0xac00 || last > 0xd7a3) return "를";
+  return (last - 0xac00) % 28 === 0 ? "를" : "을";
 }
 
 export function VerdictCallout({

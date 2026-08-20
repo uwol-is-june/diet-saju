@@ -244,13 +244,14 @@ const LAYOUTS = {
 const bBase = (c) => `${photoDiv(c)}<div class="scrim"></div>`;
 
 const LAYOUTS_B = {
-  /** 표지 — 가운데 두 줄 + 아래 마크. 근거를 대는 장이 아니라 source 를 받지 않는다. */
+  /** 표지 — 좌하단 제목 + 부제 한 줄, 우상단 로고. 근거를 대는 장이 아니라 source 를 안 받는다. */
   "b-cover": (c) => `
     ${bBase(c)}
+    ${logoDiv("is-corner")}
     <div class="copy">
       <h1 class="cover-title">${richLineB(c.title)}</h1>
-    </div>
-    ${logoDiv("is-middle")}`,
+      ${c.sub ? `<p class="cover-sub">${richLineB(c.sub)}</p>` : ""}
+    </div>`,
 
   /** 도입 — 개념 한 덩어리 + 아래 세 칸(유형 미리보기). */
   "b-intro": (c) => `

@@ -83,28 +83,21 @@ export function getRuntimeConfig(): RuntimeConfig {
 
 // ── 카운터 저장소 (있으면 켜지고 없으면 꺼진다) ────────────────────────────
 /**
- * 유형별 조회수·좋아요 카운터가 쓰는 Upstash Redis 자격증명 (TASK-51).
+ * 카운터가 쓰는 Upstash Redis 자격증명. **위 둘 중 어느 갈래도 아닌 세 번째다** —
+ * `getSecrets` 처럼 던질 수 없고(저장소가 없다고 페이지가 죽으면 안 된다) `getRuntimeConfig`
+ * 처럼 기본값을 줄 수도 없다(시크릿에 기본값이란 없다).
  *
- * **위 둘 중 어느 갈래도 아닌 세 번째다.**
- *  - `getSecrets` 처럼 던지면 안 된다 — 저장소가 없다고 페이지가 죽으면 계측이 요청을
- *    깨뜨리는 것이다. `lib/observability.ts` 의 `emit` 이 어떤 예외도 밖으로 내보내지
- *    않는 것과 같은 원칙이다.
- *  - `getRuntimeConfig` 처럼 기본값을 줄 수도 없다 — 시크릿에 기본값이란 없다.
- *
- * 그래서 **없으면 `null`** 이고, 부르는 쪽이 "카운터 없음" 상태로 다룬다. 값이 들어오는
- * 순간 저절로 켜진다.
- *
- * 토큰은 시크릿이다. **이 파일 밖에서 `process.env` 로 직접 읽지 말 것** (CLAUDE.md 보안 규칙).
+ * 그래서 **없으면 `null`** 이고 부르는 쪽이 "카운터 없음" 으로 다룬다.
+ * **이 파일 밖에서 `process.env` 로 직접 읽지 말 것.**
  */
 export type CounterStoreConfig = { readonly url: string; readonly token: string };
 
 /**
- * **이름이 두 벌이다.** Vercel 마켓플레이스에서 Upstash Redis 를 연결하면 `KV_REST_API_*`
- * 로 주입되고(옛 Vercel KV 시절 이름), Upstash 콘솔에서 직접 받으면 `UPSTASH_REDIS_REST_*`
- * 다. 둘 다 받는다 — 한쪽만 읽으면 대시보드에서 분명히 연결했는데 앱에서는 "설정 없음"
- * 으로 보이고, 그 사실이 화면 어디에도 안 나와서 원인을 찾는 데 배포 한 번을 쓴다.
+ * **이름이 두 벌이다.** Vercel 마켓플레이스 연동은 `KV_REST_API_*`(옛 Vercel KV 이름)로
+ * 주입하고 Upstash 콘솔에서 직접 받으면 `UPSTASH_REDIS_REST_*` 다. **둘 다 받는다** —
+ * 한쪽만 읽으면 대시보드에서는 연결됐는데 앱은 "설정 없음" 이 된다.
  *
- * 앞에 적은 이름이 이긴다. 손으로 넣은 값이 자동 주입값을 덮어쓸 수 있어야 한다.
+ * 앞에 적은 이름이 이긴다 — 손으로 넣은 값이 자동 주입값을 덮어쓸 수 있어야 한다.
  */
 const URL_VARS = ["UPSTASH_REDIS_REST_URL", "KV_REST_API_URL"] as const;
 const TOKEN_VARS = ["UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_TOKEN"] as const;
@@ -122,10 +115,8 @@ const counterStoreSchema = z.object({
 });
 
 /**
- * 순수 함수라 테스트가 직접 부른다 — `process.env` 를 건드리면 아래 캐시와 얽힌다.
- *
- * **이름만 돌려주고 값은 돌려주지 않는다**(`names`). 진단에 필요한 것은 "어느 이름이
- * 들어와 있나" 이지 값이 아니다.
+ * 순수 함수라 테스트가 직접 부른다 (`process.env` 를 건드리면 아래 캐시와 얽힌다).
+ * **이름만 돌려주고 값은 돌려주지 않는다** — 진단에 필요한 것은 어느 이름이 들어와 있나다.
  */
 export function resolveCounterStore(env: Record<string, string | undefined>): CounterStoreLookup {
   const pick = (names: readonly string[]) => names.find((name) => env[name]?.trim());

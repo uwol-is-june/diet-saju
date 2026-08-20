@@ -15,11 +15,11 @@ import type { YearlyAnalysis } from "./yearly";
  */
 
 /**
- * 풀이 유형. **순서가 UI 버튼 순서다.**
+ * 풀이 유형. **순서가 UI 순서다.**
  *
- * 유형을 추가하면 타입이 강제하는 곳(섹션 계약·프롬프트 지침·공유 카드 칩)이 전부
- * 컴파일 오류로 잡힌다. `Record<ReadingType, …>` 를 유지하는 이유다 — 인덱스 시그니처로
- * 바꾸면 새 유형이 조용히 빈 값으로 나간다.
+ * 유형을 추가하면 타입이 강제하는 곳(섹션 계약·프롬프트 지침·공유 카드 칩)이 전부 컴파일
+ * 오류로 잡힌다. **`Record<ReadingType, …>` 를 유지한다** — 인덱스 시그니처로 바꾸면
+ * 새 유형이 조용히 빈 값으로 나간다.
  */
 export const READING_TYPES = [
   "general",
@@ -33,15 +33,15 @@ export const READING_TYPES = [
 export type ReadingType = (typeof READING_TYPES)[number];
 
 /**
- * **`diet` 의 id 는 바꾸지 않는다** (TASK-39). 라벨만 `종합 체질 풀이` 로 바뀌었다.
- * 세그먼트가 곧 URL 이라 id 를 바꾸면 이미 공유된 `/reading/diet` 링크와 공유 카드가 죽는다.
+ * **id 를 바꾸지 않는다.** 세그먼트가 곧 URL 이라 바꾸면 이미 공유된 링크와 공유 카드가 죽는다.
  *
- * 다이어트 계열 셋은 **묻는 것이 서로 다르다** (TASK-44).
+ * 다이어트 계열은 **묻는 것이 서로 다르다.**
  *   `diet`        몸이 어떤 쪽인가 (체질·패턴·올해 흐름)
  *   `gain-cause`  왜 붙는가 (걸리는 지점·상황·치우침)
  *   `diet-method` 그래서 무엇을 어떻게 하는가 (순서·종류·실행 조건)
- *   `diet-food`   무엇을 먹는가 (재료 범주·조리·온도 — TASK-63)
- * 목록 순서가 UI 순서이므로 이 순서(체질 → 원인 → 방법 → 식단 → 운동)로 둔다.
+ *   `diet-food`   무엇을 먹는가 (재료 범주·조리·온도)
+ *   `exercise`    어떤 운동을 하는가 (종목·강도·시간대)
+ * 목록 순서가 UI 순서이므로 체질 → 원인 → 방법 → 식단 → 운동으로 둔다.
  */
 export const READING_TYPE_LABEL: Record<ReadingType, string> = {
   general: "종합 사주 풀이",
@@ -54,19 +54,13 @@ export const READING_TYPE_LABEL: Record<ReadingType, string> = {
 };
 
 /**
- * 유형 카드의 **묻는 것 한 줄** (TASK-86).
- *
- * `/` 가 리스트 카드로 바뀌면서(레퍼런스 `docs/ui_ref/list_reference.jpg`) 제목 위에
- * 작은 강조색 한 줄이 생겼다. 그 자리에 **각 유형이 답하는 질문**을 넣는다 — 지금까지
- * `schema.ts` 주석과 `CLAUDE.md` 에만 있던 구분(몸이 어떤 쪽인가 / 왜 붙는가 / 무엇을
- * 어떻게 하는가 / 무엇을 먹는가 / 어떤 운동을 하는가)이 **화면에서 읽히게** 된다.
- * 다섯 카드가 이름만으로는 서로 비슷해 보이는 것이 이 목록의 실제 문제였다.
+ * 유형 카드의 **묻는 것 한 줄** — `/` 리스트 카드에서 제목 위 강조색 줄이다.
  *
  * **라벨을 다시 쓴 것이 아니다.** 라벨은 무엇을 주는지(`나에게 맞는 운동`), 이 줄은
- * 무엇을 묻는지(`어떤 운동을 하는가`)를 말한다. 겹치면 카드 위쪽 두 줄이 같은 말이 된다.
+ * 무엇을 묻는지(`어떤 운동을 하는가`)를 말한다 — 겹치면 카드 위쪽 두 줄이 같은 말이 된다.
  *
- * 문장이 아니라 **질문 조각**이므로 마침표를 붙이지 않는다 — 카드 설명(`~합니다.`)과
- * 화법이 다른 자리다. `schema.test.ts` 가 길이·금지 어휘·숫자를 훑는다.
+ * 문장이 아니라 **질문 조각**이므로 마침표를 붙이지 않는다.
+ * `schema.test.ts` 가 길이·금지 어휘·숫자를 훑는다.
  */
 export const READING_TYPE_QUESTION: Record<ReadingType, string> = {
   general: "타고난 기질은 어떤 쪽인가",
@@ -79,17 +73,12 @@ export const READING_TYPE_QUESTION: Record<ReadingType, string> = {
 };
 
 /**
- * 노출 구분 (TASK-41). **유형을 지우는 게 아니라 "보이는 곳" 만 나눈다.**
+ * 노출 구분. **유형을 지우는 게 아니라 "보이는 곳" 만 나눈다** — `READING_TYPES` 에서 빼면
+ * `Record` 가 그 몫을 전부 지우라고 하고 되살릴 때 프롬프트·섹션 계약을 다시 써야 한다.
  *
- * `general` 은 나중에 없앨 유형이지만 그때까지 다른 사주 서비스와 대조해 문제를 잡는 데
- * 쓴다. `READING_TYPES` 에서 빼면 `Record<ReadingType, …>` 가 general 몫을 전부 지우라고
- * 하고, 그러면 되살릴 때 프롬프트·섹션 계약을 다시 써야 한다. 지금 필요한 건 노출 제어뿐이다.
+ * **`Record` 로 둔다** (배열이면 새 유형이 조용히 빠진 채 나간다).
  *
- * **`Record` 로 둔다.** 배열로 두면 새 유형이 조용히 빠진 채 나가지만, `Record` 면
- * 유형을 늘릴 때 여기가 컴파일 오류로 잡힌다.
- *
- * `internal` 은 **숨김이지 보호가 아니다** — `/admin` 에 인증이 없으므로 URL 을 아는
- * 사람은 누구나 들어온다. 지금 목적(본인 비교용)에는 충분하고 비밀도 아니다.
+ * `internal` 은 **숨김이지 보호가 아니다** — `/admin` 에 인증이 없다.
  */
 export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal"> = {
   general: "internal",
@@ -99,10 +88,8 @@ export const READING_TYPE_VISIBILITY: Record<ReadingType, "public" | "internal">
   "diet-food": "public",
   exercise: "public",
   /**
-   * **`decade` 는 내렸다** (TASK-62 · 2026-08-18). 공개 유형 넷이 전부 다이어트 축으로 몸을
-   * 묻는데 이것만 시간축을 물어 묻는 쪽이 달랐다. `general` 과 같은 이유로 **지우지 않는다** —
-   * `READING_TYPES` 에서 빼면 섹션 계약 5절과 프롬프트 지침을 되살릴 때 다시 써야 한다.
-   * 판정(`lib/saju/decade.ts`)은 계속 계산되고 대운 도식도 화면에 그대로 있다.
+   * **`decade` 는 내렸다** — 공개 유형이 다이어트 축으로 몸을 묻는데 이것만 시간축을 묻는다.
+   * 지우지 않는 이유는 위와 같다. 판정(`lib/saju/decade.ts`)은 계속 계산된다.
    */
   decade: "internal",
 };
@@ -120,12 +107,9 @@ export const INTERNAL_READING_TYPES = READING_TYPES.filter(
 );
 
 /**
- * 유형 선택 카드의 한 줄 설명 (TASK-30).
+ * 유형 선택 카드의 한 줄 설명. **`Record` 를 유지한다.**
  *
- * **`Record<ReadingType, string>` 를 유지한다.** 삼항이나 인덱스 시그니처로 두면
- * 새 유형이 조용히 빈 설명을 달고 나간다.
- *
- * 문구는 각 유형의 표현 규칙을 그대로 따른다 — `diet` 는 처방·수치를 쓰지 않는다.
+ * 문구는 각 유형의 표현 규칙을 그대로 따른다 — 처방·수치를 쓰지 않는다.
  * `schema.test.ts` 가 금지 어휘로 훑는다.
  */
 export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
@@ -135,9 +119,8 @@ export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
   "diet-method":
     "무엇을 먼저 고정할지, 어떤 종류로 움직이고 어떤 순서로 먹을지를 짚습니다.",
   /**
-   * 컨셉 한 줄을 앞에 세운다 (TASK-63). **숫자를 쓸 수 없다** — 아래 `schema.test.ts` 가
-   * 모든 유형의 문구를 `/\d/` 로 막는다(다이어트 계열에서 숫자는 곧 처방으로 읽힌다).
-   * 그래서 "90%" 가 아니라 "열에 아홉" 이다. 이 문장은 **다이어트 일반에 대한 주장**이지
+   * **숫자를 쓸 수 없다** — `schema.test.ts` 가 모든 유형의 문구를 `/\d/` 로 막는다.
+   * 그래서 "90%" 가 아니라 "열에 아홉" 이다. 이 문장은 다이어트 일반에 대한 주장이지
    * 이 사람 몸에 대한 인과가 아니므로 표현 규칙의 (ii) 경계에 걸리지 않는다.
    */
   "diet-food":
@@ -149,14 +132,11 @@ export const READING_TYPE_DESCRIPTION: Record<ReadingType, string> = {
 };
 
 /**
- * `/reading/[type]` 의 검색·공유용 문구 (TASK-31).
+ * `/reading/[type]` 의 검색·공유용 문구. 카드 설명과 **따로 둔다** — 카드는 제목 바로 밑이라
+ * 짧아야 하고, 여기는 링크만 보고 판단하는 사람이 읽으므로 무엇을 넣어야 하는지
+ * (생년월일시)까지 말해야 한다.
  *
- * 카드 설명(`READING_TYPE_DESCRIPTION`)과 **따로 둔다.** 카드는 화면에서 제목 바로 밑에
- * 붙으므로 짧아야 하고, 여기는 링크만 보고 판단하는 사람이 읽으므로 무엇을 넣어야 하는지
- * (생년월일시)와 무엇이 나오는지를 같이 말해야 한다.
- *
- * **og:image 는 유형별로 만들지 않는다.** 고정 카드(`app/opengraph-image.png`) 하나를
- * 유지한다 — 세 벌이 되면 `docs/og-card.html` 원본도 세 벌이고 팔레트 검사도 그만큼 는다.
+ * **og:image 는 유형별로 만들지 않는다** (고정 카드 하나 · `app/opengraph-image.png`).
  */
 export const READING_TYPE_META: Record<ReadingType, { title: string; description: string }> = {
   general: {
@@ -197,20 +177,14 @@ export const READING_TYPE_META: Record<ReadingType, { title: string; description
 };
 
 /**
- * 대운을 근거로 쓰는 유형은 **성별이 있어야 한다** (TASK-45).
+ * 대운을 근거로 쓰는 유형은 **성별이 있어야 한다.** 순행/역행이 성별로 정해지므로 미지정이면
+ * `chart.daeun` 이 null 이다. **임의로 순행을 정하지 않는다** — 같은 사주에 다른 판정이 나간다.
  *
- * 대운 순행/역행이 성별로 정해지므로 미지정이면 `chart.daeun` 이 null 이고 이 유형은
- * 성립하지 않는다. **임의로 순행을 정하지 않는다** — 그러면 같은 사주에 다른 판정이 나간다.
+ * **홈에서 카드를 막지 않는다.** 성별은 프로바이더의 메모리에 있어 클라이언트만 아는 값이고,
+ * 카드를 흐리게 하려면 `/` 에 클라이언트 컴포넌트가 들어가 정적 성질이 깨진다.
+ * 그래서 카드는 누구에게나 보이고 **폼이 이유를 말한다.**
  *
- * ## 왜 홈에서 카드를 막지 않는가
- *
- * 성별은 `BirthInputProvider` 의 **메모리**에 있고 그건 클라이언트만 안다. 홈에서 카드를
- * 흐리게 하려면 `/` 에 클라이언트 컴포넌트가 들어가는데, 그러면 **`/` 를 통째로 정적으로
- * 두는 성질이 깨진다**(`CLAUDE.md` "현재 페이지면 링크를 죽이는 처리는 하지 않는다" 와 같은
- * 이유). 그래서 카드는 누구에게나 보이고, **폼이 성별을 요구한다.** 왜 막혔는지 그 자리에서
- * 읽히는 쪽이기도 하다.
- *
- * `Record` 로 두어 유형을 늘릴 때 여기가 컴파일 오류로 잡히게 한다.
+ * `Record` 로 두어 유형을 늘릴 때 컴파일 오류로 잡히게 한다.
  */
 export const READING_TYPE_NEEDS_GENDER: Record<ReadingType, boolean> = {
   general: false,
@@ -250,11 +224,8 @@ export const sajuInputSchema = z.object({
   isLeapMonth: z.boolean().default(false),
   gender: z.enum(["male", "female", "unspecified"]).default("unspecified"),
   /**
-   * 유형 없이 온 요청의 기본값. **공개 유형이어야 한다** (TASK-41).
-   *
-   * 예전 기본값은 `general` 이었는데 그 유형이 `internal` 이 되면서, 유형을 생략한 요청이
-   * 화면에서는 고를 수 없는 유형으로 가게 됐다. 폼은 항상 세그먼트에서 유형을 주므로
-   * 실동작 문제는 없었지만, **기본값은 사용자가 실제로 요청할 수 있는 것**이어야 한다.
+   * 유형 없이 온 요청의 기본값. **공개 유형이고 성별을 요구하지 않는 것이어야 한다** —
+   * 기본값은 사용자가 실제로 요청할 수 있는 것이어야 한다 (`schema.test.ts` 가 막는다).
    */
   readingType: z.enum(READING_TYPES).default("diet"),
 
@@ -275,11 +246,8 @@ export const sajuInputSchema = z.object({
   longitude: z.number().min(124).max(132).optional(),
 })
   /**
-   * 대운을 쓰는 유형은 성별이 있어야 한다 (TASK-45).
-   *
-   * 폼도 막지만 **서버가 다시 막는다** — 클라이언트 검증은 신뢰 대상이 아니고, 여기서
-   * 통과시키면 `chart.decade` 가 null 인 채로 프롬프트가 나가 LLM 이 스스로 10년을 지어낸다.
-   * 스트림을 열기 전 단계라 400 으로 돌려줄 수 있다.
+   * 폼도 막지만 **서버가 다시 막는다.** 여기서 통과시키면 `chart.decade` 가 null 인 채로
+   * 프롬프트가 나가 LLM 이 스스로 10년을 지어낸다. 스트림 전이라 400 으로 돌려줄 수 있다.
    */
   .refine(
     (value) => !READING_TYPE_NEEDS_GENDER[value.readingType] || value.gender !== "unspecified",
@@ -343,25 +311,17 @@ export interface SajuChart {
   ohaeng: OhaengAnalysis;
   /** 신강/신약 — 득령·득지·득세 3기준 */
   strength: StrengthAnalysis;
-  /**
-   * 체질 경향 — 오행 균형·조후·신강신약·십신 분포에서 **코드가** 정한다 (TASK-14).
-   * 리딩 유형과 무관하게 항상 계산한다. 지금은 `diet` 프롬프트만 근거로 쓴다.
-   */
+  /** 체질 경향 — **코드가** 정한다. 리딩 유형과 무관하게 항상 계산한다. */
   constitution: ConstitutionAnalysis;
   /**
-   * 올해 세운 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-15).
-   *
-   * **작용(보완·가중·중립)은 원래 몸 쪽 값이다** — `constitution.deficient`/`excess` 에서
-   * 계산되기 때문이다. 그래서 `yearly` 유형이 사라진 뒤에도 남아 `diet` 의
-   * "올해의 몸 흐름" 이 근거로 쓴다 (TASK-39). 리딩 유형과 무관하게 항상 계산한다.
+   * 올해 세운 판정 — 세운 오행이 원국의 과부족에 어떻게 작용하는지.
+   * **작용(보완·가중·중립)은 원래 몸 쪽 값이다**(`constitution` 에서 계산된다). 그래서
+   * `yearly` 유형이 없어진 뒤에도 남아 `diet` 의 "올해의 몸 흐름" 이 근거로 쓴다.
    */
   yearly: YearlyAnalysis;
   /**
-   * 지금 흐르는 10년 판정 — 대운 오행이 원국의 과부족에 어떻게 작용하는지 (TASK-45).
-   *
-   * **성별 미지정이면 null 이다.** 대운 순행/역행이 성별로 정해지므로 낼 수 없고,
-   * 임의로 순행을 고르면 같은 사주에 다른 판정이 나간다. 그래서 `decade` 유형은
-   * 성별을 요구한다 (`READING_TYPE_NEEDS_GENDER`).
+   * 지금 흐르는 10년 판정. **성별 미지정이면 null 이다** — 순행/역행을 임의로 고르면
+   * 같은 사주에 다른 판정이 나간다 (`READING_TYPE_NEEDS_GENDER` 가 그래서 있다).
    */
   decade: DecadeAnalysis | null;
   /** 대운. 성별 미지정이면 순행/역행을 정할 수 없어 null */
@@ -380,13 +340,10 @@ export interface SajuReadingResponse {
 
 /**
  * 스트리밍 응답의 이벤트. 한 줄에 하나씩 JSON 으로 보낸다 (NDJSON).
+ * 원국은 코드가 즉시 계산하므로 첫 이벤트로 내보낸다.
  *
- * 원국은 코드가 즉시 계산하므로 첫 이벤트로 바로 내보낼 수 있다. 사용자는 LLM 을
- * 기다리는 동안 자기 사주팔자를 먼저 본다.
- *
- * `error` 는 **스트림이 시작된 뒤** 발생한 실패에만 쓴다. 시작 전 실패(입력 오류·쿼터
- * 소진 등)는 일반 JSON 응답 + 상태 코드로 처리한다 — 200 본문을 쓰기 시작하면
- * 상태 코드를 되돌릴 수 없기 때문이다.
+ * `error` 는 **스트림이 시작된 뒤** 발생한 실패에만 쓴다. 시작 전 실패는 일반 JSON +
+ * 상태 코드다 — 200 본문을 쓰기 시작하면 상태 코드를 되돌릴 수 없다.
  */
 export type SajuStreamEvent =
   | { type: "chart"; chart: SajuChart; model: string }

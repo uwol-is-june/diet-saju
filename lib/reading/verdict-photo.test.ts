@@ -92,10 +92,19 @@ describe("판정 사진 규칙", () => {
     expect(component).not.toMatch(/priority/);
   });
 
-  it("마스크는 globals.css 의 `.card-photo` 를 쓴다", () => {
-    /* 임의값으로 흩뿌리면 `/` 리스트 카드와 모양이 갈린다. */
-    expect(component).toMatch(/card-photo/);
-    expect(component).not.toMatch(/mask-image/);
+  /**
+   * 형식은 CSS 에 있다 (TASK-109). 예전에는 `/` 리스트 카드와 같은 `.card-photo`(오른쪽 면 ·
+   * 왼쪽으로 흐려짐)를 썼는데, 지금은 사진이 **카드를 통째로 덮고** 그 위에 어둠이 깔린다 —
+   * 방향이 달라 규칙을 공유하지 않는다.
+   */
+  it("형식은 globals.css 의 `.verdict-cover`·`.verdict-photo` 가 정한다", () => {
+    expect(component).toMatch(/verdict-cover/);
+    expect(component).toMatch(/verdict-photo/);
+    // 임의값으로 흩뿌리면 규칙이 두 곳에 살고 그중 하나는 반드시 낡는다.
+    expect(component).not.toMatch(/mask-image|linear-gradient|rgba\(/);
+    const css = read("app/globals.css");
+    expect(css).toMatch(/\.verdict-cover\s*\{/);
+    expect(css).toMatch(/\.verdict-photo\s*\{/);
   });
 });
 

@@ -14,7 +14,16 @@ import {
   METABOLISM_NOTE,
   MOVEMENT_PLAN,
   THERMAL_GUIDE,
+  VERDICT_BASIS_APPROACH,
+  VERDICT_BASIS_FOOD,
+  VERDICT_BASIS_FOOD_EVEN,
+  VERDICT_BASIS_GAIN,
+  VERDICT_BASIS_METABOLISM,
+  VERDICT_BASIS_MOVEMENT,
+  VERDICT_TIME_SLOT,
   analyzeConstitution,
+  verdictFoodBasis,
+  verdictMovementBasis,
   type ConstitutionInput,
   type DietApproach,
   type ThermalTendency,
@@ -501,11 +510,19 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
       ...ELEMENT_FOOD[element].groups,
     ]),
     ...Object.values(FOOD_HOW),
+    // 판정 콜아웃 근거 줄 (TASK-105) — 라벨 바로 아래에서 본문보다 먼저 읽히는 문구다
+    ...Object.values(VERDICT_BASIS_METABOLISM),
+    ...Object.values(VERDICT_BASIS_GAIN),
+    ...Object.values(VERDICT_BASIS_APPROACH),
+    ...Object.values(VERDICT_BASIS_MOVEMENT),
+    ...Object.values(VERDICT_TIME_SLOT),
+    VERDICT_BASIS_FOOD,
+    VERDICT_BASIS_FOOD_EVEN,
   ];
 
   it("문구 표가 비어 있지 않다", () => {
     // 위 수집이 깨져 빈 배열이 되면 아래 검사가 통과해 버린다.
-    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 5 + 8 + 28 + 10 + 20 + 2);
+    expect(userFacing.length).toBe(5 + 30 + 15 + 2 + 5 + 5 + 8 + 28 + 10 + 20 + 2 + 2 + 5 + 4 + 4 + 5 + 2);
   });
 
   it.each(BANNED)("어느 문구에도 %s 가 없다", (word) => {
@@ -569,6 +586,87 @@ describe("표현 가이드 — 의학적 주장으로 읽히지 않는다", () =
     const labels = Object.values(GAIN_LABEL);
     expect(new Set(labels).size).toBe(labels.length);
     for (const label of labels) expect(label.length).toBeLessThanOrEqual(16);
+  });
+
+  /**
+   * 콜아웃 **근거 줄** (TASK-105). 라벨 바로 아래에서 본문 첫 글자보다 먼저 읽히는 자리다.
+   *
+   * 예전에는 `대사 기조 발산형 · 걸리는 지점 먹는 것에서 나온 순서입니다` 처럼 판정 축의
+   * 이름을 댔다 — 모르는 말로 출처를 대면 범위 한정이 아니라 권위 신호가 된다. 그 일은
+   * 화면의 다른 자리 셋(눈썹 줄 · `내 사주` 묶음 머리 · `ResultView` 하단 문구)이 맡는다.
+   *
+   * **여기도 막는 것과 여는 것을 양쪽에서 잰다** — 용어가 다시 새는지, 그리고 빈칸이
+   * 채워지는지.
+   */
+  const verdictBasis: string[] = [
+    ...Object.values(VERDICT_BASIS_METABOLISM),
+    ...Object.values(VERDICT_BASIS_GAIN),
+    ...Object.values(VERDICT_BASIS_APPROACH),
+    ...Object.values(VERDICT_BASIS_MOVEMENT),
+    ...Object.values(VERDICT_TIME_SLOT),
+    VERDICT_BASIS_FOOD,
+    VERDICT_BASIS_FOOD_EVEN,
+  ];
+
+  it("근거 줄이 명리 용어로 출처를 대지 않는다", () => {
+    // 완료 기준의 목록 그대로다. 축 이름을 다시 붙이면 이 검사가 먼저 걸린다.
+    for (const term of ["신강", "신약", "십신", "대사 기조", "걸리는 지점", "한열", "오행"]) {
+      expect(verdictBasis.filter((line) => line.includes(term)), `${term} 는 명리 용어다`).toEqual(
+        [],
+      );
+    }
+  });
+
+  it("근거 줄에 빈칸이 남지 않는다", () => {
+    // 표가 문장을 통째로 들고 값만 끼우므로, 끼우는 함수가 빠지면 화면에 `{시간대}` 가 뜬다.
+    for (const approach of Object.keys(VERDICT_BASIS_MOVEMENT) as DietApproach[]) {
+      for (const thermal of Object.keys(VERDICT_TIME_SLOT) as ThermalTendency[]) {
+        const line = verdictMovementBasis(approach, thermal);
+        expect(line, `${approach}/${thermal}`).not.toMatch(/[{}]/);
+      }
+    }
+    for (const element of OHAENG_LIST) {
+      const line = verdictFoodBasis(element);
+      expect(line, element).not.toMatch(/[{}]/);
+      expect(line).toContain(ELEMENT_FOOD[element].basis);
+    }
+    expect(verdictFoodBasis(undefined)).toBe(VERDICT_BASIS_FOOD_EVEN);
+  });
+
+  /**
+   * **본문과 같은 문장이 되지 않는다.** `DIET_APPROACH_NOTE` 는 프롬프트가 "풀어 쓰라" 고
+   * 넘기는 값이라, 그대로 가져오면 카드와 본문 첫 문단이 같은 말을 한다.
+   */
+  it("근거 줄이 프롬프트로 나가는 문구를 그대로 쓰지 않는다", () => {
+    const prompted = [
+      ...Object.values(DIET_APPROACH_NOTE).flatMap((note) => [note.order, note.caution]),
+      ...Object.values(METABOLISM_NOTE),
+      ...Object.values(GAIN_PATTERN_NOTE),
+      ...Object.values(MOVEMENT_PLAN).flatMap((plan) => [plan.how, plan.caution]),
+      ...Object.values(THERMAL_GUIDE).map((guide) => guide.exercise),
+    ];
+    for (const line of verdictBasis) expect(prompted).not.toContain(line);
+  });
+
+  /**
+   * 두 줄 예산 (390px · `text-sm` · 글 폭 191px · 2026-08-20 측정). 실측은 브라우저로
+   * 하고 여기서는 **길이 상한**만 지킨다 — 지금 문구의 최댓값이 37자이고 축 값 조합
+   * 29가지가 전부 두 줄에 들어갔다. **늘릴 때는 상한을 올리기 전에 다시 잰다.**
+   */
+  it("근거 줄이 두 줄 예산을 넘지 않는다", () => {
+    const rendered = [
+      ...Object.values(VERDICT_BASIS_METABOLISM),
+      ...Object.values(VERDICT_BASIS_GAIN),
+      ...Object.values(VERDICT_BASIS_APPROACH),
+      ...(Object.keys(VERDICT_BASIS_MOVEMENT) as DietApproach[]).flatMap((approach) =>
+        (Object.keys(VERDICT_TIME_SLOT) as ThermalTendency[]).map((thermal) =>
+          verdictMovementBasis(approach, thermal),
+        ),
+      ),
+      ...OHAENG_LIST.map((element) => verdictFoodBasis(element)),
+      VERDICT_BASIS_FOOD_EVEN,
+    ];
+    for (const line of rendered) expect(line.length, line).toBeLessThanOrEqual(37);
   });
 
   /**

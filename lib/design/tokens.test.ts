@@ -195,6 +195,91 @@ describe("대비비 — 검정 채운 버튼 (AA 4.5:1, TASK-75)", () => {
   });
 });
 
+/**
+ * 사진 위 흰 글씨 (TASK-109).
+ *
+ * **팔레트 검사가 닿지 않는 자리다** — 배경이 토큰이 아니라 사진이다. 그래서 여기서 재는
+ * 것은 색 조합이 아니라 **스크림의 알파**다: 최악의 사진(흰 면) 위에 그 알파의 검정을
+ * 얹은 색을 계산해서 그 위의 흰 글씨가 AA 를 넘는지 본다. 검사를 새로 만들지 않으면
+ * 아무도 이 자리를 지키지 않는다.
+ */
+describe("대비비 — 판정 콜아웃의 사진 위 흰 글씨 (AA 4.5:1, TASK-109)", () => {
+  /** `.verdict-cover` 의 평평한 어둠. 카드 어디서도 이 값 아래로 내려가지 않는다. */
+  function readScrimAlpha(): number {
+    const match = /--verdict-scrim:\s*([\d.]+)\s*;/.exec(CSS);
+    if (!match) throw new Error("--verdict-scrim 을 찾지 못했습니다 (globals.css 확인)");
+    return Number(match[1]);
+  }
+
+  /** `.verdict-cover::after` 의 배경에 쓰인 색 목록 (그라데이션 정지점까지 전부) */
+  function readScrimLayers(): [number, number, number, number][] {
+    const block = /\.verdict-cover::after\s*\{([\s\S]*?)\}/.exec(CSS);
+    if (!block) throw new Error(".verdict-cover::after 를 찾지 못했습니다");
+    return [...block[1]!.matchAll(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+|var\([^)]+\))\s*\)/g)].map(
+      (m) =>
+        [Number(m[1]), Number(m[2]), Number(m[3]), m[4]!.startsWith("var") ? 1 : Number(m[4])] as [
+          number,
+          number,
+          number,
+          number,
+        ],
+    );
+  }
+
+  /** 흰 면 위에 알파 `a` 의 검정을 얹은 색 — 이 카드가 만날 수 있는 **가장 밝은 배경**이다. */
+  function worstBackground(alpha: number): string {
+    const value = Math.round(255 * (1 - alpha));
+    return `#${value.toString(16).padStart(2, "0").repeat(3)}`;
+  }
+
+  /** 반투명 흰 글씨의 실효 색 — 배경 위에 얹혀 합성된 결과로 대비를 재야 한다. */
+  function blendWhite(alpha: number, background: string): string {
+    const body = background.replace("#", "");
+    const channels = [0, 2, 4].map((i) => {
+      const base = parseInt(body.slice(i, i + 2), 16);
+      return Math.round(255 * alpha + base * (1 - alpha));
+    });
+    return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  /** `--color-on-photo-dim` 의 알파. `rgba()` 라 `readSemanticTokens` 가 hex 로 풀지 못한다. */
+  function readDimAlpha(): number {
+    const match = /--color-on-photo-dim:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([\d.]+)\s*\)/.exec(
+      CSS,
+    );
+    if (!match) throw new Error("--color-on-photo-dim 을 찾지 못했습니다");
+    return Number(match[1]);
+  }
+
+  const scrim = readScrimAlpha();
+  const worst = worstBackground(scrim);
+
+  it("최악의 사진(흰 면)에서도 흰 글씨가 AA 를 넘는다", () => {
+    expect(contrast(hex("--color-on-photo"), worst)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("흐린 흰 글씨도 같은 면에서 AA 를 넘는다", () => {
+    // 카드뉴스의 흰색 0.62 를 그대로 가져오면 여기서 걸린다 (2.8:1).
+    expect(contrast(blendWhite(readDimAlpha(), worst), worst)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("스크림 알파가 흰 글씨 AA 의 하한을 넘는다", () => {
+    // 위 두 검사와 같은 것을 **반대 방향**으로 잰다 — 알파를 내리면 어느 값에서 깨지는지
+    // 이 단정이 알려 준다. 상한 배경 밝기는 흰 글씨 4.5:1 을 만족하는 가장 밝은 회색이다.
+    let brightest = 255;
+    while (contrast("#FFFFFF", worstBackground(1 - brightest / 255)) < 4.5) brightest -= 1;
+    expect(scrim).toBeGreaterThanOrEqual(1 - (brightest + 1) / 255);
+  });
+
+  it("그라데이션 층은 어둠만 더한다", () => {
+    // 흰색·유채색 층이 섞이면 평평한 어둠이 하한이라는 근거가 무너진다.
+    for (const [r, g, b] of readScrimLayers()) {
+      expect([r, g, b]).toEqual([0, 0, 0]);
+    }
+    expect(readScrimLayers().length).toBeGreaterThan(1);
+  });
+});
+
 describe("대비비 — 채운 버튼 (AA 4.5:1, TASK-21)", () => {
   it("기본 상태", () => {
     expect(

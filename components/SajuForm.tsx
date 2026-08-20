@@ -25,27 +25,18 @@ import { OtherReadingLinks } from "./OtherReadingLinks";
 import { ResultView } from "./ResultView";
 
 /**
- * 입력 폼. 여기서는 절대 LLM 을 직접 호출하지 않는다.
- * 모든 호출은 /api/saju 를 경유하며, API 키는 서버에만 존재한다.
+ * 입력 폼. **여기서 LLM 을 직접 호출하지 않는다** — 모든 호출은 `/api/saju` 경유다.
  *
- * ## 유형은 라우트가 정한다 (TASK-30)
+ * `readingType` 은 **prop 으로만** 들어온다. **폼 안에 유형 선택 컨트롤을 두지 않는다** —
+ * 두 곳에서 고를 수 있으면 어긋난다.
  *
- * `readingType` 은 **prop 으로만** 들어온다. 폼 안에 유형 선택 컨트롤을 두지 않는다 —
- * 두 곳에서 고를 수 있으면 반드시 어긋난다. 라우트가 유형을 정하므로 생성 중에 바뀔 수도
- * 없고, 그래서 `resultType`(요청 시점의 유형을 따로 붙들던 상태)도 필요 없다.
- *
- * ## 입력값은 프로바이더에 있다
- *
- * 로컬 `useState` 가 아니라 `useBirthInput()` 을 읽고 쓴다. 루트 레이아웃에 얹혀 있어
- * 유형을 옮겨도 값이 남는다. 저장소·URL 로 옮기면 안 되는 이유는 그쪽 주석에 있다.
+ * 입력값은 로컬 `useState` 가 아니라 `useBirthInput()` 에 있다 (루트 레이아웃에 얹혀 있어
+ * 유형을 옮겨도 값이 남는다). **저장소·URL 로 옮기지 말 것** — 이유는 프로바이더 주석에 있다.
  */
 export function SajuForm({ readingType }: { readingType: ReadingType }) {
   const { input, update, cacheKey, recall, remember } = useBirthInput();
 
-  /**
-   * 이미 받은 풀이 (TASK-60). **렌더 중에 읽어도 되는 값이다** — 프로바이더의 ref 를
-   * 들여다보는 것뿐이고 부수효과가 없다.
-   */
+  /** 이미 받은 풀이. **렌더 중에 읽어도 되는 값이다** (ref 조회이고 부수효과가 없다). */
   const cached = recall(cacheKey(readingType));
 
   const [loading, setLoading] = useState(false);
@@ -56,22 +47,19 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
   /** 응답으로 원국이 도착한 횟수. 자동 스크롤이 이 값에 걸린다 (아래 주석 참고). */
   const [arrivedCount, setArrivedCount] = useState(0);
   /**
-   * 값이 이미 있으면 폼을 접고 요약 한 줄만 보여준다. 유형만 바꿔 다시 받는 것이
-   * 두 번 클릭이어야 하므로 **접힌 상태에서 바로 제출할 수 있어야 한다.**
-   * 첫 방문은 값이 없으므로 펼친 폼 그대로다.
+   * 값이 있으면 폼을 접고 요약 한 줄만 보여준다. **접힌 상태에서 바로 제출할 수 있어야 한다**
+   * (유형만 바꿔 다시 받는 것이 두 번 클릭이다).
    *
-   * 제출할 수 없는 값이면 접지 않는다 — 접으면 왜 버튼이 꺼져 있는지 볼 수 없다.
-   * **유형이 요구하는 것까지 본다** (TASK-45) — 성별이 빠진 채 `decade` 로 들어오면
-   * 폼이 펼쳐진 채여야 성별을 바로 고를 수 있다.
+   * **제출할 수 없는 값이면 접지 않는다** — 접으면 왜 버튼이 꺼져 있는지 볼 수 없다.
+   * **유형이 요구하는 것까지 본다** (성별이 빠진 채 들어오면 펼친 채여야 고를 수 있다).
    */
   const [editing, setEditing] = useState(() => !canSubmit(input, readingType));
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   /**
    * 유형이 바뀌었는데 이 컴포넌트가 살아 있으면 화면이 **옛 유형의 결과**를 들고 있게 된다.
-   * 지금은 라우트가 바뀔 때 언마운트되지만, 그 사실에 정확성을 기대지 않는다.
-   * 렌더 중 상태 조정은 React 가 권하는 "prop 이 바뀔 때 state 맞추기" 방식이다 —
-   * 효과로 하면 옛 결과가 한 번 그려진 뒤에 바뀐다.
+   * 라우트 이동으로 언마운트되는 것에 정확성을 기대지 않는다.
+   * **효과가 아니라 렌더 중 상태 조정이다** — 효과로 하면 옛 결과가 한 번 그려진 뒤 바뀐다.
    */
   const [shownType, setShownType] = useState(readingType);
   if (shownType !== readingType) {
@@ -94,10 +82,7 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
 
   const timeIncomplete = hasIncompleteTime(input);
   const birthTime = composeBirthTime(input.birthHour, input.birthMinute);
-  /**
-   * 유형이 요구하는 것이 빠졌을 때의 이유 (TASK-45). 버튼만 꺼 두면 **왜 눌리지 않는지**
-   * 알 수 없다. 유형은 라우트가 정하므로 이 값도 유형이 바뀌면 따라 바뀐다.
-   */
+  /** 유형이 요구하는 것이 빠졌을 때의 이유. 버튼만 꺼 두면 **왜 눌리지 않는지** 알 수 없다. */
   const missing = missingForType(input, readingType);
   const submittable = canSubmit(input, readingType);
   const placeApplies = birthplaceApplies(input);
@@ -117,12 +102,12 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
   }
 
   /**
-   * 원국은 폼 아래에 그려지는데, 폼이 길어 모바일에서는 화면 밖이다.
-   * 그대로 두면 스트리밍이 시작돼도 "아무 일도 안 일어난" 것처럼 보인다.
+   * 결과는 폼 아래에 그려지는데 모바일에서는 화면 밖이라, 그대로 두면 스트리밍이 시작돼도
+   * "아무 일도 안 일어난" 것처럼 보인다.
    *
-   * **`chart` 가 아니라 `arrivedCount` 에 건다** (TASK-60). `chart` 에 걸면 캐시로 채운
-   * 경우에도 돌아서, 링크를 눌러 막 들어온 사람(이미 맨 위에 있다)의 화면이 튄다.
-   * 이 값은 **응답으로 원국이 도착할 때만** 올라가므로 캐시 적중은 세지 않는다.
+   * **`chart` 가 아니라 `arrivedCount` 에 건다.** 이 값은 응답으로 원국이 도착할 때만
+   * 올라가므로 캐시 적중은 세지 않는다 — `chart` 로 되돌리면 링크를 눌러 막 들어온
+   * 사람(이미 맨 위에 있다)의 화면이 튄다.
    */
   useEffect(() => {
     if (arrivedCount === 0) return;
@@ -142,8 +127,8 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
    * 스트림이 시작된 뒤의 실패는 error 이벤트로 오며, 그때까지 받은 풀이는 그대로 둔다.
    */
   /**
-   * `event` 가 없는 호출은 결과 화면 `계산 기준` 카드의 **다시 보기**다 (TASK-101).
-   * 폼 제출과 같은 경로를 타야 캐시·스크롤·중단 처리가 한 벌로 남는다.
+   * `event` 가 없는 호출은 결과 화면 `계산 기준` 카드의 **다시 보기**다.
+   * **제출 경로는 이 함수 하나여야 한다** — 캐시·스크롤·중단 처리가 두 벌이 되지 않게.
    */
   async function handleSubmit(event?: React.FormEvent) {
     event?.preventDefault();
@@ -246,9 +231,8 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
       if (buffer.trim()) handleLine(buffer);
 
       /**
-       * **완료된 것만 담는다** (TASK-60) — `done` 까지 왔고 `error` 이벤트가 없었으며
-       * 중단되지 않은 경우. 중간까지 받은 글을 담으면 다음에 **완결된 풀이인 척** 나온다.
-       * (중단·네트워크 오류는 여기까지 오지 않고 아래 catch 로 빠진다.)
+       * **완료된 것만 담는다** — `done` 까지 왔고 `error` 이벤트가 없었으며 중단되지 않은
+       * 경우. 중간까지 받은 글을 담으면 다음에 **완결된 풀이인 척** 나온다.
        */
       if (finished && !failed && receivedChart && receivedReading.length > 0) {
         remember(requestKey, { chart: receivedChart, reading: receivedReading });
@@ -500,18 +484,14 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
           /*
             접힌 상태 — 요약 한 줄 + 연필 아이콘. 여기서 바로 제출할 수 있다.
 
-            **`flex-wrap` 을 쓰지 않는다** (TASK-89). 예전에는 요약이 길면 버튼이 아랫줄로
-            떨어져 **무엇에 걸린 버튼인지** 읽히지 않았다 — 모바일에서 요약은 거의 늘
-            두 줄이라 그게 기본 모습이었다. 지금은 요약이 줄바꿈해도 버튼은 같은 줄에
-            남는다: 글 쪽에 `min-w-0` 을 줘 줄어들게 하고 버튼은 `shrink-0` 으로 고정한다
-            (`min-w-0` 이 없으면 flex 항목의 최소 크기가 내용 폭이라 버튼을 밀어낸다).
+            **`flex-wrap` 을 쓰지 않는다.** 요약이 줄바꿈해도 버튼은 같은 줄에 남아야
+            한다(무엇에 걸린 버튼인지 읽혀야 한다): 글 쪽 `min-w-0` + 버튼 `shrink-0`.
+            `min-w-0` 이 없으면 flex 항목의 최소 크기가 내용 폭이라 버튼을 밀어낸다.
 
-            **글자가 사라지므로 이름은 `aria-label` 이 만든다.** 아이콘은 `aria-hidden`
-            장식이다 (`ShareActions` 의 아이콘과 같은 취급). `수정` 만으로는 무엇을
-            수정하는지 알 수 없어 대상까지 적는다.
+            **이름은 `aria-label` 이 만든다** (아이콘은 `aria-hidden` 장식). `수정` 만으로는
+            무엇을 수정하는지 알 수 없어 대상까지 적는다.
 
-            `break-keep` 은 요약이 두 줄이 될 때를 위한 것이다 — 없으면 한글이 낱말
-            가운데서 끊겨 `성별 / 미지정` 이 된다 (`/` 의 리스트 카드와 같은 이유).
+            `break-keep` 이 없으면 한글이 낱말 가운데서 끊겨 `성별 / 미지정` 이 된다.
 
             (좋아요 칩 이름을 여기 적지 말 것 — `counters.test.ts` 가 이 파일에서 그
             이름을 찾아 "폼에 좋아요가 되살아났다" 로 읽는다. 주석이라도 걸린다.)
@@ -540,12 +520,7 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             생성 중단
           </Button>
         ) : (
-          /*
-            **검정 면 · radius 12px 이다** (TASK-75). TASK-71 은 필 모양 + `brand-solid`
-            였는데, 레퍼런스 실물이 검정 사각 필이고 재보니 흰 글씨 17.46:1 로 통과해
-            그때의 유보 사유(새 토큰과 대비 검증이 필요하다)가 사라졌다.
-            모양·색·비활성 처리는 전부 `components/ui/Button.tsx` 가 정한다.
-          */
+          /* 모양·색·비활성 처리는 전부 `components/ui/Button.tsx` 가 정한다. */
           <Button
             type="submit"
             className="w-full"
@@ -619,9 +594,8 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
 }
 
 /**
- * 입력 규격은 **`components/ui/field.ts` 가 단일 소스**다 (TASK-75). 높이·radius·여백을
- * 여기 적어 두면 버튼과 두 벌이 된다 — 폼 안에서 입력과 버튼의 모서리가 어긋난다.
- * iOS 확대 방지(`text-base sm:text-sm`)와 명시 높이가 필요한 이유도 그 파일에 있다.
+ * 입력 규격은 **`components/ui/field.ts` 가 단일 소스**다. 높이·radius·여백을 여기 적으면
+ * 버튼과 두 벌이 되어 폼 안에서 모서리가 어긋난다.
  */
 const inputBaseClass = FIELD_BASE;
 
@@ -630,11 +604,9 @@ const inputClass = `${inputBaseClass} text-ink`;
 /**
  * `type="date"` 는 iOS 기본 스타일이 폭을 줄이고 안쪽 여백을 제멋대로 넣는다.
  *
- * 글자색을 **여기서 정하지 않는** 이유: native date 는 값이 없을 때 `연도-월-일` 을
- * 본문 색으로 그려서, 옆 칸의 `placeholder:text-ink-placeholder` 와 톤이 어긋나
- * 미완성처럼 보인다 (TASK-22). 비어 있는 동안만 자리표시자 색으로 낮추는데,
- * `text-ink` 를 미리 붙여 두면 두 유틸리티가 같은 레이어에서 겹쳐 승자가 CSS 출력
- * 순서에 달리게 된다. 자리표시자 문자열 자체는 브라우저·로케일이 정하므로 못 바꾼다.
+ * **글자색을 여기서 정하지 않는다.** native date 는 값이 없을 때 `연도-월-일` 을 본문 색으로
+ * 그리므로 비어 있는 동안만 자리표시자 색으로 낮추는데, `text-ink` 를 미리 붙여 두면 두
+ * 유틸리티가 같은 레이어에서 겹쳐 승자가 CSS 출력 순서에 달린다.
  */
 const nativeDateClass = (value: string) =>
   `${inputBaseClass} appearance-none ${value ? "text-ink" : "text-ink-placeholder"}`;
@@ -646,8 +618,8 @@ const selectTimeClass = (value: string) =>
 
 
 /**
- * 칩 목록 (TASK-85). **`선택 안 함` 이 없다** — 성별은 둘 다 비선택인 상태가 곧
- * `unspecified` 다. 값은 `BirthInput` 의 것을 그대로 쓴다 (API 계약이라 바꾸지 않는다).
+ * 칩 목록. **`선택 안 함` 이 없다** — 둘 다 비선택인 상태가 곧 `unspecified` 다.
+ * 값은 `BirthInput` 의 것을 그대로 쓴다 (API 계약이라 바꾸지 않는다).
  */
 const GENDER_CHIPS = [
   { value: "male", label: "남성" },
@@ -666,9 +638,8 @@ const checkboxClass = "size-5 shrink-0 accent-brand-hover";
 
 
 /**
- * 연필 아이콘 (TASK-89). `aria-hidden` 장식이고 버튼 이름은 `aria-label` 이 만든다.
- * 색은 `currentColor` 라 버튼 variant 를 그대로 따른다 — 값을 박으면 `tokens.test.ts` 가
- * 이 파일에서 원시 색상을 찾아낸다. 모양·굵기는 `ScrollToTop`·`ShareActions` 와 같은 규격이다.
+ * 연필 아이콘. `aria-hidden` 장식이고 버튼 이름은 `aria-label` 이 만든다.
+ * 색은 `currentColor` 다 — 값을 박으면 `tokens.test.ts` 가 원시 색상으로 잡는다.
  */
 function PencilIcon() {
   return (

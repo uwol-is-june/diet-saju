@@ -14,31 +14,30 @@ import {
 import type { ReadingType } from "@/lib/saju/schema";
 
 /**
- * 풀이를 섹션별로 그린다 (TASK-06).
+ * 풀이를 섹션별로 그린다. 계약(`lib/reading/sections.ts`)이 정한 `## 제목` 이 도착할 때마다
+ * 그 앞 섹션을 완결로 보고 렌더한다.
  *
- * 계약(`lib/reading/sections.ts`)이 정한 `## 제목` 이 도착할 때마다 그 앞 섹션이 완결된
- * 것으로 보고 렌더한다. 그래서 첫 섹션이 1.5초쯤 뜨면서도 섹션별 구성을 얻는다.
+ * **아코디언을 쓰지 않는다** — 접혀 있으면 글이 써지는 것을 볼 수 없고 풀이는 통독하는
+ * 글이다. 요약만 카드로 띄우고 나머지는 한 카드 안에서 구분선으로 나눈다.
  *
- * ## 아코디언을 쓰지 않은 이유
- *
- * 접혀 있으면 글이 써지는 것을 볼 수 없고, 사주 풀이는 통독하는 글이다. 접었다 펴는
- * 조작을 얻는 대신 스트리밍의 값어치를 버리는 교환이라 하지 않았다. 요약만 카드로
- * 띄우고 나머지는 한 카드 안에서 구분선으로 나눈다.
- *
- * ## 폴백
- *
- * 모델이 제목 계약을 어겨 아무 섹션도 못 잡히면(`recognized === false`) 원문 마크다운을
- * 그대로 그린다. 계약은 프롬프트로 부탁하는 것이라 어길 수 있고, 그때 화면이 비면
- * 형식 문제가 내용 손실로 번진다.
+ * **폴백**: 아무 섹션도 못 잡히면(`recognized === false`) 원문 마크다운을 그대로 그린다.
+ * 계약은 부탁이라 어길 수 있고, 그때 화면이 비면 형식 문제가 내용 손실로 번진다.
  */
 /**
- * 굵게 만들 판정 라벨 (TASK-65).
- *
- * **prop 으로 흘리지 않고 context 로 둔다.** `Prose` 호출부가 셋(본문·프리앰블·**폴백**)이고
- * `Body` 를 한 단계 더 거치는데, 폴백은 평소에 안 보여서 빠뜨려도 눈에 띄지 않는다.
- * `Prose` 가 마크다운의 유일한 통로라는 성질을 그대로 쓰는 쪽이 안전하다.
+ * 굵게 만들 판정 라벨. **prop 으로 흘리지 않고 context 로 둔다** — `Prose` 호출부가
+ * 셋(본문·프리앰블·**폴백**)이고 폴백은 평소에 안 보여서 빠뜨려도 눈에 띄지 않는다.
  */
 const VerdictLabels = createContext<readonly string[]>([]);
+
+/**
+ * 섹션 제목 규격. **요약 카드와 아래 카드가 이 한 값을 함께 쓴다** (TASK-108) — 두 곳에
+ * 손으로 적으면 한쪽만 바뀌어 위계가 다시 뒤집힌다(요약이 위에 있는데 제목이 더 작았다).
+ *
+ * **`tracking-wide` 를 붙이지 않는다.** `.title-sm` 이 `letter-spacing: -0.01em` 을 걸고
+ * `tracking-wide` 는 `+0.025em` 이라 같은 유틸리티 레이어 안에서 서로 싸운다 — 어느 쪽이
+ * 이기는지 선언 순서에 달려 있어 눈으로 확인해야 하는 값이 된다.
+ */
+const SECTION_TITLE = "title-sm title-bold mb-2";
 
 export function ReadingSections({
   reading,
@@ -90,7 +89,12 @@ export function ReadingSections({
 
       {summary && (
         <section className="anim-rise rounded-2xl border border-brand-border bg-brand-subtle p-5 shadow-sm sm:p-6">
-          <h2 className="mb-2 text-sm font-bold tracking-wide text-brand-ink">
+          {/*
+            **아래 카드의 섹션 제목과 문자 그대로 같은 규격이다** (`SECTION_TITLE` · TASK-108).
+            예전에는 여기가 `text-sm`(14px)이라 **위에 있는 카드의 제목이 그 밑 소제목보다
+            작아 위계가 뒤집혀** 있었다. 색만 브랜드 잉크로 다르다.
+          */}
+          <h2 className={`${SECTION_TITLE} text-brand-ink`}>
             <SectionIcon id={summary.id} />
             {summary.title}
           </h2>
@@ -103,23 +107,22 @@ export function ReadingSections({
           <div className="divide-y divide-line">
             {rest.map((section, index) => (
               /*
-                key 는 **제목이 아니라 id** 다 (TASK-25). 계약에 없는 제목은 도착하는 대로
-                글자가 늘어나므로 제목을 key 로 쓰면 조각마다 remount 되고, 그러면 등장
-                애니메이션이 매번 다시 재생돼 글이 떨린다. 계약에 있는 섹션은 잘린 제목도
-                접두어로 맞춰지므로 id 가 처음부터 안정적이다.
+                key 는 **제목이 아니라 id** 다. 계약에 없는 제목은 도착하는 대로 글자가
+                늘어나므로 제목을 key 로 쓰면 조각마다 remount 되어 등장 애니메이션이
+                다시 재생되고 글이 떨린다.
               */
               <article
                 /*
-                  **id 뒤에 index 를 붙인다.** 모델이 같은 제목을 두 번 낼 때가 있어서
-                  (표본 4건 중 1건에서 `## 어디서부터 붙는가` 가 두 번 왔다) id 만 쓰면
-                  key 가 겹친다. index 는 스트리밍 중에도 앞쪽 섹션에서 바뀌지 않으므로
-                  위 주석의 안정성은 그대로다 — 제목을 key 로 쓸 때와 달리 조각마다
-                  remount 되지 않는다.
+                  **id 뒤에 index 를 붙인다** — 모델이 같은 제목을 두 번 낼 때가 있어 id 만
+                  쓰면 key 가 겹친다. index 는 스트리밍 중 앞쪽 섹션에서 바뀌지 않으므로
+                  위 안정성은 그대로다.
                 */
                 key={section.id ? `${section.id}-${index}` : `unmatched-${index}`}
                 className="anim-rise py-5 first:pt-0 last:pb-0"
               >
                 {/*
+                  규격은 `SECTION_TITLE` 하나이고 요약 카드가 같은 값을 쓴다 (TASK-108).
+
                   **`globals.css` 의 `.reading h2`(1.125rem)와 같은 크기다** (TASK-67).
                   예전에는 여기가 `text-base`(16px)라 본문과 같은 크기였고 굵기로만
                   구분됐다 — 계약이 깨져 원문 폴백으로 갈 때만 제목이 커지는 셈이라
@@ -128,7 +131,7 @@ export function ReadingSections({
                   **제목에 `.reading` 을 걸면 안 된다.** 그 규칙은 `@layer` 밖이라
                   Tailwind 유틸리티를 이기고, 여기 붙인 크기 클래스가 조용히 무시된다.
                 */}
-                <h2 className="title-sm title-bold mb-2">
+                <h2 className={SECTION_TITLE}>
                   <SectionIcon id={section.id} />
                   {section.title}
                 </h2>
@@ -146,10 +149,8 @@ export function ReadingSections({
 }
 
 /**
- * 제목 앞 아이콘 (TASK-46). **계약에 있는 섹션에만 붙는다** — 계약에 없는 제목(`id: null`)
- * 은 어느 절인지 모르므로 붙일 근거가 없고, 원문 폴백 경로에는 제목 자체가 없다.
- *
- * `aria-hidden` 이다. 스크린리더가 "나뭇잎 오행으로 본 체질" 로 읽으면 안 된다.
+ * 제목 앞 아이콘. **계약에 있는 섹션에만 붙는다** — 계약에 없는 제목은 어느 절인지 모른다.
+ * `aria-hidden` 이다 (스크린리더가 "나뭇잎 오행으로 본 체질" 로 읽으면 안 된다).
  */
 function SectionIcon({ id }: { id: ReadingSectionId | null }) {
   if (!id) return null;
@@ -161,12 +162,9 @@ function SectionIcon({ id }: { id: ReadingSectionId | null }) {
 }
 
 /**
- * `.reading` 은 **본문에만** 두고 섹션 제목에는 두지 않는다.
- *
- * `globals.css` 의 `.reading h2` 는 어느 `@layer` 에도 없어서 Tailwind 유틸리티
- * (`@layer utilities`)를 이긴다 — 제목에 `.reading` 을 걸면 여기 붙인 `text-base mb-2` 가
- * 조용히 무시되고 저쪽 값이 적용된다. 제목은 컴포넌트가, 본문 마크다운은 `.reading` 이
- * 담당하도록 갈라 둔다.
+ * `.reading` 은 **본문에만** 두고 섹션 제목에는 두지 않는다. `globals.css` 의 `.reading h2`
+ * 는 `@layer` 밖이라 Tailwind 유틸리티를 이긴다 — 제목에 걸면 컴포넌트가 붙인 클래스가
+ * 조용히 무시된다.
  */
 function Body({ section, showCursor }: { section: ParsedSection; showCursor: boolean }) {
   // 제목만 도착하고 본문이 아직 없는 순간 — 커서만 보여 준다.
@@ -215,18 +213,16 @@ function ProgressNote({
 }
 
 /**
- * 마크다운을 그리는 **유일한 통로** (TASK-28).
- *
- * `react-markdown` 을 직접 부르지 말고 이걸 쓴다. 문장 묶음 단위 줄바꿈은 렌더 직전 변환이라
- * 호출부마다 붙이면 한 곳을 빠뜨리게 되고 — 특히 계약을 어겼을 때 가는 **폴백 경로**를
- * 빠뜨리기 쉽다 — 화면이 경로에 따라 다르게 보인다.
+ * 마크다운을 그리는 **유일한 통로.** `react-markdown` 을 직접 부르지 말 것 — 줄바꿈 변환이
+ * 렌더 직전이라 호출부마다 붙이면 한 곳(특히 **폴백 경로**)을 빠뜨리게 되고 화면이 경로에
+ * 따라 다르게 보인다.
  */
 function Prose({ children }: { children: string }) {
   const labels = useContext(VerdictLabels);
   /*
-    순서가 중요하다 (TASK-65).
-    ① 닫히지 않은 `**` 를 먼저 지운다 — 그래야 아래 강조 삽입이 "`**` 는 짝수" 가정 위에서
-       돈다. 스트리밍 중에는 `**식욕형` 까지만 도착한 순간이 반드시 있다.
+    **순서가 중요하다.**
+    ① 닫히지 않은 `**` 를 먼저 지운다 — 그래야 강조 삽입이 "`**` 는 짝수" 가정 위에서 돈다.
+       스트리밍 중에는 `**식욕형` 까지만 도착한 순간이 반드시 있다.
     ② 판정 라벨의 첫 등장을 굵게 (`lib/reading/emphasis.ts`).
     ③ 마지막에 문장 단위로 문단을 가른다.
   */

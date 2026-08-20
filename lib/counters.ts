@@ -3,33 +3,22 @@ import { getCounterStore, type CounterStoreConfig } from "./env";
 import { READING_TYPES, type ReadingType } from "./saju/schema";
 
 /**
- * 유형별 조회수·좋아요 카운터 (TASK-51).
+ * 유형별 조회수·좋아요 카운터.
  *
- * ## 왜 저장소가 필요한가
+ * **저장소가 필요하다.** 인메모리 `Map` 이면 인스턴스마다 다른 수가 화면에 찍히고, 필요한
+ * 연산이 원자적 증가(`INCR`)라 읽기 캐시로 대체할 수 없다.
  *
- * `lib/rate-limit.ts` 처럼 인메모리 `Map` 으로 두면 인스턴스마다 다른 수가 보이고 콜드
- * 스타트마다 0 으로 돌아간다. 레이트 리밋은 느슨해도 티가 안 나지만 **조회수는 틀린 값이
- * 화면에 그대로 찍힌다.** 그리고 필요한 연산이 원자적 증가(`INCR`)라 읽기 캐시
- * (`unstable_cache` 등)로는 대체할 수 없다 — 두 요청이 같은 값을 읽으면 하나가 사라진다.
+ * **세는 단위는 유형뿐이다** — 키는 `views:<type>` · `likes:<type>` 가 전부다. 결과별로
+ * 세려면 결과에 id 가 있어야 하고 그건 결과를 서버에 두는 것이라 "저장하지 않습니다" 가
+ * 죽는다. **생년월일에서 파생된 어떤 값도 키에 넣지 않는다 — 해시도 안 된다**(입력 공간이
+ * 작아 전수 대조가 된다).
  *
- * ## 세는 단위는 유형뿐이다
+ * **누가 눌렀는지 서버에 남지 않는다.** 좋아요 중복은 브라우저 `localStorage` 플래그로만
+ * 막는다 — 서버에 신원을 만들면 처리방침 3항을 고쳐야 하는데 좋아요는 정확한 수가 필요한
+ * 값이 아니다.
  *
- * 키는 `views:<type>` · `likes:<type>` 가 전부다. 결과별로 세려면 결과에 id 가 있어야 하고
- * 그건 결과를 서버에 두는 것이라 개인정보 처리방침의 "저장하지 않습니다" 가 죽는다.
- * **생년월일에서 파생된 어떤 값도 키에 넣지 않는다** — 해시도 안 된다. 입력 공간이 작아
- * 전수 대조가 되므로 익명화가 아니라 가명화까지다.
- *
- * ## 누가 눌렀는지는 어디에도 남지 않는다
- *
- * 좋아요 중복은 브라우저의 `localStorage` 플래그로만 막는다. 서버에 신원을 만들면
- * 처리방침 3항("IP 주소: 최대 1분")을 고쳐야 하는데, 좋아요는 정확한 수가 필요한 값이
- * 아니라 그 값을 치를 이유가 없다.
- *
- * ## 실패해도 서비스는 죽지 않는다
- *
- * 이 모듈은 **던지지 않는다.** 저장소가 없거나 응답하지 않으면 그 사실을 상태값으로
- * 돌려주고, 부르는 쪽은 숫자 자리를 숨긴다. `lib/observability.ts` 의 `emit` 이 어떤
- * 예외도 밖으로 내보내지 않는 것과 같은 원칙이다 — 계측이 요청을 깨뜨리면 안 된다.
+ * **이 모듈은 던지지 않는다.** 저장소가 없거나 응답하지 않으면 상태값으로 돌려주고 부르는
+ * 쪽이 숫자 자리를 숨긴다 — 계측이 요청을 깨뜨리면 안 된다.
  */
 
 export const COUNTER_KINDS = ["views", "likes"] as const;
@@ -68,9 +57,8 @@ function emptySnapshot(): CounterSnapshot {
 }
 
 /**
- * 값 하나를 세는 수로 바꾼다. Redis 는 없는 키에 `null` 을 주고(아직 아무도 안 본 유형),
- * 값은 문자열로 온다. 숫자가 아니거나 음수면 0 이다 — **여기서 던지면 화면 하나가 통째로
- * 죽는데** 카운터는 없어도 되는 값이라 그럴 이유가 없다.
+ * 값 하나를 세는 수로 바꾼다. 없는 키는 `null` 이고 값은 문자열로 온다.
+ * 숫자가 아니거나 음수면 0 이다 — **여기서 던지면 화면 하나가 통째로 죽는다.**
  */
 export function toCount(value: unknown): number {
   const parsed = Number(value);
@@ -140,13 +128,11 @@ async function write(store: CounterStoreConfig, command: readonly string[]): Pro
 /**
  * 모든 유형의 조회수·좋아요를 한 번에 읽는다 (`MGET` 한 번 = 명령 1회).
  *
- * **읽기만 GET 경로 형태(`/mget/키/키…`)를 쓴다.** Next 의 Data Cache 는 GET 만 캐시하므로,
- * POST 로 보내면 `/` 가 `revalidate` 로 숫자를 들고 있을 수가 없다 (요청마다 저장소를
- * 두드리게 되고 그러면 `/` 가 동적이 된다).
+ * **읽기만 GET 경로 형태를 쓴다.** Next 의 Data Cache 는 GET 만 캐시하므로 POST 로 보내면
+ * `/` 가 요청마다 저장소를 두드리게 되고 **동적이 된다.**
  *
- * @param revalidateSeconds 없으면 `no-store`(항상 최신). 주면 그 초만큼 Data Cache 에 둔다.
- *   `/admin` 은 지금 붙어 있는지를 보는 화면이라 캐시하면 안 되고, `/` 의 숫자는 반대로
- *   실시간일 이유가 없다.
+ * @param revalidateSeconds 없으면 `no-store`(항상 최신). `/admin` 은 지금 붙어 있는지를
+ *   보는 화면이라 캐시하면 안 되고, `/` 의 숫자는 반대로 실시간일 이유가 없다.
  */
 export async function readCounters(revalidateSeconds?: number): Promise<CounterStatus> {
   const lookup = getCounterStore();
@@ -190,11 +176,10 @@ export async function incrementView(type: ReadingType): Promise<number | null> {
 }
 
 /**
- * 좋아요 +1 / -1. 취소를 허용하기로 했으므로(2026-08-14) 감소 경로가 있다.
+ * 좋아요 +1 / -1. 취소를 허용하므로 감소 경로가 있다.
  *
- * **하한이 0 이다.** 좋아요 여부는 브라우저에만 있어서, 저장소를 지운 사람이 취소만 누르면
- * `DECR` 이 음수로 내려간다. Redis 에 "0 밑으로는 안 내려가는 감소" 가 없으므로 내려간
- * 뒤에 되돌린다 — 드문 경로라 명령 한 번 더 쓰는 값이 있다.
+ * **하한이 0 이다.** 좋아요 여부가 브라우저에만 있어서 저장소를 지운 사람이 취소만 누르면
+ * `DECR` 이 음수로 내려간다. "0 밑으로 안 내려가는 감소" 가 없으므로 내려간 뒤에 되돌린다.
  */
 export async function applyLike(type: ReadingType, delta: 1 | -1): Promise<number | null> {
   const lookup = getCounterStore();

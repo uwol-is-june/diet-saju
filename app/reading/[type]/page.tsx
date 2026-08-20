@@ -16,17 +16,16 @@ import {
 } from "@/lib/saju/schema";
 
 /**
- * 입력 + 결과 화면 (TASK-30).
+ * 입력 + 결과 화면.
  *
- * **세그먼트 값은 기존 `ReadingType` id 를 그대로 쓴다** (`general`·`diet`).
- * 한글 슬러그를 따로 만들면 API 계약(`schema.ts`)과 URL 이 두 벌이 된다.
- * 같은 이유로 `diet` 는 라벨이 `종합 체질 풀이` 로 바뀐 뒤에도 id 를 유지한다 (TASK-39).
+ * **세그먼트 값은 기존 `ReadingType` id 를 그대로 쓴다** — 한글 슬러그를 만들면 API
+ * 계약(`schema.ts`)과 URL 이 두 벌이 된다. 같은 이유로 **id 를 바꾸지 않는다.**
  *
  * 없어진 유형(`yearly`)은 여기서 404 가 되지 않는다 — `next.config.ts` 의 리다이렉트가
- * 먼저 잡아 `/` 로 보낸다. 한때 유효했던 URL 이라 밖에 링크가 남아 있을 수 있다.
+ * 먼저 잡아 `/` 로 보낸다(한때 유효했던 URL 이라 밖에 링크가 남아 있다).
  *
- * 단계를 클라이언트 상태가 아니라 라우트로 나눈 덕에 ⓐ 뒤로가기가 그대로 동작하고
- * ⓑ `/reading/diet` 를 바로 공유·북마크할 수 있으며 ⓒ 유형별 메타데이터를 붙일 자리가 생긴다.
+ * 단계를 클라이언트 상태가 아니라 **라우트로** 나눈 덕에 뒤로가기·공유·북마크·유형별
+ * 메타데이터가 저절로 산다.
  */
 
 export function generateStaticParams() {
@@ -41,15 +40,13 @@ function toReadingType(value: string): ReadingType {
 }
 
 /**
- * 공유 카드 이미지 — **`/` 와 같은 고정 카드 하나**를 가리킨다 (TASK-31).
+ * 공유 카드 이미지 — **`/` 와 같은 고정 카드 하나**를 가리킨다.
  *
  * `app/opengraph-image.png` 는 **파일 규약이라 그 세그먼트에만 붙고 하위로 상속되지
- * 않는다** (Next 문서: "set ... for a route segment"). 실측으로 확인했다 — 이 줄이 없으면
- * `/reading/diet` 를 카카오톡에 붙였을 때 이미지 없는 카드가 나간다. 사람들이 실제로
- * 공유하는 URL 이 여기라 그쪽이 더 아프다.
+ * 않는다.** 이 줄이 없으면 `/reading/*` 에는 og:image 가 아예 없고, 사람들이 실제로
+ * 공유하는 URL 이 여기다. **지우지 말 것.**
  *
- * **유형별 카드를 만들지 않는다.** 세 벌이 되면 `docs/og-card.html` 원본도 세 벌이고
- * 팔레트 검사(`lib/design/tokens.test.ts`)도 그만큼 는다. 얻는 것보다 유지 비용이 크다.
+ * **유형별 카드를 만들지 않는다** — 여러 벌이 되면 원본 HTML 도 팔레트 검사도 그만큼 는다.
  */
 const SHARED_OG_IMAGE = "/opengraph-image.png";
 
@@ -68,9 +65,8 @@ export async function generateMetadata({
     description,
     alternates: { canonical: url },
     /**
-     * 내부 유형은 검색에 노출하지 않는다 (TASK-41). 메인 목록에서 링크가 사라져도
-     * 이미 색인됐을 수 있고, 검색에서 들어오면 내린 의미가 없다.
-     * 프리렌더는 계속 한다 — 빼면 `/reading/general` 자체가 죽는다.
+     * 내부 유형은 검색에 노출하지 않는다 — 목록에서 링크가 사라져도 이미 색인됐을 수 있다.
+     * **프리렌더는 계속 한다** (빼면 그 라우트 자체가 죽는다).
      */
     robots:
       READING_TYPE_VISIBILITY[readingType] === "internal"
@@ -103,8 +99,8 @@ export default async function ReadingPage({
 
   return (
     /*
-      `/` 에서 카드를 누르면 이 화면이 오른쪽에서 밀려 들어오고, 맨 위 `<` 로 나가면
-      반대로 빠진다 (TASK-96). 근거와 제약은 `components/PageTransition.tsx`.
+      `/` 에서 카드를 누르면 오른쪽에서 밀려 들어오고 맨 위 `<` 로 나가면 반대로 빠진다.
+      근거와 제약은 `components/PageTransition.tsx`.
     */
     <PageTransition>
       {/* 조회수는 브라우저가 센다 (TASK-51). 서버 렌더에서 세면 이 페이지의 프리렌더가 죽는다. */}
@@ -153,7 +149,18 @@ export default async function ReadingPage({
           </div>
         </div>
 
-        <h1 className="title-lg title-extrabold mt-1 text-center">
+        {/*
+          제목이 **슬롯 안으로 올라온다** (TASK-106). 사진 슬롯(300px)의 아래 구간은
+          마스크 알파가 0 인 빈 자리이고, `-mt-7`(=28px)이 제목을 그 안으로 당긴다 —
+          그래야 페이드 꼬리가 제목·설명이 앉는 높이까지 이어지고 사진과 글 사이에
+          경계선이 생기지 않는다. **슬롯 높이·마스크와 한 벌이라 따로 고치지 말 것**
+          (근거 계산은 `app/globals.css` 의 `.hero-photo`).
+
+          **글자가 사진 위에 얹히는 것이 아니다** — 이 자리의 알파는 0 이라 뒤가
+          `canvas` 다. 값을 줄이면(더 위로 당기면) 반투명한 그림 위에 글자가 놓여
+          대비가 사진마다 달라진다.
+        */}
+        <h1 className="title-lg title-extrabold -mt-7 text-center">
           {READING_TYPE_LABEL[readingType]}
         </h1>
         {/* 중앙 정렬은 **짧은 글에만** 쓴다 — 본문 문단을 가운데로 놓으면 줄 시작점이 흔들린다. */}

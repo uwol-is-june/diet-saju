@@ -17,6 +17,7 @@
     {
       "layout": "b-cover",
       "title": "커피에도\n마감 시간이 있다?",
+      "sub": "눕는 시각으로 정하는 커피 마감 시간",
       "photo": "assets/caffeine-01.jpg",
       "photoHint": "검은 커피 한 잔 · 어두운 나무 테이블",
       "photoQuery": "black coffee cup dark table moody still life",
@@ -25,7 +26,7 @@
         "#12100f"
       ],
       "photoCredit": "사진: Pexels / hello aesthe",
-      "photoPosition": "center 0%"
+      "photoPosition": "center 100%"
     },
     {
       "layout": "b-intro",

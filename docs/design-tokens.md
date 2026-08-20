@@ -48,9 +48,16 @@ Next.js + Tailwind v4 앱이라 CSS 번들(`/_next/static/chunks/*.css`)의 `@th
 | --- | --- | --- |
 | 주 버튼 | h-12(48px) · rounded-xl(12px) · font-semibold · 누를 때 `translate-y-px` | `components/ui/Button.tsx` |
 | 보조 버튼 | 같은 규격 · `variant="outline"` / `"ghost"` | 같은 파일 |
-| 작은 버튼 | `size="compact"`(40px) · 아이콘은 `size="icon"`(36px) | 같은 파일 |
+| 작은 버튼 | `size="compact"`(40px) · 아이콘은 `size="icon"`(44px · 원형) | 같은 파일 |
 | 입력 | min-h-12(48px) · rounded-xl · px-4 | `components/ui/field.ts` (`FIELD_BASE`) |
 
+- **아이콘 버튼만 dasii 값(36px)을 따르지 않는다** (TASK-89). 글자가 없어 누를 면이
+  아이콘 크기로 정해지는 자리라 **터치 타깃 최소 크기(44px)가 규격보다 앞선다**
+  (`BackLink`·`ScrollToTop` 의 `min-h-11` 과 같은 값). 모양도 이것만 `rounded-full` 이다 —
+  옆에 글자 줄이 흐르는 자리라 사각 면은 그 줄에서 또 하나의 블록으로 읽힌다.
+  **radius 는 `SIZE` 안에 있다** — 공통 문자열에 두면 원형으로 바꿀 길이 호출부에서
+  `rounded-full` 을 덧대는 것뿐인데, 두 유틸리티는 특정도가 같아 **스타일시트 순서**가
+  이기고 클래스 문자열 순서로는 정해지지 않는다.
 - **입력 높이가 44 → 48px 로 커졌다.** `min-h-11` 은 **터치 타깃 최소 크기**라 올리는 것은
   안전하다. 대신 `SajuForm` 은 드롭다운이 여섯 줄이라 **폼 전체가 세로로 길어진다** —
   390px 전체 높이 1,890px 로 확인했다. 줄일 때 44px 아래로 내려가지 않는지 볼 것.

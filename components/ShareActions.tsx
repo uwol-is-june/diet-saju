@@ -20,6 +20,22 @@ import type { ReadingType, SajuChart } from "@/lib/saju/schema";
  * 링크 복사는 **결과 링크가 아니라 서비스 주소**를 복사한다. 결과 영구 링크는 결과를 서버에
  * 저장한다는 뜻이고 "저장하지 않습니다" 를 무효화하므로 도입하지 않았다
  * (판단 근거는 `CLAUDE.md` 의 "결과 영구 링크(/r/[id])는 도입하지 않았다").
+ *
+ * ## 버튼 둘은 좁은 화면에서도 한 줄이다 (TASK-88)
+ *
+ * 예전에는 `flex-col sm:flex-row` 라 **모바일에서만 세로로 쌓였다.** 주 사용자가 모바일인데
+ * (CLAUDE.md "모바일이 기본값이다") 거기서만 48px 짜리 큰 면 둘이 위아래로 붙어, 결과를
+ * 다 읽고 내려온 자리에서 공유 카드가 화면을 크게 차지했다. 지금은 `grid-cols-2` 로 고정이다.
+ *
+ * 한 줄에 둘을 넣으면 글자 자리가 절반이 되므로 **라벨을 줄이고 아이콘을 붙였다.**
+ * 아이콘은 `aria-hidden` 장식이고 버튼 이름은 옆 글자가 만든다 (`LikeButton` 의 하트와 같다).
+ * 진행 중 문구도 `이미지를 만들고 있습니다…` 에서 줄였다 — 그 길이는 한 줄에 들어가지 않는다.
+ *
+ * **글자만 한 단계 줄인다(`text-sm`).** 부품의 높이 48px · radius 12px 는 그대로다 —
+ * 규격을 바꾼 것이 아니라 절반 폭에 라벨을 앉히는 것이다. 360px(가장 좁은 실기기)에서
+ * 아이콘 20 + 사이 8 + 글자 + 좌우 여백 32 가 칸 136px 안에 들어가야 하는데, `text-base`
+ * 로는 `이미지 저장` 이 그 칸을 넘는다. **`size="compact"` 로 낮추지 않는다** — 그쪽은
+ * 40px 이고 손가락으로 누르는 주 동작 자리에는 낮다.
  */
 export function ShareActions({
   chart,
@@ -83,12 +99,24 @@ export function ShareActions({
         공개된 곳에 올릴 때 참고해 주세요.
       </p>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button type="button" className="flex-1" onClick={saveImage} disabled={busy}>
-          {busy ? "이미지를 만들고 있습니다…" : "이미지로 저장"}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          className="gap-2 whitespace-nowrap"
+          onClick={saveImage}
+          disabled={busy}
+        >
+          <DownloadIcon />
+          <span className="text-sm">{busy ? "만드는 중…" : "이미지 저장"}</span>
         </Button>
-        <Button type="button" variant="outline" className="flex-1" onClick={copyLink}>
-          링크 복사
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-2 whitespace-nowrap"
+          onClick={copyLink}
+        >
+          <LinkIcon />
+          <span className="text-sm">링크 복사</span>
         </Button>
       </div>
 
@@ -98,5 +126,47 @@ export function ShareActions({
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * 아이콘 둘 — `aria-hidden` 장식이다. 색은 `currentColor` 라 버튼 variant 를 그대로 따른다
+ * (`tokens.test.ts` 가 이 파일에서 원시 색상을 찾으므로 값을 박지 말 것).
+ * 모양·굵기는 `ScrollToTop` 의 화살표와 같은 규격이다.
+ */
+function DownloadIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-5 shrink-0"
+    >
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M4 20h16" />
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-5 shrink-0"
+    >
+      <path d="M10 13.5a4 4 0 0 0 5.7.4l3-3a4 4 0 0 0-5.7-5.7L11.3 6.9" />
+      <path d="M14 10.5a4 4 0 0 0-5.7-.4l-3 3a4 4 0 0 0 5.7 5.7l1.7-1.7" />
+    </svg>
   );
 }

@@ -35,14 +35,29 @@ import type { ButtonHTMLAttributes } from "react";
 type Variant = "primary" | "outline" | "ghost";
 type Size = "default" | "compact" | "icon";
 
-/** 높이·여백·글자 크기 — dasii 실측값이다. */
+/**
+ * 높이·여백·글자 크기 — dasii 실측값이다.
+ *
+ * **radius 도 여기 있다** (TASK-89). 예전에는 아래 공통 문자열에 `rounded-xl` 이 박혀
+ * 있었는데, 그러면 원형 버튼을 만들 길이 **호출부에서 `rounded-full` 을 덧대는 것**뿐이다.
+ * 두 유틸리티는 특정도가 같아 **스타일시트에 늦게 나오는 쪽이 이긴다** — 클래스 문자열
+ * 순서로는 정해지지 않는다. 그래서 버튼 하나에 radius 클래스가 **언제나 하나만** 붙게 한다.
+ */
 const SIZE: Record<Size, string> = {
   // 48px. 저쪽 주 버튼과 같다.
-  default: "h-12 px-4 text-base",
-  // 40px. 폼 안의 보조 동작(`수정`)처럼 줄 안에 얹히는 버튼.
-  compact: "min-h-10 px-4 py-2 text-sm",
-  // 정사각. 아이콘 하나만 들어간다.
-  icon: "size-9",
+  default: "h-12 rounded-xl px-4 text-base",
+  // 40px. 폼 안의 보조 동작처럼 줄 안에 얹히는 버튼.
+  compact: "min-h-10 rounded-xl px-4 py-2 text-sm",
+  /*
+    아이콘 하나만 들어가는 **원형** 버튼. 44px 이고 dasii 값(36px)을 따르지 않는다 —
+    글자가 없어 누를 면이 아이콘 크기로 정해지는 자리라, 터치 타깃 최소 크기(44px)가
+    규격보다 앞선다 (`BackLink`·`ScrollToTop` 이 쓰는 `min-h-11` 과 같은 값).
+    **줄이지 말 것.** 지금 호출부(`SajuForm` 의 `수정`)가 모바일에서 손가락으로 누르는 자리다.
+
+    원형인 것은 옆에 글자 줄이 흐르는 자리라서다 — 사각 면은 그 줄에서 또 하나의
+    블록으로 읽히고, 원은 줄 끝에 얹힌 동작으로 읽힌다.
+  */
+  icon: "size-11 rounded-full",
 };
 
 const VARIANT: Record<Variant, string> = {
@@ -70,7 +85,7 @@ export function Button({
 
         포커스 링을 여기서 그리지 않는다 — 전역 `:focus-visible` 이 이미 건다.
       */
-      className={`inline-flex items-center justify-center rounded-xl font-semibold transition active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${SIZE[size]} ${VARIANT[variant]} ${className}`}
+      className={`inline-flex items-center justify-center font-semibold transition active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${SIZE[size]} ${VARIANT[variant]} ${className}`}
       {...props}
     />
   );

@@ -482,14 +482,39 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             </fieldset>
           </div>
         ) : (
-          /* 접힌 상태 — 요약 한 줄 + "수정". 여기서 바로 제출할 수 있다. */
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-ink-soft">
+          /*
+            접힌 상태 — 요약 한 줄 + 연필 아이콘. 여기서 바로 제출할 수 있다.
+
+            **`flex-wrap` 을 쓰지 않는다** (TASK-89). 예전에는 요약이 길면 버튼이 아랫줄로
+            떨어져 **무엇에 걸린 버튼인지** 읽히지 않았다 — 모바일에서 요약은 거의 늘
+            두 줄이라 그게 기본 모습이었다. 지금은 요약이 줄바꿈해도 버튼은 같은 줄에
+            남는다: 글 쪽에 `min-w-0` 을 줘 줄어들게 하고 버튼은 `shrink-0` 으로 고정한다
+            (`min-w-0` 이 없으면 flex 항목의 최소 크기가 내용 폭이라 버튼을 밀어낸다).
+
+            **글자가 사라지므로 이름은 `aria-label` 이 만든다.** 아이콘은 `aria-hidden`
+            장식이다 (`ShareActions` 의 아이콘과 같은 취급). `수정` 만으로는 무엇을
+            수정하는지 알 수 없어 대상까지 적는다.
+
+            `break-keep` 은 요약이 두 줄이 될 때를 위한 것이다 — 없으면 한글이 낱말
+            가운데서 끊겨 `성별 / 미지정` 이 된다 (`/` 의 리스트 카드와 같은 이유).
+
+            (좋아요 칩 이름을 여기 적지 말 것 — `counters.test.ts` 가 이 파일에서 그
+            이름을 찾아 "폼에 좋아요가 되살아났다" 로 읽는다. 주석이라도 걸린다.)
+          */
+          <div className="flex items-center justify-between gap-3">
+            <p className="min-w-0 break-keep text-sm text-ink-soft">
               <span className="mr-2 text-xs text-ink-muted">입력한 정보</span>
               <strong className="font-medium">{describeBirthInput(input)}</strong>
             </p>
-            <Button type="button" variant="outline" size="compact" onClick={() => setEditing(true)}>
-              수정
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              aria-label="입력한 정보 수정"
+              onClick={() => setEditing(true)}
+            >
+              <PencilIcon />
             </Button>
           </div>
         )}
@@ -718,5 +743,28 @@ function Field({
       )}
       {children}
     </div>
+  );
+}
+
+/**
+ * 연필 아이콘 (TASK-89). `aria-hidden` 장식이고 버튼 이름은 `aria-label` 이 만든다.
+ * 색은 `currentColor` 라 버튼 variant 를 그대로 따른다 — 값을 박으면 `tokens.test.ts` 가
+ * 이 파일에서 원시 색상을 찾아낸다. 모양·굵기는 `ScrollToTop`·`ShareActions` 와 같은 규격이다.
+ */
+function PencilIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-4"
+    >
+      <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
   );
 }

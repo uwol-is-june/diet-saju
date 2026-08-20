@@ -377,6 +377,7 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     // 부품 (TASK-75) — 규격의 단일 소스라 여기에 hex 가 새면 화면 전체가 새는 것과 같다
     "components/ui/Button.tsx",
     "components/ui/field.ts",
+    "components/ui/ChoiceChips.tsx",
     "components/FirstVisitNotice.tsx",
     "components/OtherReadingLinks.tsx",
     "components/ScrollToTop.tsx",
@@ -387,8 +388,9 @@ describe("완료 기준 — 컴포넌트에 raw 색상이 없다", () => {
     "components/charts/OhaengCycle.tsx",
     "components/charts/ThermalScale.tsx",
     "components/charts/DaeunTimeline.tsx",
-    // 유형 카드 모티프 (TASK-50) — SVG 라 fill-*/stroke-* 에 hex 가 새기 쉽다
-    "components/thumbnails/ReadingThumbnail.tsx",
+    /* 유형 리스트 카드의 사진 (TASK-86) — 사진 안의 색은 이 검사가 닿지 않지만
+       카드 면·글자·화살표는 여전히 토큰에서만 온다 */
+    "components/ReadingCardPhoto.tsx",
     // 캔버스 카드도 색을 CSS 토큰에서 읽는다. hex 를 박으면 단일 소스가 깨진다.
     "lib/share/draw-card.ts",
   ];

@@ -1,0 +1,37 @@
+{
+  "diet": {
+    "id": 7494071,
+    "photographer": "Leon Huang",
+    "photographerUrl": "https://www.pexels.com/@leon-huang-37073985",
+    "pageUrl": "https://www.pexels.com/photo/close-up-shot-of-green-leaves-7494071/",
+    "alt": "Close-up of vibrant green leaves with a blurred bokeh background, capturing nature's essence."
+  },
+  "exercise": {
+    "id": 11513443,
+    "photographer": "Clarisse Vidal",
+    "photographerUrl": "https://www.pexels.com/@clarisse-vidal-197681550",
+    "pageUrl": "https://www.pexels.com/photo/white-sneakers-on-the-floor-11513443/",
+    "alt": "Pair of white sneakers against a textured olive green wall in a minimalist setting, perfect for fashion or lifestyle themes."
+  },
+  "gain-cause": {
+    "id": 32246936,
+    "photographer": "Pușcaș Adryan",
+    "photographerUrl": "https://www.pexels.com/@pu-ca-adryan-163345030",
+    "pageUrl": "https://www.pexels.com/photo/modern-minimalist-living-room-with-stylish-decor-32246936/",
+    "alt": "Cozy modern living room featuring a minimalist couch and elegant decor in Romania."
+  },
+  "diet-method": {
+    "id": 37793421,
+    "photographer": "Zeynep  Hız",
+    "photographerUrl": "https://www.pexels.com/@zzeynephiz",
+    "pageUrl": "https://www.pexels.com/photo/minimalist-workspace-with-notebook-and-pens-37793421/",
+    "alt": "A clean minimalist workspace featuring a decorated notebook and a pen holder on a white desk."
+  },
+  "diet-food": {
+    "id": 27569266,
+    "photographer": "TapeWorm",
+    "photographerUrl": "https://www.pexels.com/@tapeworm-532626151",
+    "pageUrl": "https://www.pexels.com/photo/a-pot-of-steaming-soup-sits-on-a-table-27569266/",
+    "alt": "A steaming pot with floral design sits on a rustic table, creating a cozy kitchen ambiance."
+  }
+}

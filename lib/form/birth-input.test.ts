@@ -412,6 +412,53 @@ describe("출생지 드롭다운", () => {
     expect(css).toContain("background-color: var(--color-ink-muted)");
   });
 
+  /**
+   * 성별·양력음력은 **칩 둘**이다 (TASK-85). 선택지가 사실상 둘인데 드롭다운이면 한 번 더
+   * 눌러야 목록이 보인다. 되돌아가면 그 비용이 그대로 돌아온다.
+   */
+  it("성별과 양력/음력이 칩이다", () => {
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).toContain("ChoiceChips");
+    // 드롭다운으로 되돌아가면 이 문구가 함께 돌아온다.
+    expect(form).not.toContain("선택 안 함");
+  });
+
+  /**
+   * **`unspecified` 를 세 번째 칩으로 만들지 않는다.** 둘 다 비선택인 것이 곧 미지정이다 —
+   * 값 셋을 화면에 그대로 옮기면 "고르지 않음" 이 하나의 선택지처럼 보인다.
+   * `BirthInput["gender"]` 의 값 셋과 `sajuInputSchema` 는 그대로 둔다 (API 계약이다).
+   */
+  it("미지정이 칩으로 나오지 않는다", () => {
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).toMatch(/GENDER_CHIPS = \[[^\]]*\]/);
+    expect(form).not.toMatch(/value: "unspecified"/);
+  });
+
+  /**
+   * 성별을 안 고르면 대운이 `null` 이 되어 근거 카드와 공유 카드 칩이 조용히 사라진다.
+   * **폼이 그 대가를 말해야 한다** (TASK-85) — 예전에는 `decade`(내부 유형)에서만 말했다.
+   */
+  it("성별 미선택의 대가가 폼에 적혀 있다", () => {
+    const form = readCode("components/SajuForm.tsx");
+    expect(form).toMatch(/gender === "unspecified" &&/);
+    expect(form).toContain("대운");
+  });
+
+  /**
+   * 칩은 옆 칸의 입력과 **밑선이 맞아야** 한다 — 규격은 `field.ts`·`Button.tsx` 와 같은
+   * 값이다(48px · radius 12px). 포커스 링은 전역 `:focus-visible` 이 건다.
+   */
+  it("칩 부품이 입력과 같은 규격을 쓴다", () => {
+    const chips = readCode("components/ui/ChoiceChips.tsx");
+    expect(chips).toContain("h-12");
+    expect(chips).toContain("rounded-xl");
+    expect(chips).not.toContain("focus:ring");
+    // `<select>` 가 공짜로 주던 것을 직접 만들어야 한다.
+    expect(chips).toContain('role="radiogroup"');
+    expect(chips).toContain("aria-labelledby");
+    expect(chips).toContain("ArrowRight");
+  });
+
   it("모든 select 가 같은 껍데기를 쓴다", () => {
     // 하나만 빠지면 그 칸만 브라우저 기본 화살표가 남아 폼에 화살표가 두 종류가 된다.
     // **개수를 대조하므로** 나중에 select 를 추가하면서 껍데기를 빠뜨리면 여기서 걸린다.

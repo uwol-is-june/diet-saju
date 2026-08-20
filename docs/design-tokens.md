@@ -57,6 +57,10 @@ Next.js + Tailwind v4 앱이라 CSS 번들(`/_next/static/chunks/*.css`)의 `@th
 - **`SelectShell` 을 부품으로 흡수하지 않았다.** 화살표 규칙은 `globals.css` 의
   `.select-shell` 하나이고 `birth-input.test.ts` 가 `<select` 개수와 껍데기 개수를
   **대조한다.** 새 껍데기를 만들면 그 검사가 세는 대상이 갈린다.
+- **`ChoiceChips` 도 부품을 쓰지 않는다** (TASK-85). 같은 이유다 — 선택된 상태를 면 색으로
+  보여야 해서 variant 축이 다르다. 다만 **모양(48px · radius 12px)은 `field.ts` 와 같은
+  값**이라 폼 그리드에서 옆 칸 입력과 밑선이 맞는다. 선택된 면은 `bg-brand` +
+  `text-on-brand`(9.61:1)이고, 흰 글씨는 쓸 수 없다(green500 위 1.82:1).
 - **`LikeButton` 은 부품을 쓰지 않는다.** 켜짐/꺼짐이 있는 **칩**이라 variant 축이 다르다
   (`aria-pressed`). 필 모양인 것도 `/reading/[type]` 의 유형 줄 칩과 같은 계열이다.
 
@@ -254,37 +258,26 @@ TASK-10 의 OG 이미지도 이 토큰을 쓴다. 브랜드 그린과 목(木) �
 (`FirstVisitNotice` 배경, 선택된 유형 칩, 스트리밍 커서, 현재 대운 링)에는 여전히 맞다.
 그래서 토큰 테스트의 "흰 텍스트는 브랜드 면에서 쓸 수 없다" 단정도 유지한다.
 
-### 유형 카드 모티프 (TASK-50)
+### 유형 카드 사진 (TASK-50 → 85)
 
-`/` 의 유형 선택 카드 썸네일은 **인라인 SVG 모티프**다
-(`components/thumbnails/ReadingThumbnail.tsx`). 예전 `--color-thumb-1/2/3` 단색 자리를
-대체했고 **그 토큰 셋은 지웠다.**
+`/` 의 유형 선택 카드가 리스트 카드로 바뀌면서 오른쪽 면이 **사진**이 됐다
+(`components/ReadingCardPhoto.tsx` · 파일은 `public/cards/`). 예전의 인라인 SVG 모티프
+(`components/thumbnails/ReadingThumbnail.tsx`)는 지웠고, 그보다 앞선 `--color-thumb-1/2/3`
+단색 토큰 셋도 그때 이미 사라졌다.
 
-**새 토큰을 만들지 않았다.** 면은 `bg-brand`(연한 강조 면), 도형은 `on-brand`(그 위 어두운
-잉크)다 — 둘은 이미 짝으로 검증된 조합이고(9.61:1), 도형에 쓰면 **작은 크기에서도 형태가
-읽힌다.** `--color-ohaeng-*` 을 끌어 쓰지 않은 이유는 그것이 오행을 **인코딩하는 값**이기
-때문이다(막대·오각형·공유 카드가 공유한다). 장식이 같은 색을 쓰면 "이 카드는 목(木)인가?"
-로 읽힌다.
+**팔레트 관점에서 달라진 것은 하나다 — 래스터는 이 검사가 닿지 않는다.** 그래서
+**사진이 화면의 색을 정하지 않게** 둔다: 카드 면(`surface-muted`)·글자(`ink`·`ink-muted`·
+`brand-ink`)·화살표(`surface` 위 `ink-soft`)는 전부 시맨틱 토큰이고, 사진은 오른쪽 끝에서
+`globals.css` 의 `.card-photo` 마스크로 흐려지는 장식이다. **글은 사진과 겹치지 않는 폭에
+둔다** — 흐려지는 구간에 글자가 얹히면 대비를 보증할 수 없다.
 
-**모티프는 유형의 의미를 담으므로 `Record<ReadingType, …>` 다.** 예전 단색은 배열이 맞았다 —
-명도 차이일 뿐 유형과 무관했으므로 돌려 쓰면 됐다. 지금은 배열이면 **새 유형이 조용히 남의
-그림을 달고 나간다.**
+`.card-photo` 의 `linear-gradient(..., black 55%)` 에서 검정은 **팔레트 값이 아니라 알파
+마스크**다("여기는 보인다"). 그래서 raw 색 검사와 무관하다.
 
-| 유형 | 모티프 | 어디서 온 어휘인가 |
-| --- | --- | --- |
-| `diet` | 오각형 | `OhaengCycle` 의 상생 오각형 (라벨 없이 축소) |
-| `gain-cause` | 치우친 막대 셋 | `OhaengBars` |
-| `diet-method` | 계단 | 접근 순서 — 무엇을 먼저 고정하는가 |
-| `exercise` | 오르는 화살 | 강도의 결 |
-| `decade` | 눈금 다섯 칸 중 한 칸 | `DaeunTimeline` 의 "지금 어디쯤인가" |
-| `general` | 오각형 + 중심점 | 내부 유형이라 목록에 없지만 `Record` 라 값이 필요하다 |
+`tokens.test.ts` 의 raw 색 검사 목록에는 `components/ReadingCardPhoto.tsx` 가 들어 있다 —
+사진 자체는 못 보지만 그 파일이 클래스로 정하는 나머지는 계속 토큰에서만 온다.
 
-**사진을 쓰지 않기로 한 이유 셋**(크기·피사체·팔레트 검사 밖)은 그 파일 주석에 있다.
-**래스터로 렌더하지도 않는다** — `scripts/render-icons.mjs` 파이프라인이 있는 이유는
-파비콘·og:image 가 반드시 파일이어야 하기 때문이고, 페이지 안의 장식에는 그 제약이 없다.
-
-`tokens.test.ts` 의 raw 색 검사 목록에 이 파일이 들어 있다. SVG 는 `fill-*`·`stroke-*` 에
-hex 가 새기 쉬운 자리라 빠뜨리면 아무도 모른다.
+**사진을 고르고 받는 방법과 피사체 규칙**은 `CLAUDE.md` 의 "유형 카드 사진" 절에 있다.
 
 ### 다크 모드는 도입하지 않았다
 

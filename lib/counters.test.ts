@@ -211,8 +211,20 @@ describe("붙는 자리", () => {
 
   /** 스트리밍 중에 평가를 요구하면 지금 쓰이고 있는 글을 끊는다. */
   it("좋아요 버튼은 생성이 끝난 뒤에만 나온다", () => {
-    const form = read("components/SajuForm.tsx");
-    expect(form).toMatch(/!streaming && \(\s*<>\s*<LikeButton/);
+    const result = read("components/ResultView.tsx");
+    expect(result).toMatch(/!streaming && \(\s*<div[^>]*>\s*<LikeButton/);
+  });
+
+  /**
+   * **좋아요가 공유보다 먼저다** (TASK-81). `도움이 됐어요` 는 방금 읽은 글에 대한
+   * 반응인데 예전에는 근거 카드 셋 뒤에 있어서 다 지나친 다음에야 나왔다. 순서가
+   * 되돌아가면 그 문제가 그대로 돌아온다.
+   */
+  it("좋아요가 공유 카드보다 위에 있다", () => {
+    const result = read("components/ResultView.tsx");
+    expect(result.indexOf("<LikeButton")).toBeLessThan(result.indexOf("<ShareActions"));
+    // 폼에서는 떼어 냈다 — 두 곳에 있으면 같은 버튼이 화면에 두 번 나온다.
+    expect(read("components/SajuForm.tsx")).not.toContain("LikeButton");
   });
 });
 

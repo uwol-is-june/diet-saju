@@ -4,8 +4,9 @@ import {
   PUBLIC_READING_TYPES,
   READING_TYPE_DESCRIPTION,
   READING_TYPE_LABEL,
+  READING_TYPE_QUESTION,
 } from "@/lib/saju/schema";
-import { ReadingThumbnail } from "@/components/thumbnails/ReadingThumbnail";
+import { ReadingCardPhoto } from "@/components/ReadingCardPhoto";
 
 /**
  * 유형 선택 화면 (TASK-30).
@@ -22,19 +23,22 @@ import { ReadingThumbnail } from "@/components/thumbnails/ReadingThumbnail";
  * 가 있었다. 둘 다 카드가 이미 보여주는 것이다 — 헤더가 무엇을 하는 화면인지 말하고,
  * 카드 면 전체가 링크라 누르면 넘어간다는 것을 hover 상태가 설명한다.
  *
- * ## 카드 그리드다 (TASK-64)
+ * ## 리스트 카드다 (TASK-86 · 레퍼런스 `docs/ui_ref/list_reference.jpg`)
  *
- * 예전에는 세로로 쌓인 행이었다(썸네일 왼쪽 · 글 가운데 · 화살표 오른쪽). 지금은 **두 칸
- * 그리드**이고 카드마다 썸네일이 위에 있다.
+ * **TASK-64 의 두 칸 그리드를 뒤집었다** (2026-08-19 사용자 확정). 한 줄에 한 장씩 쌓고
+ * 카드마다 **왼쪽 글 + 오른쪽 사진 + 오른쪽 아래 화살표**를 둔다.
  *
- * - **칸 수를 하드코딩하지 않는다.** 공개 유형이 홀수면 마지막 줄에 빈칸이 남는데,
- *   "첫 카드만 가로로 넓게" 같은 index 특례로 메우면 **유형이 하나 늘 때 조용히 깨진다.**
- * - **화살표를 뺐다.** 카드에서는 면 전체가 누를 곳이라 오른쪽 끝의 화살표가 가리킬 방향이
- *   없다. 행에서는 그 화살표가 "누르면 넘어간다" 를 설명했지만 카드에서는 테두리와 hover 가
- *   그 일을 한다.
- * - **설명 줄을 지우지 않는다.** 카드가 좁아지면 제일 먼저 지우고 싶어지는 자리인데,
- *   거기가 `diet-food` 의 컨셉 한 줄이 사는 곳이다. 좁아서 안 들어가면 설명이 아니라
- *   칸 수를 줄인다.
+ * - **화살표를 되살렸다.** TASK-64 는 "카드는 면 전체가 링크라 화살표가 가리킬 방향이
+ *   없다" 로 뺐다. 리스트 카드에서는 사정이 다르다 — 카드가 가로로 길어 오른쪽 끝이
+ *   **줄의 끝**이 되고, 레퍼런스가 거기에 원형 화살표를 두는 이유도 그것이다. 장식이라
+ *   `aria-hidden` 이고 링크 이름은 제목이 만든다.
+ * - **`li` 의 `display: contents` 를 걷어냈다.** 그건 두 칸 그리드에서 같은 줄 카드의
+ *   높이를 맞추려던 장치다. 한 줄에 한 장이면 맞출 상대가 없다.
+ * - **설명 줄은 그대로 둔다** (TASK-64). 사진이 오른쪽을 먹어 글 폭이 좁아지므로 세 줄로
+ *   자르되(`line-clamp-3`) **지우지는 않는다** — 거기가 `diet-food` 의 컨셉 한 줄이 사는
+ *   곳이다. 열이 넓어지면(`sm:`) 저절로 다 들어간다.
+ * - **묻는 것 한 줄이 제목 위에 붙는다** (`READING_TYPE_QUESTION`). 레퍼런스의 강조색
+ *   윗줄 자리이고, 다섯 카드가 이름만으로는 비슷해 보이던 문제를 여기서 푼다.
  * - `ul` / `li` 구조와 `aria-label` 은 그대로다 — `birth-input.test.ts` 가 소스에서 본다.
  *
  * **"입력한 정보는 저장하지 않습니다" 도 여기서 뺐다.** 약속이 사라진 것이 아니라
@@ -67,49 +71,91 @@ export default async function HomePage() {
 
   return (
     <>
-      <header className="mb-8 text-center">
-        <p className="mb-2 text-sm font-medium tracking-widest text-brand-ink">DIET SAJU</p>
-        <h1 className="mb-3 text-3xl font-bold tracking-tight">사주로 읽는 나의 기질</h1>
-        <p className="text-sm leading-relaxed text-ink-muted">
-          생년월일시로 사주 원국(사주팔자)을 계산하고,
+      {/*
+        머리 부분은 레퍼런스를 그대로 받는다 — **강조색 윗줄 + 큰 두 줄 제목**, 그리고
+        위쪽에서 옅게 시작해 본문 흰 면으로 풀리는 배경.
+
+        음수 여백으로 콘텐츠 열의 좌우·위 여백(`main` 의 `px-5 py-10`)을 넘어 **열 끝까지**
+        면을 펼친다. 안 그러면 띠가 본문 폭에만 걸려 잘린 사각형으로 보인다.
+        색은 시맨틱 토큰이고 유형별로 갈지 않는다 (확정 결정: 테마를 유형별로 두지 않는다).
+      */}
+      <header className="-mx-5 -mt-10 mb-7 bg-gradient-to-b from-brand-subtle to-canvas px-5 pt-12 pb-8 text-center">
+        <p className="text-sm font-bold text-brand-ink">생년월일시로 계산한 사주 원국에서</p>
+        <h1 className="title-lg title-extrabold mt-2">
+          나의 기질과 몸을
           <br />
-          오행 균형을 바탕으로 타고난 기질과 생활 습관을 풀어드립니다.
-        </p>
+          읽어드립니다
+        </h1>
       </header>
 
       {/* 내부 유형은 목록에 내지 않는다 (TASK-41). `/admin` 에서만 들어간다. */}
-      <ul aria-label="풀이 유형" className="grid grid-cols-2 gap-3 sm:gap-4">
-        {PUBLIC_READING_TYPES.map((type) => (
-          <li key={type} className="contents">
-            {/*
-              `li` 에 `contents` 를 주어 **카드(`a`)가 직접 그리드 칸이 되게** 한다.
-              그래야 같은 줄의 카드들이 같은 높이로 늘어나 아래 카운트 줄이 나란히 선다
-              (`li` 가 칸이면 그 안의 `a` 는 내용 높이에 머문다).
-            */}
+      <ul aria-label="풀이 유형" className="flex flex-col gap-3">
+        {PUBLIC_READING_TYPES.map((type, index) => (
+          <li key={type}>
             <Link
               href={`/reading/${type}`}
-              className="flex flex-col rounded-2xl border border-line bg-surface p-4 shadow-sm transition hover:border-brand hover:bg-brand-subtle sm:p-5"
+              className="relative flex min-h-40 flex-col overflow-hidden rounded-3xl bg-surface-muted p-5 transition hover:bg-brand-subtle"
             >
-              {/* 유형별 모티프 (TASK-50). 장식이라 스크린리더에서 숨긴다 —
-                  링크 이름은 아래 제목이 만든다. `Record` 라 유형이 늘면 컴파일이 막는다. */}
-              <ReadingThumbnail readingType={type} />
-              <span className="mt-3 block font-bold">{READING_TYPE_LABEL[type]}</span>
-              <span className="mt-1 block text-sm leading-relaxed text-ink-muted">
-                {READING_TYPE_DESCRIPTION[type]}
-              </span>
-              {counts && (
-                /*
-                  숫자만 나열하면 무엇인지 알 수 없다. 단위 낱말을 붙여 읽히게 한다.
-                  `mt-auto` 로 카드 바닥에 붙여 둔다 — 설명 길이가 유형마다 달라서
-                  그냥 두면 같은 줄의 두 카드에서 이 줄의 높이가 어긋난다.
-                */
-                <span className="mt-auto block pt-3 text-xs text-ink-muted">
-                  조회 {counts[type].views.toLocaleString("ko-KR")}
-                  {counts[type].likes > 0 && (
-                    <> · 도움됐어요 {counts[type].likes.toLocaleString("ko-KR")}</>
-                  )}
+              {/*
+                오른쪽 면을 채우고 글 쪽으로 흐려진다 (TASK-86). 장식이라 `alt=""` 다.
+                **첫 장만 `priority`** — 그것이 이 화면의 LCP 요소다 (TASK-87 실측:
+                LCP 1.02 → 0.72초). 다섯 장 전부에 주면 preload 가 서로를 밀어낸다.
+              */}
+              <ReadingCardPhoto readingType={type} priority={index === 0} />
+
+              {/*
+                글은 사진 위에 온다(`relative`). 폭을 사진과 겹치지 않게 잡아야 흐려지는
+                구간에 글자가 얹히지 않는다 — 사진 색은 팔레트 검사 밖이라 그 위에 글자를
+                올리면 대비를 보증할 수 없다.
+              */}
+              <div className="relative w-[62%] break-keep">
+                <span className="block text-xs font-bold text-brand-ink">
+                  {READING_TYPE_QUESTION[type]}
                 </span>
-              )}
+                <span className="title-sm title-bold mt-1.5 block">
+                  {READING_TYPE_LABEL[type]}
+                </span>
+                {/*
+                  좁은 폭에서 세 줄로 자른다 — **지우지 않는다** (TASK-64). 열이 넓어지면
+                  자동으로 다 보인다. **`block` 을 함께 주지 말 것** — `line-clamp` 이
+                  `display: -webkit-box` 를 걸어야 동작하는데 `block` 이 그걸 덮는다
+                  (실측에서 네 줄이 카드 밖으로 잘려 나갔다).
+                */}
+                <span className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-ink-muted sm:line-clamp-none">
+                  {READING_TYPE_DESCRIPTION[type]}
+                </span>
+              </div>
+
+              {/*
+                바닥 줄 — 왼쪽에 조회수, 오른쪽에 화살표. `mt-auto` 로 카드 바닥에 붙인다
+                (설명 길이가 유형마다 달라 그냥 두면 카드마다 이 줄의 높이가 어긋난다).
+              */}
+              <div className="relative mt-auto flex items-end justify-between pt-3">
+                {counts ? (
+                  /* 숫자만 나열하면 무엇인지 알 수 없다. 단위 낱말을 붙여 읽히게 한다. */
+                  <span className="text-xs text-ink-muted">
+                    조회 {counts[type].views.toLocaleString("ko-KR")}
+                    {counts[type].likes > 0 && (
+                      <> · 도움됐어요 {counts[type].likes.toLocaleString("ko-KR")}</>
+                    )}
+                  </span>
+                ) : (
+                  /* 저장소가 죽으면 그 자리를 비운다 — 0 을 보여주지 않는다 (TASK-51). */
+                  <span />
+                )}
+
+                {/*
+                  줄의 끝을 알리는 원형 화살표 (레퍼런스). **장식이다** — 링크 이름은 제목이
+                  만들고 스크린리더에 이 글리프가 읽히면 안 된다. 면을 흰색으로 두는 이유는
+                  사진 위에 걸쳐도 대비가 유지돼야 하기 때문이다.
+                */}
+                <span
+                  aria-hidden
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-ink-soft shadow-sm"
+                >
+                  →
+                </span>
+              </div>
             </Link>
           </li>
         ))}

@@ -9,6 +9,7 @@ import { DaeunTimeline } from "./charts/DaeunTimeline";
 import { OhaengBars } from "./charts/OhaengBars";
 import { OhaengCycle } from "./charts/OhaengCycle";
 import { ThermalScale } from "./charts/ThermalScale";
+import { LikeButton } from "./LikeButton";
 import { ReadingSections } from "./ReadingSections";
 import { ShareActions } from "./ShareActions";
 import { VerdictCallout } from "./VerdictCallout";
@@ -16,9 +17,9 @@ import { VerdictCallout } from "./VerdictCallout";
 /* 오행 배지 톤 표는 `charts/OhaengBars.tsx` 로 옮겼다 (TASK-25에서 배지 줄을 막대로 교체). */
 
 /**
- * 결과 화면. **위에서부터 판정 한 줄 → 풀이 → 공유 → 근거 도식 순이다** (TASK-61).
- * 사람들이 보러 온 것은 풀이이므로 그것이 맨 위에서 시작하고, 코드가 만든 도식은
- * "무엇으로 이 풀이가 나왔는가" 를 밝히는 근거로 뒤에 붙는다.
+ * 결과 화면. **위에서부터 판정 한 줄 → 풀이 → 좋아요 → 공유 → 근거 도식 순이다**
+ * (TASK-61 · 81). 사람들이 보러 온 것은 풀이이므로 그것이 맨 위에서 시작하고, 코드가 만든
+ * 도식은 "무엇으로 이 풀이가 나왔는가" 를 밝히는 근거로 뒤에 붙는다.
  *
  * `streaming` 이 true 면 아직 생성 중이라는 표시를 붙인다. 원국은 코드가 60~70ms 에
  * 계산하지만 첫 글자는 1초 뒤에 오므로, 그 사이를 판정 콜아웃이 채운다.
@@ -69,24 +70,47 @@ export function ResultView({
         />
       </div>
 
-      {/* 생성이 끝난 뒤에 보여준다 — 쓰는 중에 공유 버튼을 내밀면 미완성 결과를 퍼뜨린다. */}
-      {!streaming && <ShareActions chart={chart} readingType={readingType} />}
+      {/*
+        생성이 끝난 뒤에 보여준다 — 쓰는 중에 평가를 요구하거나 공유 버튼을 내밀면
+        지금 쓰이고 있는 글을 끊고 미완성 결과를 퍼뜨린다 (TASK-51 의 이유 그대로).
+
+        **좋아요가 공유보다 먼저다** (TASK-81). `도움이 됐어요` 는 방금 읽은 글에 대한
+        반응인데 예전에는 **근거 카드 셋 뒤**에 있어서 다 지나친 다음에야 나왔다. 읽고 →
+        반응하고 → 공유하는 순서로 둔다. **`OtherReadingLinks` 는 여기 오지 않는다** —
+        그건 이 화면을 다 본 뒤에 다른 유형으로 보내는 동선이라 맨 아래(`SajuForm`)에 있다.
+
+        둘을 한 묶음(`space-y-2`)으로 감싼다. 바깥 `space-y-6` 에 나란히 두면 칩의
+        `py-2` 가 더해져 사이가 32px 로 벌어지고 **한 덩어리로 읽히지 않는다.**
+      */}
+      {!streaming && (
+        <div className="space-y-2">
+          <LikeButton type={readingType} />
+          <ShareActions chart={chart} readingType={readingType} />
+        </div>
+      )}
 
       {/*
-        근거 묶음 (TASK-61). **풀이 아래에 둔다** — 사람들이 보러 온 것은 풀이이고 도식은
-        그것이 무엇에서 나왔는지 보여주는 근거다. 접는 것만으로는 부족했다(TASK-52): 접힌
+        근거 묶음 (TASK-61 · 82). **풀이 아래에 둔다** — 사람들이 보러 온 것은 풀이이고
+        도식은 그것이 무엇에서 나왔는지 보여주는 근거다. 접는 것만으로는 부족했다(TASK-52): 접힌
         제목 줄 셋과 펼쳐진 원국 카드가 여전히 본문보다 위에 있어서 글이 아래에서 시작했다.
 
         제목 줄을 **카드로 감싸지 않는다** — 카드 안에 카드가 되어 여백이 두 겹이 된다.
         묶음에 이름이 있어야 이 카드들이 왜 뒤에 붙어 있는지 읽힌다.
         TASK-73 에서 원국까지 접어 **셋이 같은 모양**이 됐다.
       */}
-      <h2 className="pt-2 text-sm font-bold tracking-wide text-ink-muted">
-        이 풀이의 근거
-      </h2>
+      <div className="pt-2">
+        <h2 className="title-md title-bold">내 사주</h2>
+        {/*
+          **제목이 하던 일을 한 줄로 옮겼다** (TASK-82). 옛 제목 `이 풀이의 근거` 는
+          설명문처럼 읽혔지만 "이 카드들이 왜 본문 뒤에 붙어 있는가" 를 혼자 설명하고
+          있었다(TASK-61). 이름을 `내 사주` 로 바꾸면 그 일을 아무도 하지 않으므로
+          바로 아래 한 줄이 대신 한다. **둘 중 하나만 두지 말 것.**
+        */}
+        <p className="mt-1 text-sm text-ink-muted">이 풀이는 아래 값에서 나왔습니다.</p>
+      </div>
 
       {/*
-        원국 카드도 접는다 (TASK-73). `이 풀이의 근거` 는 이름 그대로 **본문을 읽고 난 뒤에
+        원국 카드도 접는다 (TASK-73). 이 묶음은 이름 그대로 **본문을 읽고 난 뒤에
         확인하는 자리**인데, 접힌 제목 줄 둘 옆에서 이 카드만 화면 한 뭉치를 차지했다.
 
         `note` 가 **양력 날짜와 띠**다 — 펴지 않고 알아야 하는 것은 "내가 넣은 값으로
@@ -349,7 +373,7 @@ function FoldCard({
       }}
     >
       {/*
-        제목을 `h3` 로 두어 **`이 풀이의 근거` 묶음(h2) 아래 단계**로 읽히게 한다 (TASK-61).
+        제목을 `h3` 로 두어 **`내 사주` 묶음(h2) 아래 단계**로 읽히게 한다 (TASK-61 · 82).
         원국 카드와 같은 단계여야 제목 탐색으로 근거 카드 셋을 훑을 수 있다.
       */}
       <summary className="flex items-center gap-x-3 gap-y-1 p-5 sm:p-6">

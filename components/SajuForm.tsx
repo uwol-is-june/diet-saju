@@ -16,9 +16,9 @@ import { composeBirthTime, HOUR_OPTIONS, MINUTE_OPTIONS } from "@/lib/form/birth
 import { BIRTHPLACE_SIDO } from "@/lib/form/birthplaces";
 import type { ReadingType, SajuChart, SajuStreamEvent } from "@/lib/saju/schema";
 import { Button } from "./ui/Button";
+import { ChoiceChips } from "./ui/ChoiceChips";
 import { FIELD_BASE } from "./ui/field";
 import { useBirthInput } from "./BirthInputProvider";
-import { LikeButton } from "./LikeButton";
 import { OtherReadingLinks } from "./OtherReadingLinks";
 import { ResultView } from "./ResultView";
 
@@ -279,19 +279,35 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               />
             </Field>
 
-            <Field label="성별" htmlFor={fieldId("gender")}>
-              <SelectShell>
-                <select
-                  id={fieldId("gender")}
-                  value={input.gender}
-                  onChange={(e) => set("gender")(e.target.value as BirthInput["gender"])}
-                  className={inputClass}
-                >
-                  <option value="unspecified">선택 안 함</option>
-                  <option value="male">남성</option>
-                  <option value="female">여성</option>
-                </select>
-              </SelectShell>
+            {/*
+              성별은 **칩 둘**이다 (TASK-85). 선택지가 사실상 둘인데 드롭다운이면 한 번 더
+              눌러야 목록이 보인다. **`선택 안 함` 을 세 번째 칩으로 만들지 않는다** —
+              둘 다 비선택인 것이 곧 `unspecified` 이고, `BirthInput["gender"]` 값 셋과
+              `sajuInputSchema` 는 그대로다 (API 계약이다).
+            */}
+            <Field label="성별" labelId={fieldId("gender-label")}>
+              <ChoiceChips
+                labelledBy={fieldId("gender-label")}
+                value={input.gender === "unspecified" ? null : input.gender}
+                onChange={(gender) => set("gender")(gender)}
+                options={GENDER_CHIPS}
+              />
+              {/*
+                **미선택의 대가를 그 자리에 적는다** (TASK-85). 성별을 안 고르면
+                `lib/saju/pillars.ts` 가 `daeun` 을 `null` 로 두고, 그러면 `대운 · 세운`
+                근거 카드가 통째로 사라지고 공유 카드의 대운 칩도 빠진다. 예전에는 그
+                사실을 폼이 말하는 곳이 `decade`(내부 유형) 하나뿐이라 공개 유형에서는
+                **아무 말 없이 결과가 줄어들었다.**
+
+                고른 뒤에는 감춘다 — 이미 치른 값을 계속 설명할 이유가 없다.
+                `missingForType` 의 **제출을 막는 문구와 섞지 말 것** (그쪽은 `role="alert"`
+                이고 버튼 위에 뜬다). 이건 막지 않고 알려주기만 한다.
+              */}
+              {input.gender === "unspecified" && (
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  고르면 10년 단위 흐름(대운)까지 함께 봅니다.
+                </p>
+              )}
             </Field>
 
             <Field label="생년월일" htmlFor={fieldId("birth-date")}>
@@ -307,18 +323,16 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
               />
             </Field>
 
-            <Field label="양력 / 음력" htmlFor={fieldId("calendar")}>
-              <SelectShell>
-                <select
-                  id={fieldId("calendar")}
-                  value={input.calendar}
-                  onChange={(e) => set("calendar")(e.target.value as BirthInput["calendar"])}
-                  className={inputClass}
-                >
-                  <option value="solar">양력</option>
-                  <option value="lunar">음력</option>
-                </select>
-              </SelectShell>
+            {/* 양력/음력도 선택지가 둘이라 같은 부품을 쓴다 (TASK-85). 부품을 만든 값이
+                두 자리에 쓰이므로 같은 커밋에서 함께 바꾼다. 나머지 드롭다운(시각 보정 ·
+                자시 기준)은 라벨이 길어서 칩으로 만들지 않는다. */}
+            <Field label="양력 / 음력" labelId={fieldId("calendar-label")}>
+              <ChoiceChips
+                labelledBy={fieldId("calendar-label")}
+                value={input.calendar}
+                onChange={(calendar) => set("calendar")(calendar)}
+                options={CALENDAR_CHIPS}
+              />
             </Field>
 
             {/* 윤달 체크박스는 **전체 폭 행**으로 내린다 (TASK-22).
@@ -594,14 +608,15 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
                  화면 표시는 폼이 들고 있는 값으로 한다. */
               birthplace={placeApplies ? describeBirthplace(input) : null}
             />
-            {/* 생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하거나 평가를
-                요구하면 지금 쓰이고 있는 글을 끊는다 (TASK-51 도 같은 이유로 여기 있다). */}
-            {!streaming && (
-              <>
-                <LikeButton type={readingType} />
-                <OtherReadingLinks current={readingType} />
-              </>
-            )}
+            {/*
+                생성이 끝난 뒤에만 낸다 — 스트리밍 중에 다른 유형으로 유도하면 지금
+                쓰이고 있는 글을 끊는다.
+
+                **좋아요는 `ResultView` 로 옮겼다** (TASK-81). 방금 읽은 글에 대한 반응이라
+                근거 카드 셋 뒤가 아니라 공유 바로 위가 제자리다. 여기 남은 것은 **다 본
+                뒤에 다른 유형으로 보내는 동선**뿐이고, 그건 화면 맨 아래가 맞다.
+            */}
+            {!streaming && <OtherReadingLinks current={readingType} />}
           </>
         )}
       </div>
@@ -653,25 +668,54 @@ function SelectShell({ children }: { children: React.ReactNode }) {
 
 const labelClass = "mb-1.5 block text-sm font-medium text-ink-soft";
 
+/**
+ * 칩 목록 (TASK-85). **`선택 안 함` 이 없다** — 성별은 둘 다 비선택인 상태가 곧
+ * `unspecified` 다. 값은 `BirthInput` 의 것을 그대로 쓴다 (API 계약이라 바꾸지 않는다).
+ */
+const GENDER_CHIPS = [
+  { value: "male", label: "남성" },
+  { value: "female", label: "여성" },
+] as const satisfies readonly { value: BirthInput["gender"]; label: string }[];
+
+const CALENDAR_CHIPS = [
+  { value: "solar", label: "양력" },
+  { value: "lunar", label: "음력" },
+] as const satisfies readonly { value: BirthInput["calendar"]; label: string }[];
+
 /** 체크박스는 글상자보다 작아서, 라벨 전체를 44px 높이의 탭 영역으로 만든다. */
 const checkboxLabelClass =
   "flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink-soft";
 const checkboxClass = "size-5 shrink-0 accent-brand-hover";
 
+/**
+ * 라벨 + 컨트롤 한 칸.
+ *
+ * **컨트롤이 하나면 `htmlFor`, 라디오 그룹이면 `labelId` 다** (TASK-85). 후자는 `label`
+ * 요소로 감쌀 대상이 없어서(그룹 전체가 대상이다) `aria-labelledby` 로 잇는다 —
+ * `htmlFor` 를 아무 칩에 걸면 그 칩 하나의 이름이 되어 그룹 이름이 사라진다.
+ */
 function Field({
   label,
   htmlFor,
+  labelId,
   children,
 }: {
   label: string;
-  htmlFor: string;
+  htmlFor?: string;
+  labelId?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label htmlFor={htmlFor} className={labelClass}>
-        {label}
-      </label>
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className={labelClass}>
+          {label}
+        </label>
+      ) : (
+        <span id={labelId} className={labelClass}>
+          {label}
+        </span>
+      )}
       {children}
     </div>
   );

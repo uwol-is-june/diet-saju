@@ -8,6 +8,7 @@ import {
   READING_TYPE_LABEL,
   READING_TYPE_META,
   READING_TYPE_NEEDS_GENDER,
+  READING_TYPE_QUESTION,
   READING_TYPE_VISIBILITY,
   sajuInputSchema,
 } from "./schema";
@@ -72,10 +73,17 @@ describe("카드 설명 — 표현 규칙", () => {
     READING_TYPE_META[type].description,
   ]);
 
+  /**
+   * 카드의 **묻는 것 한 줄** 도 같은 규칙을 받는다 (TASK-86). 화면에서 제목 바로 위에
+   * 놓이는 문구라 여기를 빼면 같은 약속이 첫 화면에서 깨진다. 다만 아래 "단정형으로
+   * 끝난다" 검사에는 넣지 않는다 — 이쪽은 문장이 아니라 질문 조각이다.
+   */
+  const questions = READING_TYPES.map((type) => READING_TYPE_QUESTION[type]);
+
   it.each([...BANNED_MEDICAL, ...BANNED_PRESCRIPTION, ...BANNED_PROPHECY])(
     "어느 설명에도 %s 가 없다",
     (word) => {
-      expect(all.filter((text) => text.includes(word))).toEqual([]);
+      expect([...all, ...questions].filter((text) => text.includes(word))).toEqual([]);
     },
   );
 
@@ -90,12 +98,50 @@ describe("카드 설명 — 표현 규칙", () => {
   it.each(READING_TYPES)("%s 문구에 숫자가 없다", (type) => {
     expect(READING_TYPE_DESCRIPTION[type]).not.toMatch(/\d/);
     expect(READING_TYPE_META[type].description).not.toMatch(/\d/);
+    expect(READING_TYPE_QUESTION[type]).not.toMatch(/\d/);
   });
 
   it("어느 설명도 단정형으로 끝나지 않는다", () => {
     // "~합니다" 로 서술하는 화법을 지킨다. "~됩니다"·"~드립니다" 도 같은 부류다.
     for (const text of all) {
       expect(text.endsWith("다.")).toBe(true);
+    }
+  });
+});
+
+describe("카드의 묻는 것 한 줄 (TASK-86)", () => {
+  it("모든 유형에 있고 서로 다르다", () => {
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_QUESTION[type]).toBeTruthy();
+      expect(READING_TYPE_QUESTION[type]).not.toContain("undefined");
+    }
+    const seen = new Set(READING_TYPES.map((type) => READING_TYPE_QUESTION[type]));
+    expect(seen.size).toBe(READING_TYPES.length);
+  });
+
+  /**
+   * 카드에서 제목 위 **한 줄**이고 390px 에서 글 폭이 카드의 절반뿐이다. 길어지면 두 줄로
+   * 접혀 제목보다 눈에 먼저 들어온다 — 그 자리는 제목의 것이다.
+   */
+  it("한 줄에 들어갈 길이다", () => {
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_QUESTION[type].length).toBeLessThanOrEqual(16);
+    }
+  });
+
+  it("문장이 아니라 질문 조각이다", () => {
+    for (const type of READING_TYPES) {
+      // 마침표를 붙이면 카드 안에 종결 문장이 둘이 된다 (아래 설명 줄이 그 역할이다).
+      expect(READING_TYPE_QUESTION[type].endsWith(".")).toBe(false);
+      expect(READING_TYPE_QUESTION[type]).not.toContain("?");
+    }
+  });
+
+  it("라벨을 다시 쓴 것이 아니다", () => {
+    // 라벨은 무엇을 주는지, 이 줄은 무엇을 묻는지다. 겹치면 카드 위 두 줄이 같은 말이 된다.
+    for (const type of READING_TYPES) {
+      expect(READING_TYPE_QUESTION[type]).not.toBe(READING_TYPE_LABEL[type]);
+      expect(READING_TYPE_QUESTION[type]).not.toContain(READING_TYPE_LABEL[type]);
     }
   });
 });

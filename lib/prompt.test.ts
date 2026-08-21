@@ -376,6 +376,55 @@ describe("표현 규칙 — 원인 유형 (TASK-44)", () => {
   });
 });
 
+/**
+ * 본문은 판정 이름 + 그것이 하루에 어떻게 나타나는지까지다 (TASK-113).
+ *
+ * 실제로 나갔던 문장이 `득령과 득지가 모두 이루어져 신강 판정을 받았습니다` 였다 — 두 문장에
+ * 계산 과정의 항목이 넷인데 정작 결과가 무슨 뜻인지는 없었다. `SYSTEM_INSTRUCTION` 이
+ * 이미 막고 있었는데도 나간 이유는 **절 지침이 절 옆에서 그 항목을 "반드시" 로 요구**했기
+ * 때문이다. 그래서 검사도 절 지침 쪽에 둔다.
+ *
+ * 근거를 대는 일은 화면의 근거 카드 넷이 맡는다 — `사주 원국` 카드가 이미 십신·신강신약·
+ * 득령/득지/득세 ○×·통근을 보여주고 있다.
+ */
+describe("본문에 이름으로 남는 것은 판정 라벨뿐이다 (TASK-113)", () => {
+  const guideOf = (prompt: string) => prompt.slice(prompt.indexOf("# 작성 지침"));
+
+  /** 사용자가 화면에서 뜻을 확인할 방법이 없는 이름. **지침이 요구하면 그대로 본문에 나간다.** */
+  const PROCESS_TERMS = ["득령", "득지", "득세", "통근", "왕상휴수사", "신강", "신약", "십신"];
+
+  it.each(READING_TYPES)("%s 작성 지침이 계산 항목의 이름을 요구하지 않는다", (type) => {
+    const guide = guideOf(PROMPTS[type]);
+    for (const term of PROCESS_TERMS) {
+      expect(guide, `${type} 지침이 ${term} 을 요구한다`).not.toContain(term);
+    }
+  });
+
+  it("데이터 블록 옆에서 한 번 더 막는다 — 이름이 실려 있는 자리가 거기다", () => {
+    // 원국 블록(신강/신약)과 판정 블록(십신 우세) 두 곳에 항목 이름이 실린다. 실을 수밖에
+    // 없으므로(판정의 재료다) **바로 옆에서 "본문에 옮기지 말라" 고 말한다.**
+    expect(dietPrompt).toContain("판정의 재료다");
+    expect(dietPrompt.replace(/\s+/g, " ")).toContain("이름을 본문에 옮기지 말 것");
+  });
+
+  it("규칙과 나쁜 예를 함께 둔다 — 규칙만으로는 안 잡힌다", () => {
+    expect(SYSTEM_INSTRUCTION).toContain("본문에 이름으로 남는 것은 판정 라벨뿐입니다");
+    // 실제로 나갔던 문장을 나쁜 예로 박아 둔다.
+    expect(SYSTEM_INSTRUCTION).toContain("득령과 득지가 이루어져 신강 판정을 받았습니다");
+    // 태어난 계절은 예외다 — 생일에서 바로 나오는 사실이라 읽는 사람이 확인할 수 있다.
+    expect(SYSTEM_INSTRUCTION).toContain("태어난 계절은 근거로 써도 됩니다");
+  });
+
+  /**
+   * **2층으로 도망가는 것을 막는다.** 용어를 아는 낱말로 바꿔 놓으면(`지탱하는 힘`·`자리`)
+   * 1층보다 나아 보이지만 무엇을 말하는지 알 수 없어 읽고 나도 남는 것이 없다.
+   */
+  it("아는 낱말로 갈아 끼우는 것도 나쁜 예로 든다", () => {
+    expect(SYSTEM_INSTRUCTION).toContain("지탱하는 힘이 넉넉합니다");
+    expect(SYSTEM_INSTRUCTION).toContain("판정이 하루에 어떻게 나타나는지");
+  });
+});
+
 describe("섹션 계약 (TASK-06)", () => {
   /** 작성 지침 부분만 떼어 낸다. 원국 블록에도 `## ` 제목이 있어 섞이면 안 된다. */
   const guideOf = (prompt: string) => prompt.slice(prompt.indexOf("# 작성 지침"));
@@ -430,15 +479,20 @@ describe("섹션 계약 (TASK-06)", () => {
   });
 
   /**
-   * 여는 자리와 근거는 **둘 다** 지켜야 한다 (TASK-56). 기준선에서 `diet` 는 절의 98%를
-   * 명리 용어로 열었다. 근거를 빼는 것이 아니라 자리를 뒤로 옮기는 것이므로, 두 문장이
-   * 함께 있어야 한 쪽만 남아 근거가 사라지거나 다시 앞으로 오지 않는다.
+   * 여는 자리 규칙 (TASK-56). 기준선에서 `diet` 는 절의 98%를 명리 용어로 열었다.
+   *
+   * **TASK-113 이 "뒤로 옮긴다" 를 "본문에서 뺀다" 로 바꿨다** — 근거를 대는 일은 화면의
+   * 근거 카드 넷이 맡는다. 그래서 예전의 `반드시 언급` + `자리를 뒤로 옮기라는 뜻` 두 문장
+   * 대신 **판정 라벨에 걸린 "반드시 언급"** 이 남아 있는지를 본다.
    */
-  it("근거는 유지하되 여는 자리에서 뒤로 옮기라고 지시한다", () => {
+  it("장면으로 열고 판정 라벨은 계속 반드시 언급하라고 지시한다", () => {
     expect(SYSTEM_INSTRUCTION).toContain("첫 문장을 명리학 용어로 열지 마세요");
     expect(SYSTEM_INSTRUCTION).toContain("첫 문장은 그 사람이 겪는 일이나 몸으로 느끼는 감각으로 엽니다");
-    expect(SYSTEM_INSTRUCTION).toContain("반드시\n  언급하고");
-    expect(SYSTEM_INSTRUCTION).toContain("근거를 빼라는 뜻이 아니라");
+    expect(SYSTEM_INSTRUCTION).toContain("판정 라벨은 반드시 언급하고");
+
+    // 계산 항목을 근거로 요구하던 문장이 되살아나면 본문에 다시 용어가 나간다.
+    expect(SYSTEM_INSTRUCTION).not.toContain("근거를 빼라는 뜻이 아니라");
+    expect(SYSTEM_INSTRUCTION).not.toContain("자리를 뒤로 옮기라는 뜻");
 
     // 균등 배분으로 되돌아가면 중심 절이 사라진다.
     expect(SYSTEM_INSTRUCTION).not.toContain("각 절은 3~5문장");

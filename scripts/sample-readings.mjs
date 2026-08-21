@@ -168,6 +168,42 @@ const MYEONGRI = [
 ];
 
 /**
+ * ⑩ 계산 항목 이름 — **본문 전체 빈도** (TASK-113).
+ *
+ * ③ 은 **여는 자리에 쓰였는지만** 세고 "근거 인용은 유지한다" 를 전제로 달고 있었다.
+ * TASK-113 이 그 전제를 뒤집었다 — 근거를 대는 일은 본문이 아니라 **화면의 근거 카드 넷**이
+ * 맡고 본문에 이름으로 남는 것은 판정 라벨뿐이다. 그래서 여는 자리가 아니라 **본문 어디에
+ * 나와도** 센다.
+ *
+ * 두 목록으로 나눈다 — 앞쪽은 **0건이 완료 기준**이고, 뒤쪽은 읽는 사람이 화면에서 다시
+ * 만날 곳이 없는 이름이라 **줄어드는지만 본다**(0 을 요구하지 않는다).
+ */
+const PROCESS_TERMS = ["득령", "득지", "득세", "통근", "왕상휴수사"];
+
+const NAME_TERMS = [
+  "신강", "신약", "십신", "지장간", "월령", "일간", "천간",
+  "비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인",
+];
+
+/**
+ * 자리 이름은 부분 문자열로 두면 오탐이 난다 — **`일주일` 이 `일주` 에 걸린다**
+ * (`견과`/`비견과 겁재` 와 같은 계열이다). `지지` 도 `지지해 주는` 에 걸려 목록에서 뺐다.
+ */
+const NAME_PATTERNS = [
+  { label: "일주", re: /일주(?!일)/g },
+  { label: "년주", re: /[년연]주/g },
+  { label: "월주", re: /월주/g },
+  { label: "시주", re: /시주/g },
+];
+
+/**
+ * ⑪ 되짚기 — "혹시 ~한 적 있으시죠?". 상한은 **절마다 하나 · 요약 절에는 없음**이다.
+ * TASK-113 이 용어를 걷어내면 그 자리를 누구에게나 맞는 말이 채우기 쉬우므로 상한이
+ * 살아 있는지 함께 본다. **이 글에서 물음표로 끝나는 문장은 되짚기뿐이다.**
+ */
+const CALLBACK_RE = /[?？]$/;
+
+/**
  * ④ 장면 — **프록시다.** "구체적 장면인가" 를 기계가 판단할 수 없어서, 하루·한 주의
  * 시간·자리·상황을 가리키는 말이 든 문장을 센다. 절대값보다 **전후 차이**만 본다.
  */
@@ -195,7 +231,7 @@ const BANNED = [
   "치료", "완치", "처방", "진단", "질병", "질환", "증상", "효능", "약효",
   "해독", "독소", "면역", "항암", "염증", "혈압", "혈당", "콜레스테롤", "보장",
   "단식", "칼로리", "kcal", "저탄고지", "키토", "원푸드", "목표 체중", "보조제", "영양제",
-  "온성", "냉성", "장부", "오장",
+  "온성", "냉성", "오장",
 ];
 
 /**
@@ -203,7 +239,15 @@ const BANNED = [
  * 아니라 오히려 우리가 하려는 말이다. `견과`/`비견과 겁재` 오탐과 같은 계열이라
  * 부분 문자열로 두면 안 된다.
  */
-const BANNED_PATTERNS = [{ label: "효과", re: /(?<!역)효과/ }];
+const BANNED_PATTERNS = [
+  { label: "효과", re: /(?<!역)효과/ },
+  /*
+    `장부` 는 **`긴장부터` 에 걸린다** (TASK-113 재측정에서 1건). `견과`/`비견과 겁재` 와
+    같은 계열이라 부분 문자열로 두면 안 된다. 장부 배속은 내보내면 안 되는 것이라
+    지표를 지우지 않고 **오탐만 뺀다.**
+  */
+  { label: "장부", re: /(?<![긴자])장부/ },
+];
 
 /**
  * `진단`·`처방` 은 **면책 문장 안에서는 오탐이다.** `TYPE_RULES` 셋이 마지막 문장으로
@@ -259,6 +303,20 @@ const REQUIRED_LABELS = {
   ],
   "diet-method": (c) => [
     ["접근 순서", [c.dietApproach]],
+    ["움직임 종류", [c.movementKind]],
+  ],
+  /*
+    공개 유형이 다섯인데 둘이 비어 있었다 — 라벨 인용이 0/0 으로 나와 **인용률을 재지
+    못하는 유형**이 절반이었다 (TASK-113 이 지표를 늘리며 채웠다).
+    재료 범주는 목록이라 라벨로 세지 않는다 — 인용 여부가 "몇 개 중 몇 개" 가 되어
+    다른 축과 같은 자로 못 잰다. 대신 그 절이 반드시 쓰는 판정 이름으로 받는다.
+  */
+  "diet-food": (c) => [
+    ["한열", THERMAL_WORDS[c.thermal]],
+    ["살이 붙는 패턴", [c.gainPattern]],
+  ],
+  exercise: (c) => [
+    ["대표 종목", [c.movementPrimary]],
     ["움직임 종류", [c.movementKind]],
   ],
 };
@@ -352,6 +410,21 @@ function countAll(text, needles) {
   return needles.reduce((sum, needle) => sum + text.split(needle).length - 1, 0);
 }
 
+/** `낱말×횟수` 목록. 0 건인 낱말은 빼서 요약이 목록으로 길어지지 않게 한다. */
+function hitList(text, needles) {
+  return needles.flatMap((needle) => {
+    const count = text.split(needle).length - 1;
+    return count > 0 ? [`${needle}×${count}`] : [];
+  });
+}
+
+function hitListRe(text, patterns) {
+  return patterns.flatMap(({ label, re }) => {
+    const count = [...text.matchAll(re)].length;
+    return count > 0 ? [`${label}×${count}`] : [];
+  });
+}
+
 function measure({ sample, readingType, chart, reading, contract, timing }) {
   const sections = splitSections(reading);
   const expectedTitles = contract.titles[readingType] ?? [];
@@ -371,6 +444,16 @@ function measure({ sample, readingType, chart, reading, contract, timing }) {
   const sceneSentences = allSentences.filter((sentence) =>
     SCENE.some((word) => sentence.includes(word)),
   ).length;
+
+  // ⑩ 계산 항목 이름 — 본문 전체. 제목은 계약 문자열이라 빼고 본문만 본다.
+  const bodyText = bodies.join("\n");
+  const processHits = hitList(bodyText, PROCESS_TERMS);
+  const nameHits = [...hitList(bodyText, NAME_TERMS), ...hitListRe(bodyText, NAME_PATTERNS)];
+
+  // ⑪ 되짚기 — 절마다 하나까지. 요약은 첫 절이고 거기서는 0 이어야 한다.
+  const callbacksPerSection = sections.map(
+    (section) => sentences(section.body).filter((sentence) => CALLBACK_RE.test(sentence)).length,
+  );
 
   // ⑤ 판정 라벨 인용
   const labels = (REQUIRED_LABELS[readingType] ?? (() => []))(chart.constitution).map(
@@ -420,6 +503,14 @@ function measure({ sample, readingType, chart, reading, contract, timing }) {
     // ⑥
     bannedHits,
     numericHits,
+    // ⑩ 계산 항목 이름 (앞쪽은 0 이 목표 · 뒤쪽은 줄어드는지만 본다)
+    processHits,
+    processCount: countAll(bodyText, PROCESS_TERMS),
+    nameHits,
+    // ⑪ 되짚기 상한
+    callbacksPerSection,
+    callbackOverLimit: callbacksPerSection.filter((count) => count > 1).length,
+    callbackInSummary: callbacksPerSection[0] ?? 0,
     // ⑦ 섹션 제목 준수 — 순서까지 같아야 한다
     titlesOk: JSON.stringify(gotTitles) === JSON.stringify(expectedTitles),
     gotTitles,
@@ -616,10 +707,19 @@ function summarize(rows, consistency, failures, args) {
 
   const banned = rows.flatMap((row) => row.bannedHits);
   const numeric = rows.flatMap((row) => row.numericHits);
+  const process = rows.reduce((sum, row) => sum + row.processCount, 0);
+  const processWords = [...new Set(rows.flatMap((row) => row.processHits))];
+  const names = [...new Set(rows.flatMap((row) => row.nameHits))];
   lines.push(
     "",
     `- **금지 어휘**: ${banned.length}건${banned.length ? ` — ${[...new Set(banned)].join(", ")}` : ""}`,
     `- **수치·월별**: ${numeric.length}건${numeric.length ? ` — ${[...new Set(numeric)].slice(0, 10).join(", ")}` : ""}`,
+    `- **계산 항목(0 이 목표)**: ${process}건${processWords.length ? ` — ${processWords.join(", ")}` : ""}`,
+    `- **그 밖의 명리 이름(관찰)**: ${rows.reduce((sum, row) => sum + row.nameHits.length, 0)}종${
+      names.length ? ` — ${names.slice(0, 14).join(", ")}` : ""
+    }`,
+    `- **되짚기 상한 위반**: 절당 둘 이상 ${rows.reduce((s, r) => s + r.callbackOverLimit, 0)}건 · ` +
+      `요약 절 ${rows.reduce((s, r) => s + r.callbackInSummary, 0)}건`,
   );
 
   if (consistency.length) {

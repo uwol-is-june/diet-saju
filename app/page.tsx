@@ -101,32 +101,38 @@ export default async function HomePage() {
                 **문자열은 `PageTransition` 이 들고 있다** (직접 적으면 세 곳이 갈린다).
               */
               transitionTypes={[NAV_FORWARD]}
-              className="relative flex min-h-40 flex-col overflow-hidden rounded-3xl bg-surface-muted p-5 transition hover:bg-brand-subtle"
+              /*
+                **최소 높이는 판정 콜아웃과 같은 13rem 이다** (TASK-110). 사진이 전면에
+                깔리면 글 세 줄이 정하는 높이(약 160px)로는 카드가 띠 한 줄로 보인다 —
+                `.verdict-cover` 가 같은 이유로 같은 값을 든다.
+
+                **면 색을 hover 로 바꾸지 않는다** — 사진에 덮여 보이지 않는다. 그 일은
+                `.card-cover:hover` 가 스크림을 깊게 하는 쪽으로 한다.
+              */
+              className="card-cover flex min-h-52 flex-col overflow-hidden rounded-3xl p-5 transition"
             >
               {/*
-                오른쪽 면을 채우고 글 쪽으로 흐려진다 (TASK-86). 장식이라 `alt=""` 다.
-                **첫 장만 `priority`** — 그것이 이 화면의 LCP 요소다 (TASK-87 실측:
+                카드를 통째로 덮고 그 위에 어둠이 깔린다 (TASK-110). 장식이라 `alt=""` 다.
+                **첫 세 장만 `priority`** — 그중 첫 장이 이 화면의 LCP 요소다 (TASK-87 실측:
                 LCP 1.02 → 0.72초). 다섯 장 전부에 주면 preload 가 서로를 밀어낸다.
               */}
               <ReadingCardPhoto readingType={type} priority={index < 3} />
 
               {/*
-                글은 사진 위에 온다(`relative`). 폭을 사진과 겹치지 않게 잡아야 흐려지는
-                구간에 글자가 얹히지 않는다 — 사진 색은 팔레트 검사 밖이라 그 위에 글자를
-                올리면 대비를 보증할 수 없다.
+                글이 사진 위에 온다 (TASK-110). **폭을 잡지 않는다** — 예전에는 사진이
+                오른쪽 42% 만 덮어 글을 `w-[58%]` 로 묶어 두어야 했고(합이 100% 를 넘으면
+                설명 줄이 흐려지는 면 위로 넘어갔다), 이제 어둠이 카드 전체에 깔리므로
+                글이 열 폭을 다 쓴다.
 
-                **폭은 `100% - 사진 42%` 다** (TASK-99). 예전 `62%` 는 합이 104% 라
-                설계상 겹쳐 있었고, 설명 줄이 실제로 사진 위로 4~12px 넘어갔다
-                (390 · 360 · 1280px 셋 다). 여기서 %는 카드 **콘텐츠 폭**(패딩 안쪽)
-                기준이고 사진 %는 **카드 폭** 기준이라, 58% 로 두면 왼쪽 패딩 20px 과
-                58% 의 차이만큼인 **3.2px 가 어느 폭에서나 일정하게** 남는다.
-                **62% 로 되돌리지 말 것** — 카드가 넓어질수록 겹침이 커진다.
+                **위계는 무게와 크기로만 만든다** — 색은 흰색 하나이고 흐린 흰색도 같은
+                계산에서 나온 알파다 (`text-on-photo*` 밖의 색을 여기 쓰지 말 것).
+                예전 `묻는 것` 줄의 `text-brand-ink` 는 어둠 위에서 대비를 보증할 수 없다.
               */}
-              <div className="relative w-[58%] break-keep">
-                <span className="block text-xs font-bold text-brand-ink">
+              <div className="relative z-10 break-keep">
+                <span className="block text-xs font-bold text-on-photo-dim">
                   {READING_TYPE_QUESTION[type]}
                 </span>
-                <span className="title-sm title-bold mt-1.5 block">
+                <span className="title-sm title-bold mt-1.5 block text-on-photo">
                   {READING_TYPE_LABEL[type]}
                 </span>
                 {/*
@@ -135,7 +141,7 @@ export default async function HomePage() {
                   `display: -webkit-box` 를 걸어야 동작하는데 `block` 이 그걸 덮는다
                   (실측에서 네 줄이 카드 밖으로 잘려 나갔다).
                 */}
-                <span className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-ink-muted sm:line-clamp-none">
+                <span className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-on-photo-dim sm:line-clamp-none">
                   {READING_TYPE_DESCRIPTION[type]}
                 </span>
               </div>
@@ -144,10 +150,10 @@ export default async function HomePage() {
                 바닥 줄 — 왼쪽에 조회수, 오른쪽에 화살표. `mt-auto` 로 카드 바닥에 붙인다
                 (설명 길이가 유형마다 달라 그냥 두면 카드마다 이 줄의 높이가 어긋난다).
               */}
-              <div className="relative mt-auto flex items-end justify-between pt-3">
+              <div className="relative z-10 mt-auto flex items-end justify-between pt-3">
                 {counts ? (
                   /* 숫자만 나열하면 무엇인지 알 수 없다. 단위 낱말을 붙여 읽히게 한다. */
-                  <span className="text-xs text-ink-muted">
+                  <span className="text-xs text-on-photo-dim">
                     조회 {counts[type].views.toLocaleString("ko-KR")}
                     {counts[type].likes > 0 && (
                       <> · 도움됐어요 {counts[type].likes.toLocaleString("ko-KR")}</>
@@ -160,12 +166,15 @@ export default async function HomePage() {
 
                 {/*
                   줄의 끝을 알리는 원형 화살표 (레퍼런스). **장식이다** — 링크 이름은 제목이
-                  만들고 스크린리더에 이 글리프가 읽히면 안 된다. 면을 흰색으로 두는 이유는
-                  사진 위에 걸쳐도 대비가 유지돼야 하기 때문이다.
+                  만들고 스크린리더에 이 글리프가 읽히면 안 된다.
+
+                  예전에는 흰 면 + 어두운 글리프였다. 사진이 전면에 깔리면 카드에서 흰 면이
+                  이것 하나만 남아 **어둠 위에 붙은 딱지처럼 보인다.** 글자와 같은 흰색으로
+                  두고 테두리만 흐린 흰색으로 그린다 (`text-on-photo*` 밖의 색을 쓰지 않는다).
                 */}
                 <span
                   aria-hidden
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-ink-soft shadow-sm"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full border border-on-photo-dim text-on-photo"
                 >
                   →
                 </span>

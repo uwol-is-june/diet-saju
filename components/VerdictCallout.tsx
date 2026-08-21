@@ -25,7 +25,9 @@ import type { ReadingType, SajuChart } from "@/lib/saju/schema";
  * **그 한 줄은 판정 축의 이름을 대지 않고 라벨의 뜻을 말한다** (TASK-105). 문구는
  * `constitution.ts` 의 `VERDICT_BASIS_*` 에 있다 — 여기 직접 쓰면 `constitution.test.ts` 의
  * 금지 어휘·처방·숫자·효능 검사를 통째로 우회한다. 판정의 출처를 말하는 일은 화면의 다른
- * 자리 셋이 맡는다: **눈썹 줄** · 아래 `내 사주` 묶음 머리 · `ResultView` 하단 고정 문구.
+ * 자리 **하나**가 맡는다: `ResultView` 하단 고정 문구(`오락·참고용` · `AI 가 작성`).
+ * **눈썹 줄은 주제를 말하는 줄이 되고(TASK-111) `내 사주` 묶음 머리는 없어졌다(TASK-112)** —
+ * 그래서 하단 문구를 지우면 범위를 말하는 자리가 화면에 남지 않는다.
  *
  * **`Record` 다.** 삼항이나 인덱스 시그니처로 두면 새 유형이 조용히 남의 콜아웃을 달고 나간다.
  *
@@ -225,7 +227,34 @@ function objectParticle(word: string): string {
   return (last - 0xac00) % 28 === 0 ? "를" : "을";
 }
 
-const EYEBROW = "이 사주에서 읽은 한 줄";
+/**
+ * 눈썹 줄 — **아래 라벨이 무엇에 대한 답인지 말한다** (TASK-111).
+ *
+ * 예전에는 상수 하나(`이 사주에서 읽은 한 줄`)라 일곱 유형이 같은 말을 냈다. 그 줄이 하던
+ * 일은 **범위 한정**이었는데, 유형마다 답하는 질문이 다른 화면에서 같은 문구가 뜨면
+ * 라벨이 무엇에 대한 답인지는 아무도 말해 주지 않는다.
+ *
+ * **`Record` 다** (`CALLOUT` 과 같은 이유) — 삼항이나 인덱스 시그니처로 두면 새 유형이
+ * 조용히 남의 눈썹 줄을 달고 나간다. 사진 있는 꼴과 없는 꼴이 **같은 값을 읽는다.**
+ *
+ * - **판정 축의 이름을 대지 않는다** (`대사 기조`·`한열` 류). 근거 줄과 같은 규칙이다.
+ * - **유형 이름을 그대로 되풀이하는 것이 요구다.** `/reading/exercise` 에는 히어로 아래에
+ *   제목 `나에게 맞는 운동` 이 이미 있고 콜아웃은 그 바로 아래라 같은 말이 한 화면에 두 번
+ *   나온다 — **그대로 간다** (제목은 화면의 이름이고 이 줄은 아래 라벨을 여는 말이다).
+ * - **390px `text-xs` 에서 한 줄이다.** 가장 긴 `나에게 맞는 다이어트 식단은` 이 137px 이고
+ *   카드 글 폭은 310px 다 (2026-08-21 · 390px · DPR 2 실측). 두 줄이 되면 큰 글자 라벨의
+ *   자리가 밀린다.
+ * - 내부 유형(`general`·`decade`)도 `/admin` 으로 들어가므로 값이 필요하다.
+ */
+const EYEBROW: Record<ReadingType, string> = {
+  general: "타고난 기질은",
+  diet: "몸이 기울어 있는 쪽은",
+  "gain-cause": "내가 살이 찌는 이유는",
+  "diet-method": "나에게 맞는 다이어트 방법은",
+  "diet-food": "나에게 맞는 다이어트 식단은",
+  exercise: "나에게 맞는 운동은",
+  decade: "지금 지나는 10년은",
+};
 
 export function VerdictCallout({
   chart,
@@ -237,6 +266,9 @@ export function VerdictCallout({
   const callout = CALLOUT[readingType](chart);
   if (!callout) return null;
 
+  // 두 꼴이 **같은 값을 읽는다** — 각자 표를 인덱싱하면 한쪽만 고쳐지는 날이 온다.
+  const eyebrow = EYEBROW[readingType];
+
   /*
     **사진이 없는 유형은 예전 모습 그대로다** (`general`·`decade` 는 `photo: null`).
     두 모습이 한 컴포넌트에 있는 것이 맞다 — 갈리는 지점이 `Callout.photo` 하나뿐이고,
@@ -246,7 +278,7 @@ export function VerdictCallout({
     return (
       <section className="rounded-2xl border border-brand-border bg-brand-subtle p-5 shadow-sm sm:p-6">
         <div className="break-keep">
-          <p className="text-xs font-bold tracking-wide text-ink-muted">{EYEBROW}</p>
+          <p className="text-xs font-bold tracking-wide text-ink-muted">{eyebrow}</p>
           <p className="mt-1 text-xl font-bold text-brand-ink sm:text-2xl">{callout.label}</p>
           <p className="mt-2 text-sm text-ink-soft">{callout.basis}</p>
         </div>
@@ -271,7 +303,7 @@ export function VerdictCallout({
       <VerdictPhoto slug={callout.photo} />
 
       <div className="relative z-10 break-keep">
-        <p className="text-xs font-bold tracking-wide text-on-photo-dim">{EYEBROW}</p>
+        <p className="text-xs font-bold tracking-wide text-on-photo-dim">{eyebrow}</p>
         <p className="mt-1 text-2xl font-extrabold text-on-photo sm:text-3xl">{callout.label}</p>
         <p className="mt-2 text-sm text-on-photo-dim">{callout.basis}</p>
       </div>

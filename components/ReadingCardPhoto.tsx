@@ -3,13 +3,15 @@ import { READING_TYPE_PHOTO } from "@/lib/reading/type-photo";
 import type { ReadingType } from "@/lib/saju/schema";
 
 /**
- * `/` 유형 리스트 카드의 사진. 오른쪽 면을 채우고 왼쪽 글 쪽으로 흐려지며 사라진다
- * (레퍼런스 `docs/ui_ref/list_reference.jpg`).
+ * `/` 유형 리스트 카드의 사진. **카드를 통째로 덮고 그 위에 어둠이 깔린다** (TASK-110) —
+ * 형식·크롭·스크림은 `globals.css` 의 `.card-cover`·`.card-photo` 가 정한다.
+ * 판정 콜아웃(`VerdictPhoto`)과 같은 꼴이고, 예전의 오른쪽 42% + 왼쪽으로 흐려지는
+ * 마스크는 글 폭과 사진 폭을 서로 묶어 두어야 했다.
  *
- * **사진이 화면의 색을 정하지 않는다.** 래스터는 `tokens.test.ts` 검사 밖이므로 카드 면·
- * 글자·화살표는 전부 시맨틱 토큰이고 사진은 흐려지는 장식이다. 톤이 어긋나면 그건 색
- * 규칙이 아니라 **고르기**의 문제이고, `scripts/fetch-card-photos.mjs` 가 사람이 고르는
- * 단계를 둔다.
+ * **사진이 화면의 색을 정하지 않는다.** 래스터는 `tokens.test.ts` 검사 밖이므로 글자·
+ * 화살표는 전부 시맨틱 토큰(`on-photo*`)이고 **대비를 보증하는 것은 사진이 아니라
+ * 스크림의 알파**다. 톤이 어긋나면 그건 색 규칙이 아니라 **고르기**의 문제이고,
+ * `scripts/fetch-card-photos.mjs` 가 사람이 고르는 단계를 둔다.
  *
  * **피사체는 사람 없는 정물이다.**
  *
@@ -30,11 +32,15 @@ import type { ReadingType } from "@/lib/saju/schema";
  */
 
 /**
- * 슬롯 크기. `sizes` 를 주지 않으면 `next/image` 가 뷰포트 폭을 기준으로 큰 후보를
- * 내려받는다 — 카드 사진은 어느 폭에서도 열의 절반 이하라 실제 필요한 것보다 몇 배 크다.
- * 원본은 480×480 이고(`scripts/fetch-card-photos.mjs`) 여기서 한 번 더 줄여 내보낸다.
+ * 원본 크기. 정사각 480×480 이고 `scripts/fetch-card-photos.mjs` 의 `SIZE` 가 단일 소스다.
+ *
+ * **전면 깔기라 원본이 카드 폭보다 작다** (390px 화면에서 카드가 350px 이므로 DPR 2 에서
+ * 모자란다). 판정 콜아웃·히어로에서 한 판단과 같다 — 스크림 아래에 깔리는 장식이라
+ * 선명도가 정보를 나르지 않고, 원본을 키우면 저장소와 전송량이 함께 오른다.
+ * **올릴 때는 `fetch-card-photos.mjs` 의 `SIZE` 와 함께 올린다** (한쪽만 고치면 그 값이
+ * 실제 파일보다 커져 `next/image` 가 없는 해상도를 요청한다).
  */
-const SLOT = 240;
+const SLOT = 480;
 
 /**
  * `priority` 는 **첫 카드만** 받는다 — 이 사진이 `/` 의 LCP 요소다(카드 오른쪽 면을 채우므로
@@ -57,14 +63,14 @@ export function ReadingCardPhoto({
       alt=""
       width={SLOT}
       height={SLOT}
-      sizes="(max-width: 640px) 42vw, 240px"
+      sizes="(max-width: 640px) 100vw, 512px"
       priority={priority}
       /*
-        `card-photo` 가 왼쪽으로 흐려지는 마스크를 건다 (globals.css).
+        `card-photo` 가 크롭 위치를 정하고 어둠은 카드 쪽(`.card-cover::after`)이 얹는다.
         **Tailwind 임의값으로 흩뿌리지 말 것** — 규칙이 한 곳에 있어야 카드가 늘 때 같은
-        모양이 나온다.
+        모양이 나온다. `absolute` 라 사진이 늦게 와도 글의 자리가 밀리지 않는다.
       */
-      className="card-photo pointer-events-none absolute inset-y-0 right-0 h-full w-[42%] object-cover"
+      className="card-photo pointer-events-none absolute inset-0 h-full w-full"
     />
   );
 }

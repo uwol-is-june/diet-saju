@@ -196,25 +196,39 @@ describe("대비비 — 검정 채운 버튼 (AA 4.5:1, TASK-75)", () => {
 });
 
 /**
- * 사진 위 흰 글씨 (TASK-109).
+ * 사진 위 흰 글씨 (TASK-109 · 110).
  *
  * **팔레트 검사가 닿지 않는 자리다** — 배경이 토큰이 아니라 사진이다. 그래서 여기서 재는
  * 것은 색 조합이 아니라 **스크림의 알파**다: 최악의 사진(흰 면) 위에 그 알파의 검정을
  * 얹은 색을 계산해서 그 위의 흰 글씨가 AA 를 넘는지 본다. 검사를 새로 만들지 않으면
  * 아무도 이 자리를 지키지 않는다.
+ *
+ * **글자를 사진 위에 얹는 자리가 둘이다** — 판정 콜아웃(`.verdict-cover`)과 `/` 유형
+ * 카드(`.card-cover`). 두 블록에 **같은 계산을 돌린다**: 한쪽만 검사하면 다른 쪽 알파를
+ * 내리는 변경이 조용히 지나간다.
  */
-describe("대비비 — 판정 콜아웃의 사진 위 흰 글씨 (AA 4.5:1, TASK-109)", () => {
-  /** `.verdict-cover` 의 평평한 어둠. 카드 어디서도 이 값 아래로 내려가지 않는다. */
+describe.each([
+  ["판정 콜아웃", ".verdict-cover", "--verdict-scrim"],
+  ["`/` 유형 카드", ".card-cover", "--card-scrim"],
+])("대비비 — %s 의 사진 위 흰 글씨 (AA 4.5:1)", (_name, coverClass, scrimVar) => {
+  /**
+   * 평평한 어둠. 카드 어디서도 이 값 아래로 내려가지 않는다.
+   *
+   * **가장 작은 값을 쓴다** — `.card-cover:hover` 가 같은 변수를 더 깊은 값으로 다시
+   * 선언한다(어두워지는 쪽). 하한을 재는 검사이므로 밝은 쪽을 골라야 한다.
+   */
   function readScrimAlpha(): number {
-    const match = /--verdict-scrim:\s*([\d.]+)\s*;/.exec(CSS);
-    if (!match) throw new Error("--verdict-scrim 을 찾지 못했습니다 (globals.css 확인)");
-    return Number(match[1]);
+    const found = [...CSS.matchAll(new RegExp(`${scrimVar}:\\s*([\\d.]+)\\s*;`, "g"))].map((m) =>
+      Number(m[1]),
+    );
+    if (found.length === 0) throw new Error(`${scrimVar} 을 찾지 못했습니다 (globals.css 확인)`);
+    return Math.min(...found);
   }
 
-  /** `.verdict-cover::after` 의 배경에 쓰인 색 목록 (그라데이션 정지점까지 전부) */
+  /** `::after` 의 배경에 쓰인 색 목록 (그라데이션 정지점까지 전부) */
   function readScrimLayers(): [number, number, number, number][] {
-    const block = /\.verdict-cover::after\s*\{([\s\S]*?)\}/.exec(CSS);
-    if (!block) throw new Error(".verdict-cover::after 를 찾지 못했습니다");
+    const block = new RegExp(`\\${coverClass}::after\\s*\\{([\\s\\S]*?)\\}`).exec(CSS);
+    if (!block) throw new Error(`${coverClass}::after 를 찾지 못했습니다`);
     return [...block[1]!.matchAll(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+|var\([^)]+\))\s*\)/g)].map(
       (m) =>
         [Number(m[1]), Number(m[2]), Number(m[3]), m[4]!.startsWith("var") ? 1 : Number(m[4])] as [

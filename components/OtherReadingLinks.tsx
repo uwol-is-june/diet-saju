@@ -17,8 +17,8 @@ import {
  * 현재 유형은 빼고 나머지만 낸다. `PUBLIC_READING_TYPES` 를 순회하므로 유형이 늘면 자동이고,
  * 내부 유형(TASK-41)은 여기 나오지 않는다.
  *
- * **남는 유형이 없으면 아무것도 내지 않는다.** 공개 유형이 하나뿐이면 제목과 안내만 남은
- * 빈 상자가 되는데, 그건 "다른 것도 있다" 고 말해 놓고 아무것도 주지 않는 화면이다.
+ * **남는 유형이 없으면 아무것도 내지 않는다.** 공개 유형이 하나뿐이면 제목만 남은 빈 상자가
+ * 되는데, 그건 "다른 것도 있다" 고 말해 놓고 아무것도 주지 않는 화면이다.
  * 유형이 늘면 저절로 다시 나타난다.
  */
 export function OtherReadingLinks({ current }: { current: ReadingType }) {
@@ -27,10 +27,12 @@ export function OtherReadingLinks({ current }: { current: ReadingType }) {
 
   return (
     <section className="rounded-2xl border border-line bg-surface-muted p-5 sm:p-6">
-      <h2 className="mb-1 text-base font-bold">다른 유형으로도 보기</h2>
-      <p className="mb-4 text-sm text-ink-muted">
-        입력한 생년월일은 그대로 남아 있어, 다시 넣지 않아도 됩니다.
-      </p>
+      {/*
+        제목 아래 여백은 **제목이 직접 든다** (TASK-114). 안내 한 줄을 지웠으므로
+        `mb-1`(제목) + `mb-4`(안내) 한 벌이 제목의 `mb-4` 하나로 합쳐진다 — 그냥 지우면
+        제목과 첫 링크가 4px 로 붙는다.
+      */}
+      <h2 className="mb-4 text-base font-bold">다른 유형으로도 보기</h2>
       <ul className="space-y-2">
         {others.map((type) => (
           <li key={type}>

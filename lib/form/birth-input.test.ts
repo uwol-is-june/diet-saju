@@ -652,18 +652,29 @@ describe("유형은 라우트가 정한다", () => {
     expect(home).not.toContain("입력한 정보는 저장하지 않습니다");
   });
 
-  it("카드 글 폭과 사진 폭이 겹치지 않는다 (TASK-99)", () => {
-    // 예전에는 글 62% + 사진 42% = 104% 라 **설계상 겹쳐** 있었고, 설명 줄이 실제로
-    // 사진 위로 4~12px 넘어갔다 (390 · 360 · 1280px 셋 다). 눈으로는 잘 안 잡힌다 —
-    // 사진이 글 쪽으로 흐려지므로 겹친 자리가 흐린 면 위에 얹혀 "조금 붙은" 것처럼 보인다.
-    const width = (code: string) => {
-      const found = code.match(/w-\[(\d+)%\]/);
-      if (!found) throw new Error("w-[NN%] 를 찾지 못했습니다");
-      return Number(found[1]);
-    };
-    const text = width(readCode("app/page.tsx"));
-    const photo = width(readCode("components/ReadingCardPhoto.tsx"));
-    expect(text + photo).toBeLessThanOrEqual(100);
+  it("카드 사진이 전면을 덮고 글에는 폭 제약이 없다 (TASK-99 · 110)", () => {
+    // 예전에는 글 `58%` + 사진 `42%` 로 **두 폭이 서로를 묶고** 있었다 (합이 100% 를
+    // 넘으면 설명 줄이 흐려지는 면 위로 넘어갔다 — 390 · 360 · 1280px 셋 다에서 4~12px).
+    // 사진이 카드를 통째로 덮으면 그 제약이 사라지므로, 되살아나는 것을 여기서 잡는다.
+    const home = readCode("app/page.tsx");
+    const photo = readCode("components/ReadingCardPhoto.tsx");
+    expect(home).not.toMatch(/w-\[\d+%\]/);
+    expect(photo).not.toMatch(/w-\[\d+%\]/);
+    // 전면 깔기의 조건 — 카드 네 변에 붙고 폭·높이를 다 쓴다.
+    expect(photo).toContain("absolute inset-0");
+    expect(photo).toContain("w-full");
+  });
+
+  it("사진 위 글자는 사진용 토큰만 쓴다 (TASK-110)", () => {
+    // 어둠 위에 얹히는 글이므로 대비를 보증하는 것은 스크림의 알파다 (`tokens.test.ts`).
+    // `text-brand-ink`·`text-ink-muted` 처럼 흰 면을 전제한 색이 남아 있으면 그 계산 밖이다.
+    const card = readCode("app/page.tsx").slice(
+      readCode("app/page.tsx").indexOf("<ul aria-label"),
+    );
+    for (const banned of ["text-brand-ink", "text-ink-muted", "text-ink-soft"]) {
+      expect(card, `${banned} 가 카드에 남아 있다`).not.toContain(banned);
+    }
+    expect(card).toContain("text-on-photo");
   });
 
   it("카드 설명의 잘림이 살아 있다 (TASK-64 · 99)", () => {

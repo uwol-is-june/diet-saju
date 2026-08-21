@@ -638,11 +638,15 @@ describe("유형은 라우트가 정한다", () => {
     expect(home).not.toMatch(/type="date"/);
   });
 
-  it("첫 화면의 카드가 링크다", () => {
+  it("유형 카드가 링크다", () => {
     // 버튼 + router.push 로 하면 새 탭·가운데 클릭·크롤러가 다 죽는다.
-    const home = readCode("app/page.tsx");
-    expect(home).toContain("next/link");
-    expect(home).not.toContain("useRouter");
+    // 카드는 **부품 하나**가 그린다 (TASK-115) — `/` 와 결과 화면이 같은 것을 쓴다.
+    const card = readCode("components/ReadingTypeCard.tsx");
+    expect(card).toContain("next/link");
+    expect(card).not.toContain("useRouter");
+    expect(readCode("app/page.tsx")).not.toContain("useRouter");
+    // 부품이 클라이언트가 되면 `/` 에 JS 가 들어온다 (정적 성질이 깨진다).
+    expect(card).not.toContain('"use client"');
   });
 
   it("카드가 이미 말하는 것을 문구로 되풀이하지 않는다 (TASK-34 · 35)", () => {
@@ -656,9 +660,9 @@ describe("유형은 라우트가 정한다", () => {
     // 예전에는 글 `58%` + 사진 `42%` 로 **두 폭이 서로를 묶고** 있었다 (합이 100% 를
     // 넘으면 설명 줄이 흐려지는 면 위로 넘어갔다 — 390 · 360 · 1280px 셋 다에서 4~12px).
     // 사진이 카드를 통째로 덮으면 그 제약이 사라지므로, 되살아나는 것을 여기서 잡는다.
-    const home = readCode("app/page.tsx");
+    const card = readCode("components/ReadingTypeCard.tsx");
     const photo = readCode("components/ReadingCardPhoto.tsx");
-    expect(home).not.toMatch(/w-\[\d+%\]/);
+    expect(card).not.toMatch(/w-\[\d+%\]/);
     expect(photo).not.toMatch(/w-\[\d+%\]/);
     // 전면 깔기의 조건 — 카드 네 변에 붙고 폭·높이를 다 쓴다.
     expect(photo).toContain("absolute inset-0");
@@ -668,9 +672,7 @@ describe("유형은 라우트가 정한다", () => {
   it("사진 위 글자는 사진용 토큰만 쓴다 (TASK-110)", () => {
     // 어둠 위에 얹히는 글이므로 대비를 보증하는 것은 스크림의 알파다 (`tokens.test.ts`).
     // `text-brand-ink`·`text-ink-muted` 처럼 흰 면을 전제한 색이 남아 있으면 그 계산 밖이다.
-    const card = readCode("app/page.tsx").slice(
-      readCode("app/page.tsx").indexOf("<ul aria-label"),
-    );
+    const card = readCode("components/ReadingTypeCard.tsx");
     for (const banned of ["text-brand-ink", "text-ink-muted", "text-ink-soft"]) {
       expect(card, `${banned} 가 카드에 남아 있다`).not.toContain(banned);
     }
@@ -680,8 +682,8 @@ describe("유형은 라우트가 정한다", () => {
   it("카드 설명의 잘림이 살아 있다 (TASK-64 · 99)", () => {
     // `line-clamp` 은 `display: -webkit-box` 로 동작한다 — 같은 요소에 `block` 을
     // 덧대면 잘림이 통째로 죽어 네 번째 줄이 카드 밖으로 나간다.
-    const home = readCode("app/page.tsx");
-    const clamped = home.match(/className="[^"]*line-clamp-3[^"]*"/g) ?? [];
+    const clamped =
+      readCode("components/ReadingTypeCard.tsx").match(/className="[^"]*line-clamp-3[^"]*"/g) ?? [];
     expect(clamped.length).toBeGreaterThan(0);
     for (const className of clamped) expect(className).not.toMatch(/\bblock\b/);
   });
@@ -691,10 +693,17 @@ describe("유형은 라우트가 정한다", () => {
     expect(readCode("app/page.tsx")).toMatch(/<ul[^>]*aria-label=/);
   });
 
-  it("\"저장하지 않는다\" 안내는 입력 화면에 그대로 있다", () => {
-    // `/` 에서 지운 것은 중복이지 약속이 아니다.
+  it("\"저장하지 않는다\" 안내가 화면에 남아 있다", () => {
+    /*
+      **약속을 말하는 자리가 줄었다** (TASK-118). 폼 제출 버튼 아래 한 줄은 같은 화면의
+      `FirstVisitNotice` 와 겹쳐서 지웠고, 남은 것은 그 안내와 **모든 화면의 푸터**다.
+      `FirstVisitNotice` 는 닫으면 사라지므로 **푸터가 마지막 자리**다 — 검사를 통째로
+      지우면 세 자리가 다 사라져도 아무도 모른다.
+    */
     expect(readCode("components/FirstVisitNotice.tsx")).toContain("저장하지 않습니다");
-    expect(readCode("components/SajuForm.tsx")).toContain("저장하지 않고");
+    expect(readCode("components/SiteFooter.tsx")).toContain("저장하지 않으며");
+    // 지운 줄이 되살아나면 같은 화면에서 같은 약속을 두 번 하게 된다.
+    expect(readCode("components/SajuForm.tsx")).not.toContain("저장하지 않고");
   });
 
   it("잘못된 세그먼트는 404 다", () => {
@@ -710,8 +719,9 @@ describe("유형은 라우트가 정한다", () => {
  */
 describe("결과 뒤 동선", () => {
   it("다른 유형 링크가 next/link 로 이동한다", () => {
+    // 링크 자체는 `ReadingTypeCard` 가 들고 있다 (TASK-115). 여기서는 **편법이 없는지**만 본다.
     const links = readCode("components/OtherReadingLinks.tsx");
-    expect(links).toContain("next/link");
+    expect(links).toContain("ReadingTypeCard");
     expect(links).not.toContain("useRouter");
     expect(links).not.toContain("replace");
   });

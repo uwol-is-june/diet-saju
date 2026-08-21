@@ -48,7 +48,15 @@ export function ShareActions({
 
       // 글꼴이 준비되기 전에 그리면 대체 글꼴로 렌더된다.
       await document.fonts.ready;
-      drawShareCard(ctx, buildShareCardModel(chart, readingType), readPalette(document.body));
+
+      const model = buildShareCardModel(chart, readingType);
+      /*
+        판정 사진은 **우리 도메인 자산**이라 캔버스가 오염되지 않는다 — `toBlob` 이 그대로
+        된다 (제3자 URL 을 물면 여기서 보안 오류가 난다). 사진을 못 받으면 그리기를 멈추지
+        않고 **연한 면 꼴로 떨어진다** — 내부 유형이 쓰는 그 꼴이다.
+      */
+      const photo = model.photo ? await loadImage(`/verdict/${model.photo}.jpg`) : null;
+      drawShareCard(ctx, model, readPalette(document.body), photo);
 
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png"),
@@ -117,6 +125,19 @@ export function ShareActions({
       )}
     </section>
   );
+}
+
+/**
+ * 사진 한 장을 기다린다. **실패해도 예외를 올리지 않는다** — 이미지 저장이 통째로 실패하는
+ * 것보다 사진 없는 카드가 낫다 (그 꼴은 내부 유형이 이미 쓰고 있다).
+ */
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
 }
 
 /**

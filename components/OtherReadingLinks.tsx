@@ -1,18 +1,22 @@
-import Link from "next/link";
-import {
-  PUBLIC_READING_TYPES,
-  READING_TYPE_DESCRIPTION,
-  READING_TYPE_LABEL,
-  type ReadingType,
-} from "@/lib/saju/schema";
+import { PUBLIC_READING_TYPES, type ReadingType } from "@/lib/saju/schema";
+import { ReadingTypeCard } from "./ReadingTypeCard";
 
 /**
- * 결과 아래에 두는 "다른 유형도 보기" (TASK-31).
+ * 결과 아래에 두는 "다른 유형으로도 보기" (TASK-31 · 115).
+ *
+ * **`/` 와 같은 부품으로 그린다** (`ReadingTypeCard`). 둘 다 "다음에 무엇을 볼까" 를 고르는
+ * 자리인데 예전에는 여기만 회색 상자 안의 글자 줄이었다 — 같은 일을 하는 자리가 두 모습이면
+ * 규격도 두 벌이 된다.
  *
  * **평범한 라우트 이동이다.** `router.replace` 로 URL 과 화면을 따로 맞추는 편법을 쓰지
  * 않는다 — `BirthInputProvider` 가 입력을 들고 있으므로 옮겨 간 화면은 값이 채워진 채
  * 접혀 있고, 제출 한 번이면 그 유형의 풀이가 나온다. URL 과 보이는 결과가 항상 일치하는
  * 쪽을 택한 것이다.
+ *
+ * **조회수를 여기서 띄우지 않는다** (`counts` 를 넘기지 않는다). `/` 는 서버에서 한 번 읽어
+ * 정적으로 굽지만 여기는 클라이언트 트리라 그 값이 없고, **클라이언트에서 fetch 하면 풀이
+ * 한 번에 요청이 유형 수만큼 더 붙는다.** `priority` 도 주지 않는다 — 스크롤 아래라 LCP 가
+ * 아니다.
  *
  * 현재 유형은 빼고 나머지만 낸다. `PUBLIC_READING_TYPES` 를 순회하므로 유형이 늘면 자동이고,
  * 내부 유형(TASK-41)은 여기 나오지 않는다.
@@ -26,33 +30,13 @@ export function OtherReadingLinks({ current }: { current: ReadingType }) {
   if (others.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-line bg-surface-muted p-5 sm:p-6">
-      {/*
-        제목 아래 여백은 **제목이 직접 든다** (TASK-114). 안내 한 줄을 지웠으므로
-        `mb-1`(제목) + `mb-4`(안내) 한 벌이 제목의 `mb-4` 하나로 합쳐진다 — 그냥 지우면
-        제목과 첫 링크가 4px 로 붙는다.
-      */}
+    <section>
+      {/* 상자를 두르지 않는다 — 카드 넷이 이미 한 덩어리로 읽힌다 (`/` 목록과 같다). */}
       <h2 className="mb-4 text-base font-bold">다른 유형으로도 보기</h2>
-      <ul className="space-y-2">
+      <ul className="flex flex-col gap-3">
         {others.map((type) => (
           <li key={type}>
-            <Link
-              href={`/reading/${type}`}
-              className="group flex items-center gap-3 rounded-xl border border-line-strong bg-surface px-4 py-3 transition hover:border-brand hover:bg-brand-subtle"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">{READING_TYPE_LABEL[type]}</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-ink-muted">
-                  {READING_TYPE_DESCRIPTION[type]}
-                </span>
-              </span>
-              <span
-                aria-hidden
-                className="shrink-0 text-ink-muted transition group-hover:text-brand-ink"
-              >
-                →
-              </span>
-            </Link>
+            <ReadingTypeCard type={type} />
           </li>
         ))}
       </ul>

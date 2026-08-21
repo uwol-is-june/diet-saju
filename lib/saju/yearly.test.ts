@@ -76,7 +76,7 @@ describe("작용 판정 (보완 / 가중 / 중립)", () => {
     const result = analyzeYearly(inputFor(2008));
     expect(result.ganji).toBe("무자");
     expect(result.fills).toContain("수");
-    expect(result.effect).toBe("보완");
+    expect(result.effect).toBe("채워 주는");
   });
 
   it("과다 오행이 들어오는 해는 가중이다", () => {
@@ -85,7 +85,7 @@ describe("작용 판정 (보완 / 가중 / 중립)", () => {
     expect(result.ganji).toBe("병오");
     expect(result.ohaeng).toEqual(["화"]);
     expect(result.piles).toEqual(["화"]);
-    expect(result.effect).toBe("가중");
+    expect(result.effect).toBe("겹치는");
   });
 
   it("어느 쪽도 건드리지 않으면 중립이다", () => {
@@ -94,7 +94,7 @@ describe("작용 판정 (보완 / 가중 / 중립)", () => {
     expect(result.ganji).toBe("기유");
     expect(result.fills).toEqual([]);
     expect(result.piles).toEqual([]);
-    expect(result.effect).toBe("중립");
+    expect(result.effect).toBe("무던한");
   });
 
   it("판정이 항상 fills·piles 개수 비교와 일치한다", () => {
@@ -102,10 +102,10 @@ describe("작용 판정 (보완 / 가중 / 중립)", () => {
       const result = analyzeYearly(inputFor(year));
       const expected =
         result.fills.length > result.piles.length
-          ? "보완"
+          ? "채워 주는"
           : result.piles.length > result.fills.length
-            ? "가중"
-            : "중립";
+            ? "겹치는"
+            : "무던한";
       expect(result.effect, `${year}년`).toBe(expected);
     }
   });
@@ -198,6 +198,6 @@ describe("다른 원국에서도 규칙이 유지된다", () => {
       };
       effects.add(analyzeYearly(inputFor(2026, chart)).effect);
     }
-    expect([...effects].sort()).toEqual(["가중", "보완", "중립"]);
+    expect([...effects].sort()).toEqual(["겹치는", "무던한", "채워 주는"]);
   });
 });

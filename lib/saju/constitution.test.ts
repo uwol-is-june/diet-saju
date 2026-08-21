@@ -26,6 +26,7 @@ import {
   verdictMovementBasis,
   type ConstitutionInput,
   type DietApproach,
+  type GainPattern,
   type ThermalTendency,
 } from "./constitution";
 import {
@@ -306,22 +307,22 @@ describe("한열 (조후) — 계절 먼저, 원국 화·수가 보정", () => {
   }
 
   it.each([
-    ["여름", 4, 1, "열"],
-    ["여름", 1, 4, "중화"],
-    ["여름", 2, 2, "따뜻"],
-    ["겨울", 1, 4, "한"],
-    ["겨울", 4, 1, "중화"],
-    ["겨울", 2, 2, "서늘"],
-    ["봄", 4, 1, "따뜻"],
-    ["봄", 1, 4, "서늘"],
-    ["봄", 2, 2, "중화"],
-    ["가을", 2, 2, "중화"],
+    ["여름", 4, 1, "더운 쪽"],
+    ["여름", 1, 4, "고른 쪽"],
+    ["여름", 2, 2, "따뜻한 쪽"],
+    ["겨울", 1, 4, "찬 쪽"],
+    ["겨울", 4, 1, "고른 쪽"],
+    ["겨울", 2, 2, "서늘한 쪽"],
+    ["봄", 4, 1, "따뜻한 쪽"],
+    ["봄", 1, 4, "서늘한 쪽"],
+    ["봄", 2, 2, "고른 쪽"],
+    ["가을", 2, 2, "고른 쪽"],
   ] as const)("%s · 화 %d 수 %d → %s", (season, hwa, su, expected) => {
     expect(thermalOf(season, hwa, su)).toBe(expected);
   });
 
   it("눈금 점수는 항상 −2~+2 이고 5단계와 짝이 맞는다", () => {
-    const scale: ThermalTendency[] = ["한", "서늘", "중화", "따뜻", "열"];
+    const scale: ThermalTendency[] = ["찬 쪽", "서늘한 쪽", "고른 쪽", "따뜻한 쪽", "더운 쪽"];
     for (const chart of SWEEP) {
       const result = analyzeConstitution(inputFrom(chart));
       expect(result.thermalScore).toBeGreaterThanOrEqual(-2);
@@ -415,7 +416,13 @@ describe("다이어트 접근 순서 (TASK-24)", () => {
   });
 
   it("살이 붙는 패턴이 걸리는 지점으로 옳게 갈린다", () => {
-    const site = { 근육형: "움직임", 정체형: "움직임", 식욕형: "먹는 것", 불규칙형: "먹는 것", 스트레스형: "먹는 것" };
+    const site: Record<GainPattern, string> = {
+      근육형: "움직임",
+      "움직임 부족형": "움직임",
+      식욕형: "먹는 것",
+      불규칙형: "먹는 것",
+      스트레스형: "먹는 것",
+    };
     for (const chart of SWEEP) {
       const result = analyzeConstitution(inputFrom(chart));
       expect(result.gainSite).toBe(site[result.gainPattern]);

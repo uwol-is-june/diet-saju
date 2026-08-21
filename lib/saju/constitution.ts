@@ -37,7 +37,15 @@ export const EXCESS_RATIO = 1.5;
 export const DEFICIENT_RATIO = 0.5;
 
 // ── 2. 한열 (조후) ─────────────────────────────────────────────────────────
-export type ThermalTendency = "한" | "서늘" | "중화" | "따뜻" | "열";
+/**
+ * **라벨은 문장에 그대로 들어가는 말이어야 한다** (TASK-117).
+ *
+ * 예전 값은 `한 · 서늘 · 중화 · 따뜻 · 열` 이었고 다섯 중 둘만 우리말이었다. 특히 `한`(寒)은
+ * 관형사 `한`(一)과 충돌해 **본문이 다른 뜻으로 읽혔다** — `늘 서늘한 기운이 맴도는 한
+ * 체질입니다` 가 "어떤 체질" 이 된다. 프롬프트가 라벨을 그대로 쓰라고 요구하므로
+ * (인용률 99%) **라벨이 곧 사용자가 만나는 용어**다.
+ */
+export type ThermalTendency = "찬 쪽" | "서늘한 쪽" | "고른 쪽" | "따뜻한 쪽" | "더운 쪽";
 
 /**
  * **고전**: 조후는 월령(태어난 계절)의 한난을 먼저 보고, 원국의 화·수 세력으로 보정한다.
@@ -47,13 +55,19 @@ export type ThermalTendency = "한" | "서늘" | "중화" | "따뜻" | "열";
 const SEASON_TILT: Record<Season, number> = { 봄: 0, 여름: 1, 가을: 0, 겨울: -1 };
 
 /** 두 기울기의 합(−2~+2)을 눈금 인덱스(0~4)로 옮긴다. */
-const THERMAL_SCALE: readonly ThermalTendency[] = ["한", "서늘", "중화", "따뜻", "열"];
+const THERMAL_SCALE: readonly ThermalTendency[] = [
+  "찬 쪽",
+  "서늘한 쪽",
+  "고른 쪽",
+  "따뜻한 쪽",
+  "더운 쪽",
+];
 
 // ── 3. 대사 기조 ───────────────────────────────────────────────────────────
 export type MetabolismTendency = "발산형" | "축적형";
 
 // ── 4. 살이 붙는 패턴 ──────────────────────────────────────────────────────
-export type GainPattern = "근육형" | "식욕형" | "불규칙형" | "스트레스형" | "정체형";
+export type GainPattern = "근육형" | "식욕형" | "불규칙형" | "스트레스형" | "움직임 부족형";
 
 /**
  * **우리 관례**: 십신 우세 그룹 → 체중이 늘어나는 상황. 고전 상의(象意)에서 끌어왔지만
@@ -64,7 +78,7 @@ const PATTERN_OF_GROUP: Record<SipsinGroup, GainPattern> = {
   식상: "식욕형",
   재성: "불규칙형",
   관성: "스트레스형",
-  인성: "정체형",
+  인성: "움직임 부족형",
 };
 
 // ── 5. 다이어트 접근 순서 ──────────────────────────────────────────────────
@@ -76,7 +90,7 @@ export type GainSite = "움직임" | "먹는 것";
 /** **우리 관례**: 살이 붙는 패턴 → 걸리는 지점. 근거는 `GAIN_PATTERN_NOTE` 의 각 문구다. */
 const SITE_OF_PATTERN: Record<GainPattern, GainSite> = {
   근육형: "움직임",
-  정체형: "움직임",
+  "움직임 부족형": "움직임",
   식욕형: "먹는 것",
   불규칙형: "먹는 것",
   스트레스형: "먹는 것",
@@ -108,7 +122,7 @@ const APPROACH_TABLE: Record<MetabolismTendency, Record<GainSite, DietApproach>>
  * **시간대와 온도를 이 표에 넣지 말 것** (한열이 정하는 다른 층이다).
  * 두 표 모두 이미 결정론적인 축에서 **1:1 로 파생**되므로 새 동점이 없다.
  */
-export type MovementKind = "유산소 중심" | "근력 중심" | "이완 중심" | "저강도 지속";
+export type MovementKind = "유산소 중심" | "근력 중심" | "풀어 주는 쪽" | "낮은 강도로 오래";
 
 /**
  * 대표 종목과 대안. **새 판정 축이 아니라 이 표의 필드다** — `movementKind` 에서 1:1 로
@@ -138,14 +152,14 @@ export const MOVEMENT_PLAN: Record<
     caution: "먹는 양을 손대는 동안 움직임까지 함께 늘리면 둘 다 오래가지 않는다.",
   },
   "회복 우선": {
-    kind: "이완 중심",
+    kind: "풀어 주는 쪽",
     primary: "천천히 걷기",
     alternatives: ["스트레칭", "가벼운 요가", "호흡 고르기"],
     how: "스트레칭과 천천히 걷기처럼 회복을 방해하지 않는 것부터 넣는다. 잠과 쉬는 시간이 먼저 확보된 뒤에 활동량을 올린다.",
     caution: "지탱하는 힘이 얇을 때 강도를 올리면 회복이 밀려 오히려 멈춘다.",
   },
   "리듬 고정 우선": {
-    kind: "저강도 지속",
+    kind: "낮은 강도로 오래",
     primary: "같은 시각에 걷기",
     alternatives: ["실내 자전거", "집안일로 몸 쓰기", "가벼운 체조"],
     how: "매일 같은 시각에 반복할 수 있을 만큼 낮은 강도로 둔다. 무엇을 하느냐보다 같은 시각에 하느냐가 먼저다.",
@@ -177,7 +191,7 @@ export const MEAL_PLAN: Record<GainPattern, { sequence: string; timing: string }
     sequence: "긴장이 쌓인 날일수록 늦은 시간에 몰아 먹는 흐름을 먼저 끊는다.",
     timing: "저녁을 뒤로 미루지 말고 이른 쪽으로 당긴다. 늦어질수록 양이 늘어난다.",
   },
-  정체형: {
+  "움직임 부족형": {
     sequence: "앉은 자리에서 이어 먹지 않고 끼니를 분명히 끊어 둔다.",
     timing: "먹고 난 뒤 잠깐이라도 일어나 움직인 다음 다시 앉는다.",
   },
@@ -294,8 +308,8 @@ export const FOCUS_GUIDE: Record<Ohaeng, Record<"과다" | "부족", Guide>> = {
  * `short` 는 `diet-food` 콜아웃 라벨과 공유 카드 칩에 **크게 뜨는 이름**이다.
  *
  * - **`groups` 에서 코드로 뽑을 수 없다** (둘을 섞은 값이다). 손으로 적되 `Record` 를 유지한다.
- * - **맛(매운맛·쓴맛)을 여기 올리지 않는다** — 한열이 `열` 인 사람 화면에서
- *   `THERMAL_GUIDE.열` 과 정면으로 부딪힌다. **재료는 오행, 조리·온도는 한열.**
+ * - **맛(매운맛·쓴맛)을 여기 올리지 않는다** — 몸의 온도가 `더운 쪽` 인 사람 화면에서
+ *   `THERMAL_GUIDE["더운 쪽"]` 과 정면으로 부딪힌다. **재료는 오행, 조리·온도는 한열.**
  */
 export const ELEMENT_FOOD: Record<
   Ohaeng,
@@ -338,27 +352,27 @@ export const FOOD_HOW: Record<"과다" | "부족", string> = {
 };
 
 export const THERMAL_GUIDE: Record<ThermalTendency, Guide> = {
-  한: {
+  "찬 쪽": {
     tendency: "몸이 차가운 쪽으로 기운 편",
     diet: "익혀서 따뜻하게 먹고 찬 음료를 줄이기",
     exercise: "실내에서 몸을 데운 뒤 움직이고 새벽 야외 운동은 피하기",
   },
-  서늘: {
+  "서늘한 쪽": {
     tendency: "약간 서늘한 쪽으로 기운 편",
     diet: "하루 첫 끼를 따뜻한 것으로 시작하기",
     exercise: "준비운동을 충분히 하고 들어가기",
   },
-  중화: {
-    tendency: "한열이 크게 치우치지 않은 편",
+  "고른 쪽": {
+    tendency: "몸의 온도가 크게 치우치지 않은 편",
     diet: "음식 온도를 가리기보다 양과 시간에 집중하기",
     exercise: "계절에 맞춰 강도를 조절하기",
   },
-  따뜻: {
+  "따뜻한 쪽": {
     tendency: "약간 더운 쪽으로 기운 편",
     diet: "기름지고 자극적인 음식을 줄이기",
     exercise: "한낮 고강도는 피하기",
   },
-  열: {
+  "더운 쪽": {
     tendency: "열기가 위로 뜨기 쉬운 편",
     diet: "찬물보다 미지근한 물을 자주, 맵고 뜨거운 음식과 술을 줄이기",
     exercise: "이른 아침이나 해가 진 뒤의 서늘한 시간대에 하기",
@@ -387,7 +401,7 @@ export const GAIN_LABEL: Record<GainPattern, string> = {
   식욕형: "먹는 자리에서 붙는 성향",
   불규칙형: "때를 놓칠 때 붙는 성향",
   스트레스형: "긴장이 쌓일 때 붙는 성향",
-  정체형: "덜 움직일 때 붙는 성향",
+  "움직임 부족형": "덜 움직일 때 붙는 성향",
 };
 
 export const GAIN_PATTERN_NOTE: Record<GainPattern, string> = {
@@ -399,7 +413,7 @@ export const GAIN_PATTERN_NOTE: Record<GainPattern, string> = {
     "바깥 일정에 끌려 식사 시간이 들쭉날쭉해지기 쉬운 쪽이다. 메뉴보다 시간을 먼저 고정하는 것이 낫다.",
   스트레스형:
     "긴장을 오래 붙들고 있는 쪽이다. 압박이 쌓인 날 늦은 시간에 몰아 먹는 흐름을 먼저 끊는 것이 좋다.",
-  정체형:
+  "움직임 부족형":
     "받아들이고 쌓는 힘이 강한 쪽이다. 활동량이 줄면 바로 붙으므로 앉아 있는 시간을 끊어 주는 것이 먼저다.",
 };
 
@@ -463,7 +477,7 @@ export const VERDICT_BASIS_GAIN: Record<GainPattern, string> = {
   식욕형: "참기보다 먹는 순서와 그릇 크기를 바꾸는 쪽이 낫습니다",
   불규칙형: "무엇을 먹을지보다 언제 먹을지를 먼저 정하는 쪽이 낫습니다",
   스트레스형: "늦은 밤에 몰아 먹는 흐름을 먼저 끊는 쪽이 낫습니다",
-  정체형: "앉아 있는 시간을 끊어 주는 것이 먼저입니다",
+  "움직임 부족형": "앉아 있는 시간을 끊어 주는 것이 먼저입니다",
 };
 
 export const VERDICT_BASIS_APPROACH: Record<DietApproach, string> = {
@@ -498,11 +512,11 @@ export const VERDICT_BASIS_MOVEMENT: Record<DietApproach, string> = {
  * **온도·조리는 여기 없다** — 이 표는 때만 정한다.
  */
 export const VERDICT_TIME_SLOT: Record<ThermalTendency, string> = {
-  한: "실내에서",
-  서늘: "몸을 푼 뒤에",
-  중화: "계절에 맞는 때에",
-  따뜻: "한낮을 피해",
-  열: "해가 진 뒤에",
+  "찬 쪽": "실내에서",
+  "서늘한 쪽": "몸을 푼 뒤에",
+  "고른 쪽": "계절에 맞는 때에",
+  "따뜻한 쪽": "한낮을 피해",
+  "더운 쪽": "해가 진 뒤에",
 };
 
 /**

@@ -173,7 +173,7 @@ export function ResultView({
         <CorrectionNote correction={chart.timeCorrection} birthplace={birthplace} />
       </FoldCard>
 
-      <FoldCard title="기운의 관계" note={`상생·상극 · 한열 ${chart.constitution.thermal}`}>
+      <FoldCard title="기운의 관계" note={`상생·상극 · 몸의 온도 ${chart.constitution.thermal}`}>
         <p className="mb-4 text-sm text-ink-muted">
           오행은 서로 돕고(상생) 누르며(상극) 균형을 이룹니다.
         </p>
@@ -181,7 +181,7 @@ export function ResultView({
 
         <div className="mt-5 border-t border-line pt-4">
           <h3 className="mb-3 text-sm font-bold">
-            한열(조후) — <span className="text-brand-ink">{chart.constitution.thermal}</span>
+            몸의 온도 — <span className="text-brand-ink">{chart.constitution.thermal}</span>
           </h3>
           <ThermalScale constitution={chart.constitution} />
         </div>

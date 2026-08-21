@@ -238,7 +238,7 @@ describe("표현 규칙 — 실행 방법 유형 (TASK-40)", () => {
     // 층을 섞으면 같은 사주에 다른 실행 조건이 나온다.
     const movement = sectionGuide("어떤 운동 종류가 맞을까");
     expect(movement).toContain("아래 \"실행\" 절이 맡는다");
-    expect(sectionGuide("언제 어떻게 실행할까")).toContain('"한열" 항목만 근거로');
+    expect(sectionGuide("언제 어떻게 실행할까")).toContain('"몸의 온도" 항목만 근거로');
   });
 
   it("한의학 용어(성미)를 두 곳에서 막는다", () => {
@@ -661,7 +661,7 @@ describe("식단 유형 (TASK-63)", () => {
   });
 
   it("층을 섞지 않는다 — 조리와 온도는 한열 절이 맡는다", () => {
-    expect(sectionGuide("어떻게 차려 먹을까")).toContain('"한열" 항목만 근거로');
+    expect(sectionGuide("어떻게 차려 먹을까")).toContain('"몸의 온도" 항목만 근거로');
     // 끼니 시각은 `diet-method` 몫이다. 여기서 정해 주면 두 유형이 같은 말을 한다.
     expect(prompt).toContain("끼니 시각과 먹는 순서를 정해 주지 않습니다");
     expect(sectionGuide("어떻게 차려 먹을까")).toContain("끼니 시각을 정해 주지 않는다");
@@ -735,7 +735,7 @@ describe("운동 유형 (TASK-48)", () => {
 
   it("층을 섞지 않는다 — 시간대는 한열 절이 맡는다", () => {
     expect(sectionGuide("어떤 강도로 할까")).toContain('아래 "언제" 절이 맡는다');
-    expect(sectionGuide("언제 하면 좋을까")).toContain('"한열" 항목만 근거로');
+    expect(sectionGuide("언제 하면 좋을까")).toContain('"몸의 온도" 항목만 근거로');
   });
 
   it("모르는 것(지병·부상)을 밝히라고 요구한다", () => {

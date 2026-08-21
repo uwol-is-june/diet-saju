@@ -4,7 +4,7 @@
  *
  * - **고전**: 세운 간지((연도−4) mod 60), 세운 천간·지지의 십신, 십신 5분류, 세운 오행을
  *   원국의 강약과 견주어 보는 방식 자체.
- * - **우리 관례**: 작용 3단계(보완·가중·중립), 동점 처리, 십신 그룹 → "그 해의 주제" 대응표.
+ * - **우리 관례**: 작용 3단계(채워 주는·겹치는·무던한), 동점 처리, 십신 그룹 → "그 해의 주제" 대응표.
  *
  * **단정적 예언을 하지 않는다.** 여기 문구는 사용자에게 인용되고 `yearly.test.ts` 가 사건
  * 예고·단정 어휘를 훑어 막는다 — **유형이 없어져도 이 검사를 지우지 않는다.**
@@ -21,14 +21,14 @@ import {
 import type { SeunYear } from "./analysis";
 
 /** 세운 오행이 원국에 주는 작용 — **우리 관례**(3단계 표현) */
-export type YearlyEffect = "보완" | "가중" | "중립";
+export type YearlyEffect = "채워 주는" | "겹치는" | "무던한";
 
 export const EFFECT_NOTE: Record<YearlyEffect, string> = {
-  보완:
+  "채워 주는":
     "올해 들어오는 기운이 원국에서 얇았던 쪽을 채워 준다. 미뤄 둔 일을 벌이기보다 부족했던 자리를 메우는 데 쓰면 남는 해다.",
-  가중:
+  "겹치는":
     "올해 들어오는 기운이 이미 넘치던 쪽에 더해진다. 하던 방식을 더 세게 밀기보다 덜어내고 속도를 고르는 편이 낫다.",
-  중립:
+  "무던한":
     "올해 기운이 원국의 넘치는 쪽도 얇은 쪽도 크게 건드리지 않는다. 외부 변수보다 스스로 정한 계획이 결과를 가른다.",
 };
 
@@ -36,7 +36,7 @@ export const EFFECT_NOTE: Record<YearlyEffect, string> = {
  * **우리 관례**: 십신 우세 → 그 해의 주제. 고전 상의(象意)에서 끌어왔지만 축 자체는 이
  * 서비스가 만든 것이다.
  *
- * **이 축은 프롬프트로 나가지 않는다.** 작용(보완·가중)과 달리 주제 라벨은 **생활 영역
+ * **이 축은 프롬프트로 나가지 않는다.** 작용(채워 주는·겹치는)과 달리 주제 라벨은 **생활 영역
  * 어휘**라 몸 이야기에 얹으면 겉돌고, 옮기려면 근거 없는 대응표가 필요하며 "압박이 늘어
  * 몸이 상한다" 류는 면책 고지가 막는 주장에 닿는다.
  *
@@ -105,9 +105,9 @@ export function analyzeYearly(input: YearlyInput): YearlyAnalysis {
   const fills = elements.filter((element) => constitution.deficient.includes(element));
   const piles = elements.filter((element) => constitution.excess.includes(element));
 
-  // 우리 관례: 채우는 개수와 더하는 개수를 비교한다. 같으면(둘 다 0 포함) 중립.
+  // 우리 관례: 채우는 개수와 더하는 개수를 비교한다. 같으면(둘 다 0 포함) 무던한 쪽.
   const effect: YearlyEffect =
-    fills.length > piles.length ? "보완" : piles.length > fills.length ? "가중" : "중립";
+    fills.length > piles.length ? "채워 주는" : piles.length > fills.length ? "겹치는" : "무던한";
 
   const theme = sipsinGroup(seun.sipsin);
 

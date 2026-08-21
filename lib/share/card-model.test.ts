@@ -1,19 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { ELEMENT_FOOD } from "../saju/constitution";
+import { verdictOf } from "../reading/verdict";
 import { calculateSajuChart } from "../saju/pillars";
-import {
-  READING_TYPES,
-  READING_TYPE_LABEL,
-  sajuInputSchema,
-  type SajuInput,
-} from "../saju/schema";
+import { READING_TYPES, sajuInputSchema, type SajuInput } from "../saju/schema";
 import { buildShareCardModel } from "./card-model";
 
 /**
- * 공유 카드 모델 검증 (TASK-10).
+ * 공유 카드 모델 검증 (TASK-10 · 116).
  *
  * 가장 중요한 검사는 **생년월일이 카드에 실리지 않는다** 는 것이다. 이 이미지는 사용자가
  * 공개된 곳에 올리려고 만드는 것이라, 우리가 날짜를 찍어 주면 그대로 퍼진다.
+ *
+ * **기준은 날짜 문자열이 아니라 역산 가능성이다** (TASK-116). 예전 검사는 `1990`·`14:30` 만
+ * 봤는데, 그동안 카드는 사주팔자 네 기둥을 통째로 싣고 있었다 — 연·월·일·시주가 정해지면
+ * 60년 주기 안에서 생년월일시가 거의 유일하게 특정된다. 그래서 **간지 검사가 여기 있다.**
  */
 
 const FIXED_NOW = { now: new Date("2026-08-13T00:00:00Z") };
@@ -32,7 +31,7 @@ const NO_TIME = makeInput({ birthDate: "1990-05-17", gender: "female" });
 const chart = calculateSajuChart(WITH_TIME, FIXED_NOW);
 const chartNoTime = calculateSajuChart(NO_TIME, FIXED_NOW);
 
-describe("카드에 생년월일을 넣지 않는다", () => {
+describe("카드에서 생년월일을 되짚을 수 없다", () => {
   it.each(READING_TYPES)("%s 모델에 날짜 문자열이 없다", (type) => {
     const serialized = JSON.stringify(buildShareCardModel(chart, type));
     expect(serialized).not.toContain(chart.solarDate);
@@ -41,106 +40,82 @@ describe("카드에 생년월일을 넣지 않는다", () => {
     expect(serialized).not.toContain("14:30");
   });
 
+  /**
+   * **간지를 한 자도 싣지 않는다.** 네 기둥이 있으면 날짜가 특정되고, 대운 간지는 거기에
+   * 나이 구간까지 좁힌다. 시각 미상 원국까지 함께 보는 이유는 그쪽이 기둥 셋이라
+   * "덜 위험해 보이는" 경로이기 때문이다 — 셋만으로도 후보가 크게 줄어든다.
+   */
+  it.each(READING_TYPES)("%s 모델에 간지가 없다", (type) => {
+    for (const source of [chart, chartNoTime]) {
+      const serialized = JSON.stringify(buildShareCardModel(source, type));
+      const ganji = [
+        source.year.ganji,
+        source.month.ganji,
+        source.day.ganji,
+        source.hour?.ganji,
+        source.decade?.current.ganji,
+        source.seun[0]?.ganji,
+      ].filter((value): value is string => Boolean(value));
+
+      for (const value of ganji) {
+        expect(serialized, `${value} 가 카드에 실렸다`).not.toContain(value);
+      }
+    }
+  });
+
   it("풀이 본문도 넣지 않는다", () => {
-    // 카드에 들어가는 것은 원국과 판정뿐이다. 모델이 받는 인자에 풀이 자체가 없다.
+    // 카드에 들어가는 것은 판정 한 줄과 오행 막대뿐이다. 모델이 받는 인자에 풀이가 없다.
     const model = buildShareCardModel(chart, "diet");
     expect(Object.keys(model).sort()).toEqual([
       "badges",
-      "chips",
+      "basis",
+      "eyebrow",
       "footer",
       "headline",
-      "notes",
-      "pillars",
-      "typeLabel",
+      "label",
+      "photo",
     ]);
   });
 
-  it("근거 줄에 나이를 넣지 않는다", () => {
+  it("나이를 넣지 않는다", () => {
     // 대운 구간을 나이로 적으면 출생 연도가 좁혀진다.
     for (const type of READING_TYPES) {
-      for (const note of buildShareCardModel(chart, type).notes) {
-        expect(note, note).not.toMatch(/\d+\s*세/);
-        expect(note, note).not.toMatch(/\d{4}/);
+      const model = buildShareCardModel(chart, type);
+      for (const text of [model.eyebrow, model.label, model.basis, model.headline]) {
+        expect(text, text).not.toMatch(/\d+\s*세/);
+        expect(text, text).not.toMatch(/\d{4}/);
       }
     }
   });
 });
 
-describe("유형을 늘려도 카드가 깨지지 않는다", () => {
-  it.each(READING_TYPES)("%s 도 칩 2개·근거 줄·제목을 갖춘다", (type) => {
-    // Record 로 강제하지 않으면 새 유형이 다른 유형의 칩을 달고 나간다 (실제로 그럴 뻔했다).
+describe("카드는 화면 콜아웃과 같은 값을 쓴다", () => {
+  /**
+   * 표가 두 벌이 되면 **저장된 이미지가 방금 본 화면과 다른 말을 한다.** 카드가 값을
+   * 스스로 고르지 않고 `lib/reading/verdict.ts` 를 부르는지 여기서 본다.
+   */
+  it.each(READING_TYPES)("%s 의 눈썹·라벨·근거·사진이 콜아웃과 같다", (type) => {
     const model = buildShareCardModel(chart, type);
-    expect(model.chips.length).toBe(2);
-    expect(model.chips.every((chip) => chip.length > 0)).toBe(true);
-    expect(model.notes.length).toBeGreaterThanOrEqual(2);
-    expect(model.typeLabel).toBe(READING_TYPE_LABEL[type]);
+    const callout = verdictOf(chart, type);
+    expect(callout).not.toBeNull();
+    expect(model.eyebrow).toBe(callout!.eyebrow);
+    expect(model.label).toBe(callout!.label);
+    expect(model.basis).toBe(callout!.basis);
+    expect(model.photo).toBe(callout!.photo);
   });
 
-  it("유형마다 칩이 서로 다르다", () => {
+  it("유형마다 라벨이 서로 다르다", () => {
     // 전부 같으면 분기가 죽은 것이다.
-    const joined = READING_TYPES.map((type) =>
-      buildShareCardModel(chart, type).chips.join("|"),
-    );
-    expect(new Set(joined).size).toBe(READING_TYPES.length);
-  });
-});
-
-describe("근거 줄", () => {
-  it("신강·신약 3기준을 ○× 로 밝힌다", () => {
-    const [first] = buildShareCardModel(chart, "diet").notes;
-    expect(first).toContain(chart.strength.verdict);
-    expect(first).toContain(chart.strength.deukryeong ? "득령 ○" : "득령 ×");
-    expect(first).toContain(chart.strength.deukji ? "득지 ○" : "득지 ×");
-    expect(first).toContain(chart.strength.deukse ? "득세 ○" : "득세 ×");
+    const labels = READING_TYPES.map((type) => buildShareCardModel(chart, type).label);
+    expect(new Set(labels).size).toBe(READING_TYPES.length);
   });
 
-  it("대운이 있으면 현재 대운을 간지·십신으로 쓴다", () => {
-    const notes = buildShareCardModel(chart, "diet").notes;
-    const daeunNote = notes.find((note) => note.startsWith("현재 대운"));
-    expect(daeunNote).toBeDefined();
-    const currentGanji = chart.seun[0]!.daeunGanji;
-    expect(daeunNote).toContain(currentGanji!);
-  });
-
-  it("성별 미지정이면 대운 줄을 빼고 나머지만 쓴다", () => {
-    // 대운은 순행·역행을 정할 수 없어 null 이다. 빈 줄을 남기지 않는다.
-    const noGender = calculateSajuChart(
-      makeInput({ birthDate: "1990-05-17", birthTime: "14:30" }),
-      FIXED_NOW,
-    );
-    expect(noGender.daeun).toBeNull();
-    const notes = buildShareCardModel(noGender, "diet").notes;
-    expect(notes.some((note) => note.startsWith("현재 대운"))).toBe(false);
-    expect(notes.length).toBe(2);
-    expect(notes.every((note) => note.length > 0)).toBe(true);
-  });
-
-  it("diet 는 접근 순서와 대사 기조를, general 은 계절 기세를 덧붙인다", () => {
-    // 접근 순서는 대사 기조에서 파생된 결론이라 근거와 함께 한 줄에 둔다 (TASK-24).
-    const tail = buildShareCardModel(chart, "diet").notes.at(-1)!;
-    expect(tail).toContain(chart.constitution.dietApproach);
-    expect(tail).toContain(`대사 기조 ${chart.constitution.metabolism}`);
-    expect(buildShareCardModel(chart, "general").notes.at(-1)).toContain(chart.ohaeng.season);
-  });
-});
-
-describe("4기둥", () => {
-  it("연·월·일·시 순서로 네 칸이다", () => {
-    const model = buildShareCardModel(chart, "diet");
-    expect(model.pillars.map((p) => p.label)).toEqual(["연주", "월주", "일주", "시주"]);
-    expect(model.pillars.map((p) => p.ganji)).toEqual([
-      chart.year.ganji,
-      chart.month.ganji,
-      chart.day.ganji,
-      chart.hour!.ganji,
-    ]);
-  });
-
-  it("시각 미상이면 시주를 임의로 채우지 않는다", () => {
-    const model = buildShareCardModel(chartNoTime, "diet");
-    const hour = model.pillars[3]!;
-    expect(hour.ganji).toBe("미상");
-    expect(hour.sipsin).toBe("");
+  it("공개 유형에는 사진이 있고 내부 유형에는 없다", () => {
+    // 사진이 없는 쪽은 연한 면으로 그린다 (`draw-card.ts`). 갈리는 지점은 이 값 하나뿐이다.
+    for (const type of ["diet", "gain-cause", "diet-method", "diet-food", "exercise"] as const) {
+      expect(buildShareCardModel(chart, type).photo, type).toBeTruthy();
+    }
+    expect(buildShareCardModel(chart, "general").photo).toBeNull();
   });
 });
 
@@ -161,67 +136,6 @@ describe("오행 배지", () => {
       expect(badge.weight).toBeCloseTo(chart.ohaeng.score[key] / maxScore, 6);
       expect(badge.weight).toBeGreaterThanOrEqual(0);
       expect(badge.weight).toBeLessThanOrEqual(1);
-    }
-  });
-});
-
-describe("유형별 판정 칩", () => {
-  it("diet 는 한열과 살이 붙는 패턴을 쓴다", () => {
-    const model = buildShareCardModel(chart, "diet");
-    expect(model.typeLabel).toBe("종합 체질 풀이");
-    expect(model.chips).toEqual([
-      `한열 ${chart.constitution.thermal}`,
-      chart.constitution.gainPattern,
-    ]);
-  });
-
-  it("general 은 최강 오행과 신강신약을 쓴다", () => {
-    const model = buildShareCardModel(chart, "general");
-    expect(model.typeLabel).toBe("종합 사주 풀이");
-    expect(model.chips).toEqual([
-      `${chart.ohaeng.strongest} 기운이 강함`,
-      chart.strength.verdict,
-    ]);
-  });
-
-  /**
-   * 식단 칩은 **재료 이름**이다 (TASK-102). 오행 이름만 적으면(`금 곁들이기`) 카드를 받아
-   * 든 사람이 읽을 수 없다 — 공유 카드는 사주를 모르는 사람에게 가는 물건이다.
-   * 화면 콜아웃과 **같은 값**(`ELEMENT_FOOD.short`)에서 나와야 둘이 다른 말을 하지 않는다.
-   */
-  it("diet-food 는 오행 이름이 아니라 재료 이름을 쓴다", () => {
-    const model = buildShareCardModel(chart, "diet-food");
-    const element = chart.constitution.deficient[0];
-    const expected = element ? `${ELEMENT_FOOD[element].short} 곁들이기` : "오행이 고름";
-    expect(model.chips[0]).toBe(expected);
-    if (element) {
-      expect(model.chips[0]).not.toBe(`${element} 곁들이기`);
-      expect(model.chips[0]).toContain(ELEMENT_FOOD[element].short);
-    }
-  });
-
-  /**
-   * 칩은 **줄바꿈이 없다** — `draw-card.ts` 가 두 칩을 한 줄에 이어 그린다. 넘치면 카드
-   * 밖으로 나가고 지금 코드에 넘침 처리가 없다. 쓸 수 있는 폭은 `1080 − PAD*2 − 20 = 916`,
-   * 칩당 좌우 여백이 72 이므로 글자에 남는 것이 772px 이고, 두 번째 칩(`한열 ○○`)이
-   * 40px × 5자쯤이라 첫 칩 글자는 **약 570px(한글 14자)** 까지다.
-   */
-  it("가장 긴 식단 칩도 한 줄에 들어갈 길이다", () => {
-    const longest = Math.max(
-      ...Object.values(ELEMENT_FOOD).map((food) => `${food.short} 곁들이기`.length),
-    );
-    expect(longest).toBeLessThanOrEqual(14);
-  });
-
-  /**
-   * 유형이 늘거나 줄면 여기가 비는 것을 막는다. `CHIPS` 가 `Record` 라 컴파일도 막지만,
-   * 칩이 **두 개 고정**이라는 규약은 타입이 잡아 주지 않는다.
-   */
-  it("모든 유형이 칩 두 개를 채운다", () => {
-    for (const type of READING_TYPES) {
-      const model = buildShareCardModel(chart, type);
-      expect(model.chips, `${type} 칩`).toHaveLength(2);
-      expect(model.chips.every((chip) => chip.length > 0), `${type} 빈 칩`).toBe(true);
     }
   });
 });

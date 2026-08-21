@@ -541,10 +541,14 @@ export function SajuForm({ readingType }: { readingType: ReadingType }) {
             {missing}
           </p>
         )}
+        {/*
+          "저장하지 않습니다" 안내가 여기 있었다 (TASK-118). 같은 약속을 같은 화면에서 두 번
+          하고 있었고 — 위쪽 `FirstVisitNotice` 와 — 사이트 전체로는 푸터까지 세 번이었다.
+          **`FirstVisitNotice` 는 닫으면 사라지므로 두 번째 방문자에게 남는 것은 푸터 한
+          줄뿐이다.** 그 줄이 이제 이 약속을 화면에서 말하는 유일한 자리다.
 
-        <p className="text-center text-xs text-ink-muted">
-          입력한 정보는 저장하지 않고, 풀이 생성에만 사용됩니다.
-        </p>
+          여백은 `<form>` 의 `space-y-5` 가 만들므로 지우면서 따로 잡을 것이 없다.
+        */}
       </form>
 
       {/* 자동 스크롤이 겨냥하는 지점. scroll-mt 만큼 위를 띄워 카드가 화면에 붙지 않게 한다. */}

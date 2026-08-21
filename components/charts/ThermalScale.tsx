@@ -1,10 +1,10 @@
 import type { SajuChart } from "@/lib/saju/schema";
 
-/** 한열 5단계. `lib/saju/constitution.ts` 의 `THERMAL_SCALE` 과 같은 순서다. */
-const STEPS = ["한", "서늘", "중화", "따뜻", "열"] as const;
+/** 몸의 온도 5단계(코드에서는 한열·조후). `lib/saju/constitution.ts` 의 `THERMAL_SCALE` 과 같은 순서다. */
+const STEPS = ["찬 쪽", "서늘한 쪽", "고른 쪽", "따뜻한 쪽", "더운 쪽"] as const;
 
 /**
- * 한열(조후) 눈금 (TASK-25).
+ * 몸의 온도 눈금 (TASK-25). **화면에는 `한열`·`조후` 를 쓰지 않는다** (TASK-117).
  *
  * `thermalScore` 는 −2~+2 이고 5단계와 1:1로 짝이 맞는다(`constitution.ts`). 그래서
  * 눈금 위 위치가 곧 판정이다 — **점수를 숫자로 찍지 않아도** 어디에 있는지 보인다.
@@ -55,7 +55,7 @@ export function ThermalScale({ constitution }: { constitution: SajuChart["consti
       </div>
 
       <p className="mt-2 text-xs text-ink-muted">
-        태어난 계절의 한난을 먼저 보고 원국의 화·수 세력으로 보정한 조후 판정입니다.
+        태어난 계절의 춥고 더움을 먼저 보고 원국의 화·수 세력으로 보정한 판정입니다.
       </p>
     </div>
   );

@@ -56,12 +56,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  *
  * | 축 | 커버 |
  * | --- | --- |
- * | `gainPattern`   | 근육형 · 식욕형 · 불규칙형 · 스트레스형 · 정체형 (5/5) |
+ * | `gainPattern`   | 근육형 · 식욕형 · 불규칙형 · 스트레스형 · 움직임 부족형 (5/5) |
  * | `metabolism`    | 발산형 3 · 축적형 3 (2/2) |
- * | `thermal`       | 한 · 서늘 · 중화 · 따뜻 · 열 (5/5) |
+ * | `thermal`       | 찬 쪽 · 서늘한 쪽 · 고른 쪽 · 따뜻한 쪽 · 더운 쪽 (5/5) |
  * | `dietApproach`  | 활동량 · 식사량 조절 · 리듬 고정 · 회복 (4/4) |
- * | `movementKind`  | 유산소 · 근력 · 이완 · 저강도 (4/4) |
- * | `yearly.effect` | 보완 · 가중 · 중립 (3/3) |
+ * | `movementKind`  | 유산소 · 근력 · 풀어 주는 · 낮은 강도 (4/4) |
+ * | `yearly.effect` | 채워 주는 · 겹치는 · 무던한 (3/3) |
  * | 특수 경로       | `even`(과다·부족 없음) · 시각 미상 + 성별 미지정(대운 없음) |
  *
  * `even` 은 흔치 않아(전수 표본에서 약 2%) 무작위로는 안 걸리므로 **따로 넣었다.**
@@ -77,34 +77,34 @@ const SAMPLES = [
   {
     id: "S1-불규칙-발산-한",
     input: { birthDate: "1972-01-14", birthTime: "03:20", gender: "female" },
-    expect: { gainPattern: "불규칙형", metabolism: "발산형", thermal: "한" },
+    expect: { gainPattern: "불규칙형", metabolism: "발산형", thermal: "찬 쪽" },
   },
   {
     id: "S2-정체-발산-서늘",
     input: { birthDate: "1972-02-14", birthTime: "03:20", gender: "male" },
-    expect: { gainPattern: "정체형", metabolism: "발산형", thermal: "서늘" },
+    expect: { gainPattern: "움직임 부족형", metabolism: "발산형", thermal: "서늘한 쪽" },
   },
   {
     id: "S3-식욕-축적-열",
     input: { birthDate: "1972-05-14", birthTime: "03:20", gender: "female" },
-    expect: { gainPattern: "식욕형", metabolism: "축적형", thermal: "열" },
+    expect: { gainPattern: "식욕형", metabolism: "축적형", thermal: "더운 쪽" },
   },
   {
     id: "S4-근육-축적-중화",
     input: { birthDate: "1972-08-14", birthTime: "13:10", gender: "male" },
-    expect: { gainPattern: "근육형", metabolism: "축적형", thermal: "중화" },
+    expect: { gainPattern: "근육형", metabolism: "축적형", thermal: "고른 쪽" },
   },
   {
     // 과다·부족이 하나도 없는 원국 — 관리 축이 비어 프롬프트가 다른 가지를 탄다
     id: "S5-스트레스-발산-따뜻-even",
     input: { birthDate: "1974-09-14", birthTime: "08:45", gender: "female", name: "서연" },
-    expect: { gainPattern: "스트레스형", metabolism: "발산형", thermal: "따뜻", even: true },
+    expect: { gainPattern: "스트레스형", metabolism: "발산형", thermal: "따뜻한 쪽", even: true },
   },
   {
     // 시각 미상 + 성별 미지정 → 시주 없음 · 대운 없음
     id: "S6-시각미상-대운없음",
     input: { birthDate: "1990-05-17", gender: "unspecified" },
-    expect: { gainPattern: "불규칙형", metabolism: "축적형", thermal: "열", timeUnknown: true },
+    expect: { gainPattern: "불규칙형", metabolism: "축적형", thermal: "더운 쪽", timeUnknown: true },
   },
 ];
 
@@ -242,11 +242,12 @@ const BANNED = [
 const BANNED_PATTERNS = [
   { label: "효과", re: /(?<!역)효과/ },
   /*
-    `장부` 는 **`긴장부터` 에 걸린다** (TASK-113 재측정에서 1건). `견과`/`비견과 겁재` 와
-    같은 계열이라 부분 문자열로 두면 안 된다. 장부 배속은 내보내면 안 되는 것이라
-    지표를 지우지 않고 **오탐만 뺀다.**
+    `장부` 는 **`긴장부터`·`헬스장부터` 에 걸린다** (TASK-113·117 재측정에서 각 1건).
+    앞 글자를 하나씩 빼는 방식은 계속 새는 것을 봤으므로 **낱말 첫머리에서만 센다** —
+    `장부 이름` 은 잡고 `~장부터` 류는 전부 빠진다. 장부 배속은 내보내면 안 되는 것이라
+    지표를 지우지 않고 오탐만 뺀다 (`견과`/`비견과 겁재` 와 같은 계열).
   */
-  { label: "장부", re: /(?<![긴자])장부/ },
+  { label: "장부", re: /(?<![가-힣])장부/ },
 ];
 
 /**
@@ -281,11 +282,11 @@ const NUMERIC = [
  * 그래서 `THERMAL_GUIDE` 의 `tendency` 문구가 쓰는 말로 받는다.
  */
 const THERMAL_WORDS = {
-  한: ["차가운", "찬 쪽"],
-  서늘: ["서늘"],
-  중화: ["중화", "치우치지"],
-  따뜻: ["따뜻"],
-  열: ["열기", "더운"],
+  "찬 쪽": ["찬 쪽", "차가운"],
+  "서늘한 쪽": ["서늘"],
+  "고른 쪽": ["고른 쪽", "치우치지"],
+  "따뜻한 쪽": ["따뜻"],
+  "더운 쪽": ["더운", "열기"],
 };
 
 /** ⑤ 유형마다 본문이 반드시 인용해야 하는 판정 축. `chart` 이벤트 값에서 만든다. */

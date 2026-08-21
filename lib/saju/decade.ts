@@ -4,7 +4,7 @@
  *
  * - **고전**: 대운 간지(월주에서 순행/역행), 대운 천간·지지의 십신, 대운 오행을 원국의
  *   강약과 견주어 보는 방식 자체.
- * - **우리 관례는 하나뿐이다**: 대운을 세운과 같은 3단계(보완·가중·중립)로 본다.
+ * - **우리 관례는 하나뿐이다**: 대운을 세운과 같은 3단계(채워 주는·겹치는·무던한)로 본다.
  *   규칙·동점 처리를 `yearly.ts` 에서 그대로 가져오므로 새로 정한 값이 없다.
  *   **대운 세기 가중이나 천간/지지 비중 같은 값을 새로 만들지 말 것.**
  *
@@ -27,26 +27,26 @@ import type { YearlyEffect } from "./yearly";
  * 같은 문장을 쓰면 `diet` 의 "올해의 몸 흐름" 과 이 유형이 같은 말을 하게 된다.
  */
 export const DECADE_EFFECT_NOTE: Record<YearlyEffect, string> = {
-  보완:
+  "채워 주는":
     "이 10년 동안 들어오는 기운이 원국에서 얇았던 쪽을 받쳐 준다. 몸이 무리 없이 따라오는 구간이라, 크게 흔들 일보다 하던 것을 이어 가며 기반을 다지는 데 쓰면 남는다.",
-  가중:
+  "겹치는":
     "이 10년 동안 들어오는 기운이 이미 넘치던 쪽에 얹힌다. 예전에 통하던 방식이 같은 만큼 돌아오지 않기 쉬운 구간이라, 더 세게 미는 쪽보다 덜어내고 속도를 고르는 편이 맞다.",
-  중립:
+  "무던한":
     "이 10년 동안 들어오는 기운이 원국의 넘치는 쪽도 얇은 쪽도 크게 건드리지 않는다. 바깥 흐름보다 스스로 정해 둔 생활 방식이 그대로 드러나는 구간이다.",
 };
 
 /**
  * 직전 구간과 견준 흐름 — **우리 관례**(위 3단계에서 파생).
  *
- * 새 축이 아니라 두 판정을 견준 것이라 **동점 처리가 새로 필요 없다** — 같으면 `유지`다.
+ * 새 축이 아니라 두 판정을 견준 것이라 **동점 처리가 새로 필요 없다** — 같으면 `이어짐`이다.
  */
-export type DecadeShift = "완화" | "심화" | "전환" | "유지";
+export type DecadeShift = "누그러짐" | "세짐" | "방향 바뀜" | "이어짐";
 
 export const SHIFT_NOTE: Record<DecadeShift, string> = {
-  완화: "직전 10년보다 받쳐 주는 쪽으로 옮겨 왔다. 예전에 잘 안 되던 방식이 이번에는 덜 버겁게 느껴지는 구간이다.",
-  심화: "직전 10년보다 쏠리는 쪽으로 옮겨 왔다. 예전과 같은 방식을 그대로 이어 가면 같은 만큼 돌아오지 않기 쉽다.",
-  전환: "직전 10년과 방향이 바뀌었다. 몸이 반응하는 자리가 옮겨 가는 구간이라, 하던 방식을 한 번 점검할 만하다.",
-  유지: "직전 10년과 방향이 크게 다르지 않다. 지금까지의 방식이 여전히 같은 자리에서 통한다.",
+  "누그러짐": "직전 10년보다 받쳐 주는 쪽으로 옮겨 왔다. 예전에 잘 안 되던 방식이 이번에는 덜 버겁게 느껴지는 구간이다.",
+  "세짐": "직전 10년보다 쏠리는 쪽으로 옮겨 왔다. 예전과 같은 방식을 그대로 이어 가면 같은 만큼 돌아오지 않기 쉽다.",
+  "방향 바뀜": "직전 10년과 방향이 바뀌었다. 몸이 반응하는 자리가 옮겨 가는 구간이라, 하던 방식을 한 번 점검할 만하다.",
+  "이어짐": "직전 10년과 방향이 크게 다르지 않다. 지금까지의 방식이 여전히 같은 자리에서 통한다.",
 };
 
 export interface DecadePeriodVerdict {
@@ -116,9 +116,9 @@ function judge(period: DaeunPeriod, constitution: ConstitutionAnalysis): DecadeP
   const fills = ohaeng.filter((element) => constitution.deficient.includes(element));
   const piles = ohaeng.filter((element) => constitution.excess.includes(element));
 
-  // 채우는 개수와 더하는 개수를 비교한다. 같으면(둘 다 0 포함) 중립.
+  // 채우는 개수와 더하는 개수를 비교한다. 같으면(둘 다 0 포함) 무던한 쪽.
   const effect: YearlyEffect =
-    fills.length > piles.length ? "보완" : piles.length > fills.length ? "가중" : "중립";
+    fills.length > piles.length ? "채워 주는" : piles.length > fills.length ? "겹치는" : "무던한";
 
   return {
     ganji: period.ganji,
@@ -131,12 +131,12 @@ function judge(period: DaeunPeriod, constitution: ConstitutionAnalysis): DecadeP
   };
 }
 
-/** 두 구간의 작용을 견준다. 같으면 `유지` 이므로 동점 처리가 따로 없다. */
+/** 두 구간의 작용을 견준다. 같으면 `이어짐` 이므로 동점 처리가 따로 없다. */
 function compare(current: YearlyEffect, previous: YearlyEffect): DecadeShift {
-  if (current === previous) return "유지";
-  if (current === "보완") return "완화";
-  if (current === "가중") return "심화";
-  return "전환"; // 중립으로 옮겨 온 경우
+  if (current === previous) return "이어짐";
+  if (current === "채워 주는") return "누그러짐";
+  if (current === "겹치는") return "세짐";
+  return "방향 바뀜"; // 무던한 쪽으로 옮겨 온 경우
 }
 
 /**

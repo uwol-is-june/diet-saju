@@ -92,21 +92,21 @@ describe("작용 판정 — 세운과 같은 규칙", () => {
   it("부족을 채우면 보완", () => {
     // 경(6)·신(7)은 둘 다 금이다.
     const result = analyzeDecade({ daeun: daeunWith(6, 9), currentAge: 20, constitution });
-    expect(result?.current.effect).toBe("보완");
+    expect(result?.current.effect).toBe("채워 주는");
     expect(result?.current.fills).toContain("금");
   });
 
   it("과다에 더하면 가중", () => {
     // 병(2)·오(6)는 둘 다 화다.
     const result = analyzeDecade({ daeun: daeunWith(2, 6), currentAge: 20, constitution });
-    expect(result?.current.effect).toBe("가중");
+    expect(result?.current.effect).toBe("겹치는");
     expect(result?.current.piles).toContain("화");
   });
 
   it("어느 쪽도 건드리지 않으면 중립", () => {
     // 갑(0)·인(2)은 둘 다 목이다.
     const result = analyzeDecade({ daeun: daeunWith(0, 2), currentAge: 20, constitution });
-    expect(result?.current.effect).toBe("중립");
+    expect(result?.current.effect).toBe("무던한");
   });
 
   it("첫 대운을 지나는 중이면 직전 구간이 없다", () => {
@@ -118,7 +118,7 @@ describe("작용 판정 — 세운과 같은 규칙", () => {
   it("직전과 작용이 같으면 유지다 — 동점 처리가 따로 없다", () => {
     // 두 구간의 간지를 같게 만들었으므로 작용이 같다.
     const result = analyzeDecade({ daeun: daeunWith(0, 2), currentAge: 20, constitution });
-    expect(result?.shift).toBe("유지");
+    expect(result?.shift).toBe("이어짐");
   });
 });
 
@@ -154,7 +154,7 @@ describe("표현 가이드 — 단정적 예언을 하지 않는다", () => {
   });
 
   it("직전과 견준 흐름은 사건이 아니라 상태로 되어 있다", () => {
-    expect(Object.keys(SHIFT_NOTE)).toEqual(["완화", "심화", "전환", "유지"]);
+    expect(Object.keys(SHIFT_NOTE)).toEqual(["누그러짐", "세짐", "방향 바뀜", "이어짐"]);
   });
 });
 
@@ -169,6 +169,6 @@ describe("다른 원국에서도 규칙이 유지된다", () => {
       });
       if (chart.decade) effects.add(chart.decade.current.effect);
     }
-    expect(effects).toEqual(new Set(["보완", "가중", "중립"]));
+    expect(effects).toEqual(new Set(["채워 주는", "겹치는", "무던한"]));
   });
 });

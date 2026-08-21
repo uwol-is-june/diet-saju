@@ -1,13 +1,7 @@
-import Link from "next/link";
 import { readCounters } from "@/lib/counters";
-import {
-  PUBLIC_READING_TYPES,
-  READING_TYPE_DESCRIPTION,
-  READING_TYPE_LABEL,
-  READING_TYPE_QUESTION,
-} from "@/lib/saju/schema";
-import { NAV_FORWARD, PageTransition } from "@/components/PageTransition";
-import { ReadingCardPhoto } from "@/components/ReadingCardPhoto";
+import { PUBLIC_READING_TYPES } from "@/lib/saju/schema";
+import { PageTransition } from "@/components/PageTransition";
+import { ReadingTypeCard } from "@/components/ReadingTypeCard";
 
 /**
  * 유형 선택 화면. **클라이언트 컴포넌트가 없다** — 이 페이지는 통째로 정적이다.
@@ -16,15 +10,10 @@ import { ReadingCardPhoto } from "@/components/ReadingCardPhoto";
  * **화면이 이미 말하는 것을 문장으로 되풀이하지 않는다** — 목록 위아래의 안내 줄은 카드가
  * 하는 일을 설명하던 것이라 없앴다.
  *
- * 리스트 카드다 (레퍼런스 `docs/ui_ref/list_reference.jpg`). 한 줄에 한 장씩 쌓고 카드마다
- * **왼쪽 글 + 오른쪽 사진 + 오른쪽 아래 화살표**를 둔다.
+ * 리스트 카드다. 한 줄에 한 장씩 쌓고 **카드 자체는 `ReadingTypeCard` 가 그린다** (TASK-115) —
+ * 결과 화면 맨 아래가 같은 부품을 쓰므로 여기서 다시 그리면 규격이 두 벌이 된다.
  *
- * - 화살표는 카드가 가로로 길어 오른쪽 끝이 **줄의 끝**이 되는 자리다. `aria-hidden`
- *   장식이고 링크 이름은 제목이 만든다.
- * - **설명 줄을 지우지 않는다.** 사진이 오른쪽을 먹어 좁아지므로 `line-clamp-3` 으로
- *   자르되 남긴다 — 거기가 `diet-food` 의 컨셉 한 줄이 사는 곳이다.
- * - **묻는 것 한 줄이 제목 위에 붙는다** (`READING_TYPE_QUESTION`) — 다섯 카드가 이름만
- *   으로는 비슷해 보이던 문제를 여기서 푼다.
+ * - 이 페이지가 정하는 것은 **목록 구조와 등장 순서**뿐이다.
  * - `ul` / `li` 구조와 `aria-label` 은 `birth-input.test.ts` 가 소스에서 본다.
  *   **`aria-label` 을 지우지 말 것** — 화면에 목록 제목이 없어 스크린리더가 알 길이 없다.
  *
@@ -94,92 +83,18 @@ export default async function HomePage() {
             className="anim-card-rise"
             style={{ animationDelay: `${(index + 1) * CARD_STAGGER}ms` }}
           >
-            <Link
-              href={`/reading/${type}`}
-              /*
-                이 이동이 "앞으로" 임을 알린다 — 값이 없으면 방향이 정해지지 않는다.
-                **문자열은 `PageTransition` 이 들고 있다** (직접 적으면 세 곳이 갈린다).
-              */
-              transitionTypes={[NAV_FORWARD]}
-              /*
-                **최소 높이는 판정 콜아웃과 같은 13rem 이다** (TASK-110). 사진이 전면에
-                깔리면 글 세 줄이 정하는 높이(약 160px)로는 카드가 띠 한 줄로 보인다 —
-                `.verdict-cover` 가 같은 이유로 같은 값을 든다.
+            {/*
+              카드 규격은 **부품 하나**가 정한다 (TASK-115) — 결과 화면 맨 아래
+              `OtherReadingLinks` 가 같은 부품을 쓴다. 여기서 다시 그리면 규격이 두 벌이 된다.
 
-                **면 색을 hover 로 바꾸지 않는다** — 사진에 덮여 보이지 않는다. 그 일은
-                `.card-cover:hover` 가 스크림을 깊게 하는 쪽으로 한다.
-              */
-              className="card-cover flex min-h-52 flex-col overflow-hidden rounded-3xl p-5 transition"
-            >
-              {/*
-                카드를 통째로 덮고 그 위에 어둠이 깔린다 (TASK-110). 장식이라 `alt=""` 다.
-                **첫 세 장만 `priority`** — 그중 첫 장이 이 화면의 LCP 요소다 (TASK-87 실측:
-                LCP 1.02 → 0.72초). 다섯 장 전부에 주면 preload 가 서로를 밀어낸다.
-              */}
-              <ReadingCardPhoto readingType={type} priority={index < 3} />
-
-              {/*
-                글이 사진 위에 온다 (TASK-110). **폭을 잡지 않는다** — 예전에는 사진이
-                오른쪽 42% 만 덮어 글을 `w-[58%]` 로 묶어 두어야 했고(합이 100% 를 넘으면
-                설명 줄이 흐려지는 면 위로 넘어갔다), 이제 어둠이 카드 전체에 깔리므로
-                글이 열 폭을 다 쓴다.
-
-                **위계는 무게와 크기로만 만든다** — 색은 흰색 하나이고 흐린 흰색도 같은
-                계산에서 나온 알파다 (`text-on-photo*` 밖의 색을 여기 쓰지 말 것).
-                예전 `묻는 것` 줄의 `text-brand-ink` 는 어둠 위에서 대비를 보증할 수 없다.
-              */}
-              <div className="relative z-10 break-keep">
-                <span className="block text-xs font-bold text-on-photo-dim">
-                  {READING_TYPE_QUESTION[type]}
-                </span>
-                <span className="title-sm title-bold mt-1.5 block text-on-photo">
-                  {READING_TYPE_LABEL[type]}
-                </span>
-                {/*
-                  좁은 폭에서 세 줄로 자른다 — **지우지 않는다** (TASK-64). 열이 넓어지면
-                  자동으로 다 보인다. **`block` 을 함께 주지 말 것** — `line-clamp` 이
-                  `display: -webkit-box` 를 걸어야 동작하는데 `block` 이 그걸 덮는다
-                  (실측에서 네 줄이 카드 밖으로 잘려 나갔다).
-                */}
-                <span className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-on-photo-dim sm:line-clamp-none">
-                  {READING_TYPE_DESCRIPTION[type]}
-                </span>
-              </div>
-
-              {/*
-                바닥 줄 — 왼쪽에 조회수, 오른쪽에 화살표. `mt-auto` 로 카드 바닥에 붙인다
-                (설명 길이가 유형마다 달라 그냥 두면 카드마다 이 줄의 높이가 어긋난다).
-              */}
-              <div className="relative z-10 mt-auto flex items-end justify-between pt-3">
-                {counts ? (
-                  /* 숫자만 나열하면 무엇인지 알 수 없다. 단위 낱말을 붙여 읽히게 한다. */
-                  <span className="text-xs text-on-photo-dim">
-                    조회 {counts[type].views.toLocaleString("ko-KR")}
-                    {counts[type].likes > 0 && (
-                      <> · 도움됐어요 {counts[type].likes.toLocaleString("ko-KR")}</>
-                    )}
-                  </span>
-                ) : (
-                  /* 저장소가 죽으면 그 자리를 비운다 — 0 을 보여주지 않는다 (TASK-51). */
-                  <span />
-                )}
-
-                {/*
-                  줄의 끝을 알리는 원형 화살표 (레퍼런스). **장식이다** — 링크 이름은 제목이
-                  만들고 스크린리더에 이 글리프가 읽히면 안 된다.
-
-                  예전에는 흰 면 + 어두운 글리프였다. 사진이 전면에 깔리면 카드에서 흰 면이
-                  이것 하나만 남아 **어둠 위에 붙은 딱지처럼 보인다.** 글자와 같은 흰색으로
-                  두고 테두리만 흐린 흰색으로 그린다 (`text-on-photo*` 밖의 색을 쓰지 않는다).
-                */}
-                <span
-                  aria-hidden
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full border border-on-photo-dim text-on-photo"
-                >
-                  →
-                </span>
-              </div>
-            </Link>
+              **첫 세 장만 `priority`** — 그중 첫 장이 이 화면의 LCP 요소다 (TASK-87 실측:
+              LCP 1.02 → 0.72초). 다섯 장 전부에 주면 preload 가 서로를 밀어낸다.
+            */}
+            <ReadingTypeCard
+              type={type}
+              priority={index < 3}
+              counts={counts ? counts[type] : null}
+            />
           </li>
         ))}
       </ul>

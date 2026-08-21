@@ -24,6 +24,9 @@ export const CARD_HEIGHT = 1350;
 
 const PAD = 72;
 
+/** 사진(또는 연한 면)이 차지하는 높이. 아래는 근거 자리다. */
+const COVER_HEIGHT = 860;
+
 export interface CardPalette {
   canvas: string;
   surface: string;
@@ -36,6 +39,10 @@ export interface CardPalette {
   brandInk: string;
   brandSubtle: string;
   brandBorder: string;
+  onPhoto: string;
+  onPhotoDim: string;
+  /** 사진 위 어둠의 알파. **화면과 같은 값이어야 한다** (`:root` 의 `--verdict-scrim`). */
+  scrim: number;
   ohaeng: Record<string, { bg: string; fg: string }>;
 }
 
@@ -75,6 +82,10 @@ export function readPalette(element: HTMLElement): CardPalette {
     brandInk: read("--color-brand-ink"),
     brandSubtle: read("--color-brand-subtle"),
     brandBorder: read("--color-brand-border"),
+    onPhoto: read("--color-on-photo"),
+    onPhotoDim: read("--color-on-photo-dim"),
+    // 값이 없으면 **더 어두운 쪽으로** 떨어진다 — 대비의 하한을 넘기는 방향이다.
+    scrim: Number(read("--verdict-scrim")) || 0.62,
     ohaeng,
   };
 }
@@ -89,6 +100,7 @@ export function drawShareCard(
   ctx: CanvasRenderingContext2D,
   model: ShareCardModel,
   palette: CardPalette,
+  photo?: CanvasImageSource | null,
 ): void {
   ctx.fillStyle = palette.canvas;
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
@@ -96,67 +108,57 @@ export function drawShareCard(
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
 
-  // ── 머리말 ──
-  ctx.fillStyle = palette.brandInk;
-  ctx.font = font(30, 700);
-  drawTracked(ctx, "DIET SAJU", PAD, 130, 8);
+  /*
+    ── 위: 판정 한 줄 (화면 콜아웃과 같은 꼴) ──
 
-  ctx.fillStyle = palette.ink;
-  ctx.font = font(60, 700);
-  ctx.fillText(model.typeLabel, PAD, 214);
+    사진이 있으면 **사진 전면 + 어둠 + 흰 글씨**이고 없으면 연한 브랜드 면이다.
+    갈리는 지점이 `model.photo` 하나뿐인 것도 화면과 같다 (`VerdictCallout`).
 
-  ctx.fillStyle = palette.inkMuted;
+    **어둠의 알파는 화면과 같은 값을 쓴다** (`palette.scrim`). 최악의 사진(흰 면) 위에서도
+    흰 글씨가 AA 를 넘는다는 근거가 `tokens.test.ts` 에 있고, 여기서 값을 따로 정하면
+    그 근거가 이 카드에는 적용되지 않는다.
+  */
+  if (photo) {
+    drawCover(ctx, photo, 0, 0, CARD_WIDTH, COVER_HEIGHT);
+    ctx.fillStyle = `rgba(0, 0, 0, ${palette.scrim})`;
+    ctx.fillRect(0, 0, CARD_WIDTH, COVER_HEIGHT);
+  } else {
+    ctx.fillStyle = palette.brandSubtle;
+    ctx.fillRect(0, 0, CARD_WIDTH, COVER_HEIGHT);
+  }
+
+  const onCover = photo ? palette.onPhoto : palette.brandInk;
+  const onCoverDim = photo ? palette.onPhotoDim : palette.inkSoft;
+
+  ctx.fillStyle = photo ? palette.onPhotoDim : palette.brandInk;
+  ctx.font = font(28, 700);
+  drawTracked(ctx, "DIET SAJU", PAD, 108, 8);
+
+  // 글은 **아래로 모은다** — 위쪽을 사진 몫으로 남기는 것이 화면 콜아웃과 같은 배치다.
+  ctx.fillStyle = onCoverDim;
+  ctx.font = font(34, 600);
+  ctx.fillText(model.eyebrow, PAD, COVER_HEIGHT - 232);
+
+  ctx.fillStyle = onCover;
+  ctx.font = font(86, 800);
+  const labelBottom = drawWrapped(ctx, model.label, PAD, COVER_HEIGHT - 148, CARD_WIDTH - PAD * 2, 96);
+
+  ctx.fillStyle = onCoverDim;
   ctx.font = font(32);
-  ctx.fillText(model.headline, PAD, 272);
+  drawWrapped(ctx, model.basis, PAD, labelBottom + 58, CARD_WIDTH - PAD * 2, 46);
 
-  // ── 사주팔자 4기둥 ──
-  const boxTop = 336;
-  const boxHeight = 300;
-  const gap = 20;
-  const boxWidth = (CARD_WIDTH - PAD * 2 - gap * 3) / 4;
+  /*
+    ── 아래: 근거 (오행 막대) ──
 
-  model.pillars.forEach((pillar, index) => {
-    const x = PAD + index * (boxWidth + gap);
-    roundRect(ctx, x, boxTop, boxWidth, boxHeight, 28);
-    ctx.fillStyle = palette.surface;
-    ctx.fill();
-    ctx.strokeStyle = palette.line;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    **간지를 한 자도 싣지 않는다** (TASK-116). 오행 개수는 그 자체로는 생년월일시를 되짚을
+    수 없고, 화면의 오행 막대와 같은 시각 언어를 카드에 남기는 값이다.
+  */
+  ctx.fillStyle = palette.inkSoft;
+  ctx.font = font(32, 600);
+  ctx.fillText(model.headline, PAD, COVER_HEIGHT + 92);
 
-    const center = x + boxWidth / 2;
-    ctx.textAlign = "center";
-
-    ctx.fillStyle = palette.inkMuted;
-    ctx.font = font(28);
-    ctx.fillText(pillar.label, center, boxTop + 62);
-
-    // 간지 2글자는 한 글자씩 세로로 쌓는 것이 만세력 관행이다.
-    const isUnknown = pillar.ganji === "미상";
-    ctx.fillStyle = isUnknown ? palette.inkMuted : palette.ink;
-    if (isUnknown) {
-      ctx.font = font(36, 600);
-      ctx.fillText("시각", center, boxTop + 150);
-      ctx.fillText("미상", center, boxTop + 200);
-    } else {
-      ctx.font = font(76, 700);
-      const [gan, ji] = [...pillar.ganji];
-      ctx.fillText(gan ?? "", center, boxTop + 158);
-      ctx.fillText(ji ?? "", center, boxTop + 236);
-    }
-
-    if (pillar.sipsin) {
-      ctx.fillStyle = palette.inkMuted;
-      ctx.font = font(26);
-      ctx.fillText(pillar.sipsin, center, boxTop + 278);
-    }
-    ctx.textAlign = "left";
-  });
-
-  // ── 오행 배지 ──
-  const badgeTop = boxTop + boxHeight + 56;
+  const badgeTop = COVER_HEIGHT + 148;
   const badgeHeight = 88;
-  /** 배지 아래 세력 막대. 아래 판정 칩과의 64px 간격 안에 들어간다. */
   const BADGE_BAR_HEIGHT = 12;
   const badgeGap = 16;
   const badgeWidth = (CARD_WIDTH - PAD * 2 - badgeGap * 4) / 5;
@@ -184,9 +186,9 @@ export function drawShareCard(
     ctx.globalAlpha = 1;
 
     /*
-      배지 아래 세력 막대 — 화면의 오행 막대와 같은 시각 언어를 카드에도 둔다 (TASK-25).
-      길이의 근거는 우리 관례(계절 배수)라 **숫자는 찍지 않고 길이로만** 말한다.
-      개수 0 이면 아예 그리지 않는다 (1px 조각이 남으면 "조금 있다" 로 읽힌다).
+      배지 아래 세력 막대 — 길이의 근거는 우리 관례(계절 배수)라 **숫자는 찍지 않고
+      길이로만** 말한다. 개수 0 이면 아예 그리지 않는다 (1px 조각이 남으면 "조금 있다" 로
+      읽힌다).
     */
     const barY = badgeTop + badgeHeight + 14;
     roundRect(ctx, x, barY, badgeWidth, BADGE_BAR_HEIGHT, BADGE_BAR_HEIGHT / 2);
@@ -207,40 +209,6 @@ export function drawShareCard(
     }
   });
 
-  // ── 판정 칩 ──
-  const chipTop = badgeTop + badgeHeight + 64;
-  const chipHeight = 96;
-  let chipX = PAD;
-
-  ctx.font = font(40, 600);
-  for (const chip of model.chips) {
-    const width = ctx.measureText(chip).width + 72;
-    roundRect(ctx, chipX, chipTop, width, chipHeight, chipHeight / 2);
-    ctx.fillStyle = palette.brandSubtle;
-    ctx.fill();
-    ctx.strokeStyle = palette.brandBorder;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = palette.brandInk;
-    ctx.font = font(40, 600);
-    ctx.fillText(chip, chipX + 36, chipTop + 62);
-    chipX += width + 20;
-  }
-
-  // ── 근거 줄 ──
-  let noteY = chipTop + chipHeight + 82;
-  for (const note of model.notes) {
-    ctx.fillStyle = palette.brand;
-    roundRect(ctx, PAD, noteY - 16, 8, 8, 4);
-    ctx.fill();
-
-    ctx.fillStyle = palette.inkSoft;
-    ctx.font = font(32);
-    ctx.fillText(note, PAD + 28, noteY);
-    noteY += 58;
-  }
-
   // ── 꼬리말 ──
   ctx.fillStyle = palette.brand;
   roundRect(ctx, PAD, CARD_HEIGHT - 176, CARD_WIDTH - PAD * 2, 6, 3);
@@ -253,6 +221,84 @@ export function drawShareCard(
   ctx.fillStyle = palette.inkMuted;
   ctx.font = font(26);
   ctx.fillText("명리학 해석을 참고한 오락·참고용 콘텐츠 · AI 작성", PAD, CARD_HEIGHT - 62);
+}
+
+/**
+ * 사진을 슬롯에 **꽉 채워** 그린다 (`object-fit: cover` 와 같은 계산). 원본은 정사각
+ * 480×480 이고 슬롯은 가로로 기니 위아래가 잘린다 — 크롭 위치는 화면(`.verdict-photo`)과
+ * 같은 **한 값(가운데)** 이다.
+ */
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  const size = imageSize(image);
+  if (!size) return;
+  const scale = Math.max(width / size.width, height / size.height);
+  const drawWidth = size.width * scale;
+  const drawHeight = size.height * scale;
+
+  /*
+    **슬롯 밖으로 넘치는 부분을 잘라낸다.** 정사각 원본을 가로로 긴 슬롯에 채우면 위아래로
+    넘치는데, 어둠은 슬롯 안에만 깔리므로 잘라내지 않으면 **넘친 사진이 아래 근거 자리를
+    덮는다** (실제로 띠·계절 줄이 사진에 묻혔다).
+  */
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, width, height);
+  ctx.clip();
+  ctx.drawImage(
+    image,
+    x + (width - drawWidth) / 2,
+    y + (height - drawHeight) / 2,
+    drawWidth,
+    drawHeight,
+  );
+  ctx.restore();
+}
+
+function imageSize(image: CanvasImageSource): { width: number; height: number } | null {
+  if ("naturalWidth" in image && image.naturalWidth) {
+    return { width: image.naturalWidth, height: image.naturalHeight };
+  }
+  if ("width" in image && typeof image.width === "number" && image.width) {
+    return { width: image.width, height: image.height as number };
+  }
+  return null;
+}
+
+/**
+ * 글을 폭에 맞춰 접는다. **캔버스에는 줄바꿈이 없다** — 라벨이 길면(`팥과 수수를 곁들이기`)
+ * 한 줄로 그리다 카드 밖으로 나간다. 마지막 줄의 y 를 돌려주어 다음 글이 그 아래에 앉는다.
+ */
+function drawWrapped(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+): number {
+  const words = text.split(" ");
+  let line = "";
+  let cursorY = y;
+
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > maxWidth && line) {
+      ctx.fillText(line, x, cursorY);
+      cursorY += lineHeight;
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) ctx.fillText(line, x, cursorY);
+  return cursorY;
 }
 
 /** 자간을 벌려 그린다. 캔버스에는 letter-spacing 이 없다. */

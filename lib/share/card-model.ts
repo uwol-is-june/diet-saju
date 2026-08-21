@@ -1,22 +1,27 @@
-import { ELEMENT_FOOD } from "../saju/constitution";
-import { findCurrentDaeun } from "../saju/decade";
-import { READING_TYPE_LABEL, type ReadingType, type SajuChart } from "../saju/schema";
+import { verdictOf } from "../reading/verdict";
+import type { ReadingType, SajuChart } from "../saju/schema";
 
 /**
  * 공유 카드에 무엇을 넣을지 정한다. 그리기(캔버스)와 갈라 둔 것은 **무엇을 노출하는지가
  * 판단이 필요한 부분**이고 그 판단만 따로 테스트하기 위해서다.
  *
- * **생년월일을 카드에 찍지 않는다.** 사용자가 공개된 곳에 올리는 이미지라 우리가 먼저
- * 날짜를 넣어 줄 이유가 없다 — **띠와 계절까지만** 쓴다.
+ * ## 카드에 뜨는 것은 판정 한 줄이다 (TASK-116)
+ *
+ * 예전 카드는 면적의 8할이 **사주팔자 네 기둥 · 신강신약 · 득령/득지/득세 · 대운 간지 ·
+ * 십신**이었다. 두 가지가 틀렸다.
+ *
+ * 1. **읽을 수 없다.** 카드를 받아 든 사람은 자기 사주도 모르는 제3자다. TASK-113 이 같은
+ *    이유로 본문에서 걷어낸 낱말들이 카드에서는 가장 큰 자리를 차지하고 있었다.
+ * 2. **네 기둥은 사실상 생년월일시다.** 연·월·일·시주가 정해지면 60년 주기 안에서 날짜가
+ *    거의 유일하게 특정되고, 띠와 대운 간지가 연도를 좁힌다. `생년월일을 찍지 않는다` 를
+ *    형식으로만 지키고 있었다 — **날짜 문자열이 아니라 역산 가능성이 기준이다.**
+ *
+ * **그래서 간지를 한 자도 싣지 않는다** (`card-model.test.ts` 가 막는다). 남는 것은 화면
+ * 콜아웃과 **같은 값**(`lib/reading/verdict.ts`)과, 개수만으로는 날짜를 특정할 수 없는
+ * 오행 막대다.
  *
  * **풀이 본문도 넣지 않는다** — 길고, 카드가 읽히지 않으며, 맥락 없이 퍼지면 오해를 만든다.
  */
-
-export interface ShareCardPillar {
-  label: string;
-  ganji: string;
-  sipsin: string;
-}
 
 export interface ShareCardBadge {
   element: string;
@@ -30,37 +35,23 @@ export interface ShareCardBadge {
 }
 
 export interface ShareCardModel {
-  /** 풀이 유형 이름 */
-  typeLabel: string;
-  pillars: ShareCardPillar[];
+  /** 아래 라벨이 무엇에 대한 답인지 말하는 줄 (유형마다 다르다) */
+  eyebrow: string;
+  /** 카드의 주인공 — 판정 라벨 */
+  label: string;
+  /** 라벨의 뜻을 생활어로 옮긴 한 줄 */
+  basis: string;
+  /** `public/verdict/<slug>.jpg`. 사진이 없는 내부 유형은 `null` 이고 연한 면으로 그린다. */
+  photo: string | null;
   badges: ShareCardBadge[];
-  /** 카드 가운데 한 줄 요약 */
+  /** 사진 아래 한 줄. **날짜가 아니라 띠와 계절까지만** 쓴다. */
   headline: string;
-  /** 유형별 판정 칩. diet 는 한열·패턴, general 은 최강 오행·신강신약 */
-  chips: string[];
-  /**
-   * 칩 아래 근거 줄. **나이와 날짜를 넣지 않는다** — 대운 구간을 나이로 적으면
-   * 출생 연도가 좁혀진다. 간지와 십신까지만 쓴다.
-   */
-  notes: string[];
   footer: string;
 }
 
 const SITE = "diet-saju.vercel.app";
 
 export function buildShareCardModel(chart: SajuChart, readingType: ReadingType): ShareCardModel {
-  const pillars: ShareCardPillar[] = [
-    { label: "연주", pillar: chart.year },
-    { label: "월주", pillar: chart.month },
-    { label: "일주", pillar: chart.day },
-    { label: "시주", pillar: chart.hour },
-  ].map(({ label, pillar }) => ({
-    label,
-    // 시각 미상이면 시주가 없다. 임의로 채우지 않는다.
-    ganji: pillar ? pillar.ganji : "미상",
-    sipsin: pillar ? pillar.jiSipsin : "",
-  }));
-
   const scores = chart.ohaeng.score;
   const maxScore = Math.max(...Object.values(scores), 1);
   const badges: ShareCardBadge[] = Object.entries(chart.ohaeng.count).map(([element, count]) => ({
@@ -70,110 +61,20 @@ export function buildShareCardModel(chart: SajuChart, readingType: ReadingType):
     weight: scores[element as keyof typeof scores] / maxScore,
   }));
 
-  const mark = (met: boolean) => (met ? "○" : "×");
-  const strength = chart.strength;
-
-  const notes = [
-    // "신강·신약 신약" 처럼 겹쳐 읽히므로 판정만 앞세운다.
-    `${strength.verdict} — 득령 ${mark(strength.deukryeong)} · 득지 ${mark(
-      strength.deukji,
-    )} · 득세 ${mark(strength.deukse)}`,
-    // 현재 대운은 나이 구간을 빼고 간지·십신만 쓴다 (위 주석 참고).
-    currentDaeunLabel(chart),
-    TAIL_NOTE[readingType](chart),
-  ].filter((note): note is string => note !== null);
+  /*
+    **화면 콜아웃과 같은 함수를 부른다.** 값을 여기서 다시 고르면 저장된 이미지가 방금 본
+    화면과 다른 말을 한다. 판정이 성립하지 않는 경우(대운 없는 `decade`)는 화면과 똑같이
+    비워 두고, 카드는 눈썹 줄 없이 원국 요약만 남는다.
+  */
+  const verdict = verdictOf(chart, readingType);
 
   return {
-    typeLabel: READING_TYPE_LABEL[readingType],
-    pillars,
+    eyebrow: verdict?.eyebrow ?? "",
+    label: verdict?.label ?? "",
+    basis: verdict?.basis ?? "",
+    photo: verdict?.photo ?? null,
     badges,
     headline: `${chart.saencho}띠 · ${chart.ohaeng.season}에 태어난 사주`,
-    chips: CHIPS[readingType](chart),
-    notes,
     footer: SITE,
   };
-}
-
-/**
- * 유형별 판정 칩 — **`Record` 로 두어 유형을 늘리면 컴파일이 막히게 한다.**
- * 삼항으로 두면 새 유형이 조용히 다른 유형의 칩을 달고 나간다.
- *
- * 칩은 카드 폭에 맞춰 **항상 두 개**다.
- */
-const CHIPS: Record<ReadingType, (chart: SajuChart) => [string, string]> = {
-  general: (chart) => [`${chart.ohaeng.strongest} 기운이 강함`, chart.strength.verdict],
-  diet: (chart) => [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern],
-  // 원인 유형 (TASK-44): 걸리는 지점이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
-  "gain-cause": (chart) => [
-    `${chart.constitution.gainSite}에서 걸림`,
-    chart.constitution.gainPattern,
-  ],
-  "diet-method": (chart) => [
-    chart.constitution.dietApproach,
-    chart.constitution.movementKind,
-  ],
-  /**
-   * 시기 유형. **나이 구간을 넣지 않는다** — 적으면 출생 연도가 좁혀진다. 간지와 작용
-   * 판정까지만 쓴다 (`card-model.test.ts` 가 막는다). 대운이 없으면 체질 칩으로 물러선다.
-   */
-  /**
-   * 식단 유형: 곁들일 쪽이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
-   *
-   * **재료 이름을 쓴다** (`ELEMENT_FOOD.short`). 오행 이름만 적으면 카드를 받아 든 사람이
-   * 읽을 수 없다. **화면 콜아웃과 같은 값에서 나온다** — 한쪽만 바꾸면 둘이 다른 말을 한다.
-   * 칩에는 줄바꿈이 없으므로 길이 상한을 `card-model.test.ts` 가 지킨다.
-   */
-  "diet-food": (chart) => {
-    const element = chart.constitution.deficient[0];
-    return [
-      element ? `${ELEMENT_FOOD[element].short} 곁들이기` : "오행이 고름",
-      `한열 ${chart.constitution.thermal}`,
-    ];
-  },
-  // 운동 유형 (TASK-48): 종목이 첫 칩이다 — 이 유형이 답하는 질문이 그것이다.
-  exercise: (chart) => [chart.constitution.movementPrimary, chart.constitution.movementKind],
-  decade: (chart) =>
-    chart.decade
-      ? [`대운 ${chart.decade.current.ganji}`, `${chart.decade.current.effect} 작용`]
-      : [`한열 ${chart.constitution.thermal}`, chart.constitution.gainPattern],
-};
-
-/**
- * 근거 줄 마지막 항목도 유형별로 다르다.
- *
- * `diet` 의 접근 순서를 **칩이 아니라 여기** 넣는다 — 칩은 두 개로 고정이고 그 자리는 체질
- * 자체(한열·패턴)가 쓴다. 접근 순서는 대사 기조에서 파생된 결론이라 그것과 같은 자리에
- * 두면 "무엇에서 이 순서가 나왔는지" 가 카드에서도 보인다.
- */
-const TAIL_NOTE: Record<ReadingType, (chart: SajuChart) => string> = {
-  general: (chart) => `${chart.ohaeng.season} 기세 기준 · ${chart.ohaeng.strongest} 왕(旺)`,
-  diet: (chart) =>
-    `방식 ${chart.constitution.dietApproach} · 대사 기조 ${chart.constitution.metabolism}`,
-  // 칩이 걸리는 지점·패턴을 쓰므로 여기는 그 둘이 어디서 나왔는지를 밝힌다.
-  "gain-cause": (chart) =>
-    `대사 기조 ${chart.constitution.metabolism} · 십신 우세 ${chart.constitution.dominantGroup}`,
-  // 칩이 방식·종류를 쓰므로 여기는 그 둘이 어디서 나왔는지를 밝힌다.
-  "diet-method": (chart) =>
-    `대사 기조 ${chart.constitution.metabolism} · 걸리는 지점 ${chart.constitution.gainSite}`,
-  // 칩이 곁들일 쪽·한열을 쓰므로 여기는 그것이 어디서 나왔는지를 밝힌다.
-  "diet-food": (chart) =>
-    `대사 기조 ${chart.constitution.metabolism} · 살이 붙는 패턴 ${chart.constitution.gainPattern}`,
-  // 칩이 종목·종류를 쓰므로 여기는 그 종목이 어디서 나왔는지와 실행 조건(한열)을 밝힌다.
-  exercise: (chart) => `${chart.constitution.dietApproach} · 한열 ${chart.constitution.thermal}`,
-  // 칩이 간지·작용을 쓰므로 여기는 그 작용이 어디서 나왔는지를 밝힌다. 나이는 넣지 않는다.
-  decade: (chart) =>
-    chart.decade
-      ? `${chart.decade.sipsin} 대운 · ${chart.decade.shift ? `직전과 ${chart.decade.shift}` : "첫 대운"}`
-      : `${chart.ohaeng.season} 기세 기준`,
-};
-
-/**
- * 성별 미지정이면 대운이 없다(순행·역행을 정할 수 없다) → 줄을 넣지 않는다.
- *
- * **현재 대운을 찾는 규칙은 `lib/saju/decade.ts` 한 곳에 있다** — 흩어지면 화면·카드·풀이가
- * 서로 다른 대운을 가리킨다.
- */
-function currentDaeunLabel(chart: SajuChart): string | null {
-  const period = findCurrentDaeun(chart.daeun, chart.seun[0]?.age);
-  return period ? `현재 대운 ${period.ganji} · ${period.sipsin}` : null;
 }

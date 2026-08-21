@@ -213,6 +213,8 @@ describe("화면 전환 (TASK-96)", () => {
   const HOME = read("app/page.tsx");
   const READING = read("app/reading/[type]/page.tsx");
   const BACK_LINK = read("components/BackLink.tsx");
+  /** 앞으로 가는 링크는 **유형 카드 부품**이 들고 있다 (TASK-115) — `/` 와 결과 화면이 공유한다. */
+  const TYPE_CARD = read("components/ReadingTypeCard.tsx");
 
   /** `PageTransition` 이 내보내는 전환 유형 문자열. 여기가 단일 소스다. */
   const types = [...PAGE_TRANSITION.matchAll(/export const NAV_\w+ = "([\w-]+)"/g)].map(
@@ -270,9 +272,9 @@ describe("화면 전환 (TASK-96)", () => {
 
   it("링크가 전환 유형 문자열을 직접 적지 않는다", () => {
     // 문자열을 베끼면 CSS 클래스와 갈린 것을 아무도 모른다.
-    expect(HOME).toContain("transitionTypes={[NAV_FORWARD]}");
+    expect(TYPE_CARD).toContain("transitionTypes={[NAV_FORWARD]}");
     expect(BACK_LINK).toContain("transitionTypes={[NAV_BACK]}");
-    for (const code of [HOME, BACK_LINK]) {
+    for (const code of [TYPE_CARD, BACK_LINK]) {
       expect(code).not.toMatch(/transitionTypes=\{\["/);
     }
   });

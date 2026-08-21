@@ -7,7 +7,7 @@ import { READING_TYPES } from "../saju/schema";
  *
  * | 어디 | 무엇 |
  * | --- | --- |
- * | `components/VerdictCallout.tsx` | 판정 축 값 → 슬러그 (화면이 무엇을 부르는가) |
+ * | `lib/reading/verdict.ts` | 판정 축 값 → 슬러그 (화면과 공유 카드가 함께 읽는다) |
  * | `scripts/fetch-verdict-photos.mjs` | 슬러그 → 검색어 (무엇을 받아 오는가) |
  * | `public/verdict/` | 실제 파일 (무엇이 있는가) |
  *
@@ -15,7 +15,7 @@ import { READING_TYPES } from "../saju/schema";
  * 한 칸이라 개발 중에 눈에 띄지 않고, 판정을 그 칸으로 미는 생일을 일부러 넣어야 보인다.
  * 그래서 사람 눈이 아니라 테스트가 본다.
  *
- * 컴포넌트 쪽은 `Record<축, …>` 라 **값이 빠지면 컴파일이 막지만**, 슬러그 문자열의
+ * 표 쪽은 `Record<축, …>` 라 **값이 빠지면 컴파일이 막지만**, 슬러그 문자열의
  * 오타(`element-su` → `element-so`)는 타입이 잡지 못한다. 그 자리를 이 검사가 메운다.
  */
 
@@ -36,7 +36,7 @@ function read(relativePath: string): string {
  * 슬러그는 `<축 접두사>-<이름>` 꼴이다. 접두사를 못 박아 두면 컴포넌트 안의 다른 문자열
  * (`card-photo` 같은 클래스 이름)이 섞이지 않는다.
  *
- * **유형 id 는 뺀다** — `"gain-cause"` 가 같은 꼴이라 `CALLOUT` 의 키가 슬러그로 잡힌다.
+ * **유형 id 는 뺀다** — `"gain-cause"` 가 같은 꼴이라 `CALLOUT`·`EYEBROW` 의 키가 슬러그로 잡힌다.
  * 목록을 베끼지 않고 `READING_TYPES` 에서 걸러내므로 유형이 늘어도 따라온다.
  */
 const SLUG = /"((?:metabolism|gain|approach|element|movement)-[a-z]+)"/g;
@@ -48,7 +48,7 @@ function slugsIn(source: string): Set<string> {
   );
 }
 
-const componentSlugs = slugsIn(read("components/VerdictCallout.tsx"));
+const componentSlugs = slugsIn(read("lib/reading/verdict.ts"));
 const scriptSlugs = slugsIn(read("scripts/fetch-verdict-photos.mjs"));
 
 describe("판정 사진 슬러그", () => {
